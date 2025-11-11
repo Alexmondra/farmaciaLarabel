@@ -1,246 +1,119 @@
 @extends('adminlte::page')
 
-@section('title','Editar medicamento')
-@section('content_header') 
-<div class="d-flex justify-content-between align-items-center">
-    <h1><i class="fas fa-edit"></i> Editar Medicamento</h1>
-    <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Volver
-    </a>
-</div>
+@section('title', 'Editar por sucursal')
+
+@section('content_header')
+<h1>Editar en {{ $sucursal->nombre }} — {{ $m->nombre }}</h1>
 @stop
 
 @section('content')
-@if($errors->any())
-<div class="alert alert-danger alert-dismissible fade show">
-    <h5><i class="fas fa-exclamation-triangle"></i> Errores de validación:</h5>
-    <ul class="mb-0">
-        @foreach($errors->all() as $error)
-        <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-    <button type="button" class="close" data-dismiss="alert">
-        <span>&times;</span>
-    </button>
-</div>
-@endif
+<div class="card">
+    <div class="card-body">
 
-<form method="POST" action="{{ route('inventario.medicamentos.update', $medicamento) }}" enctype="multipart/form-data">
-@csrf @method('PUT')
+        {{-- Mensajes --}}
+        @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+        @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $e)
+                <li>{{ $e }}</li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
 
-<div class="row">
-    <!-- Información Principal -->
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-warning text-white">
-                <h5 class="mb-0"><i class="fas fa-pills"></i> Información del Medicamento</h5>
+        {{-- Datos generales --}}
+        <div class="row g-3 mb-3 small text-muted">
+            <div class="col-md-3"><b>Código:</b> {{ $m->codigo }}</div>
+            <div class="col-md-3"><b>Código barras:</b> {{ $m->codigo_barras ?? '-' }}</div>
+            <div class="col-md-3"><b>Categoría:</b> {{ $m->categoria->nombre ?? '-' }}</div>
+            <div class="col-md-3"><b>Stock actual:</b> {{ $pivot->stock_actual ?? 0 }}</div>
+        </div>
+
+        {{-- Formulario --}}
+        <form method="POST" action="{{ route('inventario.medicamentos.updateSucursal', [$m->id, $sucursal->id]) }}" class="row g-3">
+            @csrf @method('PUT')
+
+            <div class="col-md-4">
+                <label class="form-label">Precio venta (V)</label>
+                <input type="number" step="0.01" name="precio_v" class="form-control"
+                    value="{{ old('precio_v', $pivot->precio_venta ?? '') }}" placeholder="0.00">
             </div>
-            <div class="card-body">
-                <!-- Código y Nombre -->
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Código *</label>
-                            <input type="text" name="codigo" class="form-control form-control-lg" 
-                                   required value="{{ old('codigo',$medicamento->codigo) }}" 
-                                   placeholder="Ej: MED001">
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle"></i> Código único del medicamento
-                            </small>
-                        </div>
-                    </div>
-                    <div class="col-md-8">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Nombre comercial *</label>
-                            <input type="text" name="nombre" class="form-control form-control-lg" 
-                                   required value="{{ old('nombre',$medicamento->nombre) }}" 
-                                   placeholder="Nombre del medicamento">
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Forma farmacéutica y concentración -->
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Forma farmacéutica</label>
-                            <select name="forma_farmaceutica" class="form-control">
-                                <option value="">Seleccionar...</option>
-                                <option value="Tableta" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Tableta' ? 'selected' : '' }}>Tableta</option>
-                                <option value="Cápsula" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Cápsula' ? 'selected' : '' }}>Cápsula</option>
-                                <option value="Jarabe" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Jarabe' ? 'selected' : '' }}>Jarabe</option>
-                                <option value="Inyección" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Inyección' ? 'selected' : '' }}>Inyección</option>
-                                <option value="Crema" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Crema' ? 'selected' : '' }}>Crema</option>
-                                <option value="Gotas" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Gotas' ? 'selected' : '' }}>Gotas</option>
-                                <option value="Otro" {{ old('forma_farmaceutica', $medicamento->forma_farmaceutica) == 'Otro' ? 'selected' : '' }}>Otro</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Concentración</label>
-                            <input type="text" name="concentracion" class="form-control" 
-                                   value="{{ old('concentracion',$medicamento->concentracion) }}" 
-                                   placeholder="Ej: 500mg">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Presentación</label>
-                            <input type="text" name="presentacion" class="form-control" 
-                                   value="{{ old('presentacion',$medicamento->presentacion) }}" 
-                                   placeholder="Ej: Caja x 20">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Laboratorio</label>
-                            <input type="text" name="laboratorio" class="form-control" 
-                                   value="{{ old('laboratorio',$medicamento->laboratorio) }}" 
-                                   placeholder="Laboratorio farmacéutico">
-                        </div>
-                    </div>
-                </div>
+            <div class="col-md-4">
+                <label class="form-label">Precio compra (C)</label>
+                <input type="number" step="0.01" name="precio_c" class="form-control"
+                    value="{{ old('precio_c', $pivot->precio_compra ?? '') }}" placeholder="0.00">
+            </div>
 
-                <!-- Registro y códigos -->
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Registro sanitario</label>
-                            <input type="text" name="registro_sanitario" class="form-control" 
-                                   value="{{ old('registro_sanitario',$medicamento->registro_sanitario) }}" 
-                                   placeholder="Número de registro">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Código de barras</label>
-                            <input type="text" name="codigo_barra" class="form-control" 
-                                   value="{{ old('codigo_barra',$medicamento->codigo_barra) }}" 
-                                   placeholder="Código de barras">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Categoría</label>
-                            <select name="categoria_id" class="form-control">
-                                <option value="">Seleccionar categoría...</option>
-                                @foreach($categorias as $categoria)
-                                <option value="{{ $categoria->id }}" {{ old('categoria_id', $medicamento->categoria_id) == $categoria->id ? 'selected' : '' }}>
-                                    {{ $categoria->nombre }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-md-4">
+                <label class="form-label">Stock mínimo</label>
+                <input type="number" name="stock_minimo" class="form-control"
+                    value="{{ old('stock_minimo', $pivot->stock_minimo ?? '') }}" placeholder="0">
+            </div>
 
-                <!-- Imagen -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Imagen del medicamento</label>
-                            <div class="custom-file">
-                                <input type="file" name="imagen" class="custom-file-input" 
-                                       id="imagen" accept="image/*">
-                                <label class="custom-file-label" for="imagen">
-                                    Seleccionar nueva imagen...
-                                </label>
-                            </div>
-                            @if($medicamento->imagen_path)
-                            <div class="mt-2">
-                                <img src="{{ asset('storage/'.$medicamento->imagen_path) }}" 
-                                     class="img-thumbnail" style="max-width: 150px;">
-                                <small class="form-text text-muted">Imagen actual</small>
-                            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ubicación</label>
+                <input type="text" name="ubicacion" class="form-control"
+                    value="{{ old('ubicacion', $pivot->ubicacion ?? '') }}" placeholder="Ej. Pasillo A - Estante 3">
+            </div>
+
+            <div class="col-md-6 d-flex align-items-end justify-content-end">
+                <a href="{{ route('inventario.medicamentos.index', ['sucursal_id' => $sucursal->id]) }}"
+                    class="btn btn-outline-secondary me-2">Volver</a>
+                <button class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </form>
+
+        <hr>
+
+        {{-- Lotes --}}
+        <h5 class="mb-3">Lotes en {{ $sucursal->nombre }}</h5>
+        @php $lotes = $m->lotes ?? collect(); @endphp
+
+        @if($lotes->isEmpty())
+        <div class="text-muted">Sin lotes registrados para este medicamento.</div>
+        @else
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Código</th>
+                        <th class="text-end">Cantidad</th>
+                        <th>Vencimiento</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($lotes as $l)
+                    @php
+                    $porVencer = $l->fecha_vencimiento ? \Carbon\Carbon::parse($l->fecha_vencimiento)->isBefore(now()->addMonths(1)) : false;
+                    $vencido = $l->fecha_vencimiento ? \Carbon\Carbon::parse($l->fecha_vencimiento)->isBefore(today()) : false;
+                    @endphp
+                    <tr>
+                        <td>{{ $l->id }}</td>
+                        <td>{{ $l->codigo ?? '-' }}</td>
+                        <td class="text-end">{{ $l->cantidad_actual }}</td>
+                        <td>{{ $l->fecha_vencimiento ? \Carbon\Carbon::parse($l->fecha_vencimiento)->format('d/m/Y') : '-' }}</td>
+                        <td>
+                            @if($vencido)
+                            <span class="badge bg-danger">Vencido</span>
+                            @elseif($porVencer)
+                            <span class="badge bg-warning text-dark">Por vencer</span>
+                            @else
+                            <span class="badge bg-success">Vigente</span>
                             @endif
-                            <small class="form-text text-muted">
-                                <i class="fas fa-image"></i> Opcional: imagen del medicamento (máx. 2MB)
-                            </small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Estado</label>
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" name="activo" value="1" 
-                                       class="custom-control-input" id="activo" 
-                                       {{ old('activo', $medicamento->activo) ? 'checked' : '' }}>
-                                <label class="custom-control-label" for="activo">
-                                    Medicamento activo
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Descripción -->
-                <div class="form-group">
-                    <label class="font-weight-bold">Descripción</label>
-                    <textarea name="descripcion" rows="3" class="form-control" 
-                              placeholder="Descripción adicional del medicamento">{{ old('descripcion',$medicamento->descripcion) }}</textarea>
-                </div>
-            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
-    </div>
+        @endif
 
-    <!-- Información adicional -->
-    <div class="col-lg-4">
-        <!-- Información del proceso -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-warning text-white">
-                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Proceso de Edición</h6>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-lightbulb"></i> <strong>Paso 1:</strong> Edita la información general del medicamento
-                </div>
-                <div class="alert alert-warning">
-                    <i class="fas fa-arrow-right"></i> <strong>Paso 2:</strong> Para gestionar precios y stock por sucursal, ve a la vista de detalles
-                </div>
-                <a href="{{ route('inventario.medicamentos.show', $medicamento) }}" class="btn btn-primary btn-sm btn-block">
-                    <i class="fas fa-eye"></i> Ver Detalles y Gestionar Sucursales
-                </a>
-            </div>
-        </div>
-
-        <!-- Botones de acción -->
-        <div class="card shadow-sm mt-3">
-            <div class="card-body">
-                <button type="submit" class="btn btn-warning btn-lg btn-block">
-                    <i class="fas fa-save"></i> Actualizar Medicamento
-                </button>
-                <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-secondary btn-block">
-                    <i class="fas fa-times"></i> Cancelar
-                </a>
-            </div>
-        </div>
     </div>
 </div>
-</form>
-@stop
-
-@section('js')
-<script>
-// Preview de imagen
-document.getElementById('imagen').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const label = document.querySelector('label[for="imagen"]');
-        label.textContent = file.name;
-    }
-});
-
-// Validación en tiempo real
-document.querySelector('form').addEventListener('submit', function(e) {
-    const precioCompra = parseFloat(document.querySelector('input[name="precio_compra"]').value);
-    const precioVenta = parseFloat(document.querySelector('input[name="precio_venta"]').value);
-    
-    if (precioVenta < precioCompra) {
-        e.preventDefault();
-        alert('El precio de venta debe ser mayor o igual al precio de compra');
-        return false;
-    }
-});
-</script>
 @stop

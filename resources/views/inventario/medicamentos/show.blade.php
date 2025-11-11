@@ -1,134 +1,96 @@
 @extends('adminlte::page')
 
-@section('title', 'Detalles del Medicamento')
+@section('title','Detalle medicamento')
 
 @section('content_header')
-<div class="d-flex justify-content-between align-items-center">
-    <h1><i class="fas fa-pills"></i> {{ $medicamento->nombre }}</h1>
-    <div>
-        <a href="{{ route('inventario.medicamentos.edit', $medicamento) }}" class="btn btn-warning">
-            <i class="fas fa-edit"></i> Editar
-        </a>
-        <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
-    </div>
-</div>
+<h1>{{ $medicamento->nombre }}</h1>
 @stop
 
 @section('content')
-@if(session('success'))
-<div class="alert alert-success alert-dismissible fade show">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="close" data-dismiss="alert">
-        <span>&times;</span>
-    </button>
-</div>
-@endif
-
-@if(session('error'))
-<div class="alert alert-danger alert-dismissible fade show">
-    <i class="fas fa-exclamation-triangle"></i> {{ session('error') }}
-    <button type="button" class="close" data-dismiss="alert">
-        <span>&times;</span>
-    </button>
-</div>
-@endif
-
-<!-- Pestañas principales -->
-<div class="card">
-    <div class="card-header p-0">
-        <ul class="nav nav-tabs" id="medicamentoTabs" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="info-tab" data-toggle="tab" href="#info" role="tab">
-                    <i class="fas fa-info-circle"></i> Información
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="sucursales-tab" data-toggle="tab" href="#sucursales" role="tab">
-                    <i class="fas fa-store"></i> Sucursales
-                    <span class="badge badge-primary ml-1">{{ $sucursalesMedicamento->count() }}</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="lotes-tab" data-toggle="tab" href="#lotes" role="tab">
-                    <i class="fas fa-boxes"></i> Lotes
-                    <span class="badge badge-info ml-1">{{ $lotes->count() }}</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="historial-tab" data-toggle="tab" href="#historial" role="tab">
-                    <i class="fas fa-history"></i> Historial
-                </a>
-            </li>
-        </ul>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                @if($medicamento->imagen_path)
+                <img src="{{ asset('storage/'.$medicamento->imagen_path) }}" class="img-fluid rounded" alt="Imagen">
+                @else
+                <div class="text-muted">Sin imagen</div>
+                @endif
+                <hr>
+                <div><b>Código:</b> {{ $medicamento->codigo }}</div>
+                <div><b>Código barras:</b> {{ $medicamento->codigo_barras ?? '-' }}</div>
+                <div><b>Laboratorio:</b> {{ $medicamento->laboratorio ?? '-' }}</div>
+                <div><b>Categoría:</b> {{ $medicamento->categoria->nombre ?? '-' }}</div>
+            </div>
+        </div>
     </div>
-    
-    <div class="card-body">
-        <div class="tab-content" id="medicamentoTabsContent">
-            <!-- Pestaña Información -->
-            <div class="tab-pane fade show active" id="info" role="tabpanel">
-                @include('inventario.medicamentos.partials.tab-informacion')
-            </div>
-            
-            <!-- Pestaña Sucursales -->
-            <div class="tab-pane fade" id="sucursales" role="tabpanel">
-                @include('inventario.medicamentos.partials.tab-sucursales')
-            </div>
-            
-            <!-- Pestaña Lotes -->
-            <div class="tab-pane fade" id="lotes" role="tabpanel">
-                @include('inventario.medicamentos.partials.tab-lotes')
-            </div>
-            
-            <!-- Pestaña Historial -->
-            <div class="tab-pane fade" id="historial" role="tabpanel">
-                @include('inventario.medicamentos.partials.tab-historial')
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                @if($medicamento->sucursales->isEmpty())
+                <div class="alert alert-warning">Este medicamento aún no está asociado a ninguna sucursal.</div>
+                @else
+                <ul class="nav nav-tabs" role="tablist">
+                    @foreach($medicamento->sucursales as $i => $s)
+                    <li class="nav-item">
+                        <a class="nav-link {{ $i===0?'active':'' }}" data-bs-toggle="tab" href="#s{{ $s->id }}" role="tab">
+                            {{ $s->nombre }}
+                        </a>
+                    </li>
+                    @endforeach
+                </ul>
+
+                <div class="tab-content mt-3">
+                    @foreach($medicamento->sucursales as $i => $s)
+                    @php
+                    $info = $bySucursal[$s->id] ?? ['stock'=>0,'lotes'=>collect()];
+                    $pivot = $s->pivot;
+                    @endphp
+                    <div class="tab-pane fade {{ $i===0?'show active':'' }}" id="s{{ $s->id }}" role="tabpanel">
+                        <div class="row mb-3">
+                            <div class="col-md-4"><b>Precio:</b> {{ $pivot?->precio!==null ? number_format($pivot->precio,2) : '-' }}</div>
+                            <div class="col-md-4"><b>Ubicación:</b> {{ $pivot?->ubicacion ?? '-' }}</div>
+                            <div class="col-md-4"><b>Stock:</b> {{ $info['stock'] ?? 0 }}</div>
+                        </div>
+
+                        <h6>Lotes</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Código</th>
+                                        <th>Cantidad</th>
+                                        <th>Vencimiento</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($info['lotes'] as $l)
+                                    <tr>
+                                        <td>{{ $l->id }}</td>
+                                        <td>{{ $l->codigo ?? '-' }}</td>
+                                        <td>{{ $l->cantidad_actual }}</td>
+                                        <td>{{ $l->fecha_vencimiento ?? '-' }}</td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="4" class="text-muted">Sin lotes</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <a href="{{ route('inventario.medicamentos.editSucursal', [$medicamento->id, $s->id]) }}" class="btn btn-primary btn-sm">
+                            Editar en {{ $s->nombre }}
+                        </a>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
             </div>
         </div>
     </div>
 </div>
-
-<!-- Modales -->
-@include('inventario.medicamentos.partials.modal-agregar-sucursal')
-@include('inventario.medicamentos.partials.modal-agregar-lote')
-@include('inventario.medicamentos.partials.modal-editar-sucursal')
-@stop
-
-@section('css')
-<style>
-.nav-tabs .nav-link {
-    border-radius: 0;
-}
-.nav-tabs .nav-link.active {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-.badge {
-    font-size: 0.7em;
-}
-</style>
-@stop
-
-@section('js')
-<script>
-// Activar pestañas con hash en URL
-$(document).ready(function() {
-    const hash = window.location.hash;
-    if (hash) {
-        $('.nav-tabs a[href="' + hash + '"]').tab('show');
-    }
-    
-    // Actualizar hash cuando cambie de pestaña
-    $('.nav-tabs a').on('click', function() {
-        window.location.hash = $(this).attr('href');
-    });
-});
-
-// Auto-hide alerts después de 5 segundos
-setTimeout(function() {
-    $('.alert').fadeOut('slow');
-}, 5000);
-</script>
 @stop

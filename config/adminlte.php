@@ -332,8 +332,7 @@ return [
             'text' => 'Ventas',
             'icon' => 'fas fa-shopping-bag',
             'submenu' => [
-                ['text' => 'ListadoPer', 'url' => '#', 'icon' => 'far fa-list-alt', 'can' => 'ventas.ver'],
-                //['text' => 'Listado',      'url' => '#', 'icon' => 'far fa-list-alt', 'active' => ['ventas*']],
+                ['text' => 'Listado', 'url' => '#', 'icon' => 'far fa-list-alt', 'can' => 'ventas.ver'],
                 ['text' => 'Nueva venta',  'url' => '#', 'icon' => 'fas fa-plus'],
                 ['text' => 'Devoluciones', 'url' => '#', 'icon' => 'fas fa-undo'],
                 ['text' => 'Cajas',        'url' => '#', 'icon' => 'fas fa-money-check-alt'],
@@ -369,7 +368,7 @@ return [
             'submenu' => [
                 ['text' => 'Listado',        'url' => 'inventario/medicamentos', 'icon' => 'far fa-list-alt', 'can' => 'medicamentos.ver'],
                 ['text' => 'Nuevo Medicamento', 'url' => '#', 'icon' => 'fas fa-plus'],
-                ['text' => 'Categorías',     'url' => '#', 'icon' => 'fas fa-tags'],
+                ['text' => 'Categorías',     'url' => 'inventario/categorias', 'icon' => 'fas fa-tags', 'can' => 'categorias.ver'],
                 ['text' => 'Unidades',       'url' => '#', 'icon' => 'fas fa-ruler'],
                 ['text' => 'Lotes / Venc.',  'url' => '#', 'icon' => 'fas fa-calendar-times'],
                 ['text' => 'Kardex / Stock', 'url' => '#', 'icon' => 'fas fa-warehouse'],

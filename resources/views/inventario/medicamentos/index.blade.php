@@ -3,213 +3,137 @@
 @section('title','Medicamentos')
 
 @section('content_header')
-<div class="d-flex justify-content-between align-items-center">
-    <h1><i class="fas fa-pills"></i> Medicamentos</h1>
-    <a href="{{ route('inventario.medicamentos.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Nuevo Medicamento
-    </a>
-</div>
+<h1>Medicamentos</h1>
 @stop
 
 @section('content')
-@if(session('success'))
-<div class="alert alert-success alert-dismissible fade show">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="close" data-dismiss="alert">
-        <span>&times;</span>
-    </button>
-</div>
-@endif
-
-<!-- Filtros y Búsqueda -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5><i class="fas fa-filter"></i> Filtros y Búsqueda</h5>
-    </div>
+<div class="card">
     <div class="card-body">
-        <form method="GET" class="row">
-            <div class="col-md-4">
-                <label>Buscar medicamento</label>
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" value="{{ $q }}" placeholder="Nombre, código o laboratorio">
-                    <div class="input-group-append">
-                        <button class="btn btn-outline-secondary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            @if($sucursalesDisponibles->count() > 1)
-            <div class="col-md-4">
-                <label>Filtrar por sucursal</label>
+
+        {{-- Filtros --}}
+        <form method="GET" action="{{ route('inventario.medicamentos.index') }}" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <label class="form-label">Sucursal</label>
                 <select name="sucursal_id" class="form-control" onchange="this.form.submit()">
-                    <option value="">Todas las sucursales</option>
-                    @foreach($sucursalesDisponibles as $sucursal)
-                    <option value="{{ $sucursal->id }}" {{ $sucursalFiltro == $sucursal->id ? 'selected' : '' }}>
-                        {{ $sucursal->nombre }}
+                    @if($esAdmin)
+                    <option value="" {{ empty($sucursalFiltro) ? 'selected' : '' }}>Todas las sucursales</option>
+                    @endif
+                    @foreach($sucursalesDisponibles as $s)
+                    <option value="{{ $s->id }}" {{ (string)$sucursalFiltro===(string)$s->id ? 'selected':'' }}>
+                        {{ $s->nombre }}
                     </option>
                     @endforeach
                 </select>
             </div>
-            @endif
-            
-            <div class="col-md-4 d-flex align-items-end">
-                <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times"></i> Limpiar filtros
+            <div class="col-md-4">
+                <label class="form-label">Buscar</label>
+                <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Nombre, código, barras, laboratorio">
+            </div>
+            <div class="col-md-5 d-flex align-items-end">
+                <button class="btn btn-primary me-2">Aplicar</button>
+                <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-outline-secondary">Limpiar</a>
+                <a href="{{ route('inventario.medicamentos.create') }}" class="btn btn-success ms-auto">
+                    <i class="fas fa-plus"></i> Nuevo
                 </a>
             </div>
         </form>
-    </div>
-</div>
 
-<!-- Lista de Medicamentos -->
-<div class="card">
-    <div class="card-header">
-        <h5><i class="fas fa-list"></i> Lista de Medicamentos ({{ $medicamentos->total() }} resultados)</h5>
-    </div>
-    <div class="card-body p-0">
-        @if($medicamentos->count() > 0)
+        {{-- Mensajes --}}
+        @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
+        @if($errors->any()) <div class="alert alert-danger">{{ $errors->first() }}</div> @endif
+
+        {{-- Banner admin en "todas" --}}
+        @if($esAdmin && empty($sucursalFiltro))
+        <div class="alert alert-info">Viendo <b>todas</b> las sucursales. Para <b>editar o eliminar</b>, selecciona una sucursal.</div>
+        @endif
+
+        {{-- Tabla --}}
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="thead-light">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
                     <tr>
-                        <th width="80">Imagen</th>
-                        <th width="120">Código</th>
-                        <th>Medicamento</th>
-                        <th width="120">Categoría</th>
-                        <th width="120">Laboratorio</th>
-                        <th width="100">Stock</th>
-                        <th width="100">Precio</th>
-                        <th width="80">Estado</th>
-                        <th width="120">Acciones</th>
+                        <th>Nombre</th>
+                        <th>Código</th>
+                        <th>Código de barras</th>
+                        <th>Categoría</th>
+                        @if($esAdmin && empty($sucursalFiltro))
+                        <th class="text-end">Stock total</th>
+                        <th>Desglose</th>
+                        @else
+                        <th class="text-end">Stock</th>
+                        <th>Precios</th>
+                        <th>Ubicación</th>
+                        @endif
+                        <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($medicamentos as $m)
-                    @php
-                        // Usar datos ya calculados en el controlador
-                        $pivot = $m->pivot_data;
-                        $stockReal = $m->stock_real ?? 0;
-                        $precioVenta = $pivot?->precio_venta ?? 0;
-                        $stockMinimo = $pivot?->stock_minimo ?? 0;
-                        $isStockBajo = $stockReal <= $stockMinimo;
-                    @endphp
-                    <tr class="{{ $isStockBajo ? 'table-warning' : '' }}">
+                    @forelse($medicamentos as $m)
+                    <tr>
+                        <td>{{ $m->nombre }}</td>
+                        <td>{{ $m->codigo }}</td>
+                        <td>{{ $m->codigo_barras ?? '-' }}</td>
+                        <td>{{ $m->categoria->nombre ?? '-' }}</td>
+
+                        @if($esAdmin && empty($sucursalFiltro))
+                        <td class="text-end">{{ $m->stock_total ?? 0 }}</td>
                         <td>
-                            @if($m->imagen_path)
-                            <img src="{{ asset('storage/'.$m->imagen_path) }}" 
-                                 width="60" height="60" 
-                                 class="rounded shadow-sm" 
-                                 style="object-fit: cover;"
-                                 alt="{{ $m->nombre }}">
+                            @php
+                            $map = $m->desglose_stock ?? [];
+                            $index = $sucursalesDisponibles->keyBy('id');
+                            @endphp
+                            <details>
+                                <summary>Ver</summary>
+                                <ul class="mb-0">
+                                    @forelse($map as $sid => $stk)
+                                    <li>{{ $index[$sid]->nombre ?? ('Suc. #'.$sid) }}: {{ $stk }}</li>
+                                    @empty
+                                    <li>Sin stock</li>
+                                    @endforelse
+                                </ul>
+                            </details>
+                        </td>
+                        @else
+                        <td class="text-end">{{ $m->stock ?? 0 }}</td>
+                        <td>
+                            <div class="small">
+                                <div><strong>V:</strong> {{ $m->precio_v !== null ? number_format($m->precio_v, 2) : '-' }}</div>
+                                <div><strong>C:</strong> {{ $m->precio_c !== null ? number_format($m->precio_c, 2) : '-' }}</div>
+                            </div>
+                        </td>
+                        <td>{{ $m->ubicacion ?? '-' }}</td>
+                        @endif
+
+                        <td class="text-center">
+                            <a href="{{ route('inventario.medicamentos.show', $m->id) }}" class="btn btn-sm btn-outline-info">Ver</a>
+
+                            @if($esAdmin && empty($sucursalFiltro))
+                            <button class="btn btn-sm btn-outline-secondary" disabled title="Selecciona sucursal">Editar</button>
+                            <button class="btn btn-sm btn-outline-danger" disabled title="Selecciona sucursal">Eliminar</button>
                             @else
-                            <div class="bg-light rounded d-flex align-items-center justify-content-center shadow-sm" 
-                                 style="width:60px;height:60px;">
-                                <i class="fas fa-pills text-muted fa-lg"></i>
-                            </div>
+                            <a href="{{ route('inventario.medicamentos.editSucursal', [$m->id, $sucursalFiltro]) }}" class="btn btn-sm btn-primary">
+                                Editar
+                            </a>
+
+                            <form method="POST" action="{{ route('inventario.medicamentos.detachSucursal', [$m->id, $sucursalFiltro]) }}"
+                                class="d-inline" onsubmit="return confirm('¿Eliminar solo de esta sucursal?');">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-danger">Eliminar</button>
+                            </form>
                             @endif
                         </td>
-                        <td>
-                            <code class="text-primary">{{ $m->codigo }}</code>
-                            @if($m->codigo_barra)
-                            <br><small class="text-muted">{{ $m->codigo_barra }}</small>
-                            @endif
-                        </td>
-                        <td>
-                            <div>
-                                <strong class="text-dark">{{ $m->nombre }}</strong>
-                                @if($m->concentracion)
-                                <br><small class="text-info">{{ $m->concentracion }}</small>
-                                @endif
-                                @if($m->presentacion)
-                                <br><small class="text-muted">{{ $m->presentacion }}</small>
-                                @endif
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge badge-info">{{ $m->categoria->nombre ?? 'Sin categoría' }}</span>
-                        </td>
-                        <td>
-                            <small class="text-muted">{{ $m->laboratorio ?? '—' }}</small>
-                        </td>
-                        <td>
-                            <div class="text-center">
-                                <span class="badge badge-{{ $isStockBajo ? 'warning' : 'success' }} badge-lg">
-                                    {{ $stockReal }}
-                                </span>
-                                @if($isStockBajo)
-                                <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Stock bajo</small>
-                                @endif
-                                @if($pivot?->ubicacion)
-                                <br><small class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ $pivot->ubicacion }}</small>
-                                @endif
-                            </div>
-                        </td>
-                        <td>
-                            <strong class="text-success">S/ {{ number_format($precioVenta, 2) }}</strong>
-                        </td>
-                        <td>
-                            <span class="badge badge-{{ $m->activo ? 'success' : 'danger' }}">
-                                {{ $m->activo ? 'Activo' : 'Inactivo' }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group-vertical btn-group-sm" role="group">
-                                <a href="{{ route('inventario.medicamentos.show',$m) }}" 
-                                   class="btn btn-info btn-sm" 
-                                   title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('inventario.medicamentos.edit',$m) }}" 
-                                   class="btn btn-warning btn-sm" 
-                                   title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('inventario.medicamentos.destroy',$m) }}" 
-                                      method="POST" 
-                                      class="d-inline" 
-                                      onsubmit="return confirm('¿Eliminar este medicamento?');">
-                                    @csrf @method('DELETE')
-                                    <button class="btn btn-danger btn-sm" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
+
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr>
+                        <td colspan="8" class="text-center">Sin registros.</td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
-        @else
-        <div class="text-center py-5">
-            <i class="fas fa-search fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No se encontraron medicamentos</h5>
-            <p class="text-muted">Intenta ajustar los filtros de búsqueda</p>
-            <a href="{{ route('inventario.medicamentos.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Crear primer medicamento
-            </a>
-        </div>
-        @endif
-    </div>
-    
-    @if($medicamentos->hasPages())
-    <div class="card-footer">
+
         {{ $medicamentos->links() }}
     </div>
-    @endif
 </div>
-@stop
-
-@section('css')
-<style>
-.badge-lg {
-    font-size: 0.9em;
-    padding: 0.5em 0.75em;
-}
-.table-hover tbody tr:hover {
-    background-color: rgba(0,123,255,0.1);
-}
-</style>
 @stop

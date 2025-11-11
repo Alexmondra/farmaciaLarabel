@@ -43,25 +43,33 @@ Route::middleware(['auth', 'can:medicamentos.ver'])
     ->name('inventario.')
     ->group(function () {
 
-        // MEDICAMENTOS
-        Route::resource('medicamentos', MedicamentoController::class);
+        // web.php
+        Route::get('medicamentos/lookup', [\App\Http\Controllers\Inventario\MedicamentoController::class, 'lookup'])
+            ->name('medicamentos.lookup');
 
-        // Gestión por sucursal
-        Route::post('medicamentos/{medicamento}/sucursales', [MedicamentoSucursalController::class, 'store'])
-            ->name('medicamentos.sucursales.store');
 
+
+        Route::get('medicamentos', [MedicamentoController::class, 'index'])->name('medicamentos.index');
+        Route::get('medicamentos/crear', [MedicamentoController::class, 'create'])->middleware('can:medicamentos.crear')->name('medicamentos.create');
+        Route::post('medicamentos', [MedicamentoController::class, 'store'])->middleware('can:medicamentos.crear')->name('medicamentos.store');
+
+        // VER detalle completo (imagen, info global, pestañas por sucursal)
+        Route::get('medicamentos/{medicamento}', [MedicamentoController::class, 'show'])->name('medicamentos.show');
+
+        // EDITAR por sucursal (página propia)
+        Route::get('medicamentos/{medicamento}/sucursales/{sucursal}/editar', [MedicamentoSucursalController::class, 'edit'])
+            ->middleware('can:medicamentos.editar')->name('medicamentos.editSucursal');
         Route::put('medicamentos/{medicamento}/sucursales/{sucursal}', [MedicamentoSucursalController::class, 'update'])
-            ->name('medicamentos.sucursales.update');
+            ->middleware('can:medicamentos.editar')->name('medicamentos.updateSucursal');
 
+        // ELIMINAR por sucursal
         Route::delete('medicamentos/{medicamento}/sucursales/{sucursal}', [MedicamentoSucursalController::class, 'destroy'])
-            ->name('medicamentos.sucursales.destroy');
+            ->middleware('can:medicamentos.eliminar')->name('medicamentos.detachSucursal');
 
-        Route::post('medicamentos/{medicamento}/sucursales/{sucursal}/lotes', [MedicamentoSucursalController::class, 'agregarLote'])
-            ->name('medicamentos.sucursales.lotes.store');
+        // ASIGNAR (agregar) a otra sucursal
+        Route::post('medicamentos/{medicamento}/sucursales', [MedicamentoSucursalController::class, 'attach'])
+            ->middleware('can:medicamentos.editar')->name('medicamentos.attachSucursal');
 
-        // Actualizar stock por sucursal
-        Route::post('medicamentos/{medicamento}/stock', [MedicamentoController::class, 'actualizarStock'])
-            ->name('medicamentos.actualizar-stock');
 
         // CATEGORÍAS (mismo prefijo/nombre del grupo)
         // Si quieres un permiso distinto para categorías, puedes envolverlo en otro group con 'can:categorias.ver'
