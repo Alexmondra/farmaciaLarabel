@@ -39,7 +39,7 @@ class MedicamentoController extends Controller
                 $s->where(function ($w) use ($q) {
                     $w->where('nombre', 'like', "%$q%")
                         ->orWhere('codigo', 'like', "%$q%")
-                        ->orWhere('codigo_barras', 'like', "%$q%")
+                        ->orWhere('codigo_barra', 'like', "%$q%")
                         ->orWhere('laboratorio', 'like', "%$q%");
                 });
             });
@@ -55,18 +55,25 @@ class MedicamentoController extends Controller
 
         $medicamentos = $query->orderBy('nombre')->paginate(12)->withQueryString();
 
+        // IMPORTANTE: cargar relaciones necesarias para calcular stock y precio
+        $medicamentos->getCollection()->load(['sucursales', 'lotes']);
+
         $medicamentos->getCollection()->transform(function ($m) use ($esAdmin, $sucursalFiltro) {
-            $m->loadMissing(['sucursales', 'lotes']);
             if ($esAdmin && empty($sucursalFiltro)) {
-                $m->stock_total = (int)$m->lotes->sum('cantidad_actual');
-                $m->desglose_stock = $m->lotes->groupBy('sucursal_id')->map->sum('cantidad_actual')->toArray();
+                // Stock total sumando todos los lotes (usa 'cantidad', no 'cantidad_actual')
+                $m->stock_total = (int) $m->lotes->sum('cantidad');
+                // Desglose por sucursal
+                $m->desglose_stock = $m->lotes
+                    ->groupBy('sucursal_id')
+                    ->map(fn($grp) => (int) $grp->sum('cantidad'))
+                    ->toArray();
             } else {
-                $sid = (int)$sucursalFiltro;
-                $m->stock = (int)$m->lotes->where('sucursal_id', $sid)->sum('cantidad_actual');
+                $sid = (int) $sucursalFiltro;
+                // Stock por sucursal
+                $m->stock = (int) $m->lotes->where('sucursal_id', $sid)->sum('cantidad');
+                // Precio base por sucursal desde la tabla pivote medicamento_sucursal
                 $pivot = $m->sucursales()->where('sucursal_id', $sid)->first()?->pivot;
                 $m->precio_v = $pivot?->precio_venta;
-                $m->precio_c = $pivot?->precio_compra;
-                $m->ubicacion = $pivot?->ubicacion;
             }
             return $m;
         });

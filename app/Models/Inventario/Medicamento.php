@@ -38,7 +38,7 @@ class Medicamento extends Model
     public function sucursales()
     {
         return $this->belongsToMany(Sucursal::class, 'medicamento_sucursal')
-            ->withPivot('precio_compra', 'precio_venta', 'stock_actual', 'stock_minimo', 'ubicacion', 'updated_by')
+            ->withPivot('precio_venta', 'stock_total', 'stock_minimo', 'updated_by')
             ->withTimestamps();
     }
 

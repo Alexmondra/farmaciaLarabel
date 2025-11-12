@@ -27,7 +27,9 @@ class DatabaseSeeder extends Seeder
             RolesPermisosSeeder::class,
             SucursalesSeeder::class,
             CategoriasSeeder::class,
-            FarmaciaCompletaSeeder::class,
+            MedicamentosSeeder::class,
+            MedicamentoSucursalSeeder::class,
+            LotesSeeder::class,
         ]);
     }
 }

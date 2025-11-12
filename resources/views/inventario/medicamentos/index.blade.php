@@ -61,7 +61,7 @@
                         <th>Desglose</th>
                         @else
                         <th class="text-end">Stock</th>
-                        <th>Precios</th>
+                        <th>Precio</th>
                         <th>Ubicación</th>
                         @endif
                         <th class="text-center">Acciones</th>
@@ -72,7 +72,7 @@
                     <tr>
                         <td>{{ $m->nombre }}</td>
                         <td>{{ $m->codigo }}</td>
-                        <td>{{ $m->codigo_barras ?? '-' }}</td>
+                        <td>{{ $m->codigo_barra ?? '-' }}</td>
                         <td>{{ $m->categoria->nombre ?? '-' }}</td>
 
                         @if($esAdmin && empty($sucursalFiltro))
@@ -98,7 +98,6 @@
                         <td>
                             <div class="small">
                                 <div><strong>V:</strong> {{ $m->precio_v !== null ? number_format($m->precio_v, 2) : '-' }}</div>
-                                <div><strong>C:</strong> {{ $m->precio_c !== null ? number_format($m->precio_c, 2) : '-' }}</div>
                             </div>
                         </td>
                         <td>{{ $m->ubicacion ?? '-' }}</td>
