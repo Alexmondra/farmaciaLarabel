@@ -300,15 +300,19 @@ return [
 
     'menu' => [
         // Navbar items:
+
+
         [
             'type' => 'navbar-search',
-            'text' => 'search',
+            'text' => 'searchhhh',
             'topnav_right' => true,
         ],
         [
             'type' => 'fullscreen-widget',
             'topnav_right' => true,
         ],
+
+
 
         // Sidebar items:
         [
@@ -382,7 +386,7 @@ return [
             'text' => 'Proveedores',
             'icon' => 'fas fa-truck-loading',
             'submenu' => [
-                ['text' => 'Listado', 'url' => '#', 'icon' => 'far fa-list-alt'],
+                ['text' => 'Listado', 'url' => 'inventario/proveedores', 'icon' => 'far fa-list-alt'],
                 ['text' => 'Nuevo',   'url' => '#', 'icon' => 'fas fa-plus'],
             ],
         ],

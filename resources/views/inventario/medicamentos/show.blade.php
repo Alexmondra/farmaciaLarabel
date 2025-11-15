@@ -1,96 +1,111 @@
 @extends('adminlte::page')
 
-@section('title','Detalle medicamento')
+@section('title', 'Detalle de medicamento')
 
 @section('content_header')
-<h1>{{ $medicamento->nombre }}</h1>
+<h1>Detalle de medicamento</h1>
+<p class="text-muted mb-0">
+    <strong>{{ $medicamento->nombre }}</strong>
+    @if($sucursalSeleccionada)
+    <span class="ml-2 badge bg-primary">
+        Sucursal actual: {{ $sucursalSeleccionada->nombre }}
+    </span>
+    @endif
+</p>
 @stop
 
 @section('content')
-<div class="row">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                @if($medicamento->imagen_path)
-                <img src="{{ asset('storage/'.$medicamento->imagen_path) }}" class="img-fluid rounded" alt="Imagen">
-                @else
-                <div class="text-muted">Sin imagen</div>
-                @endif
-                <hr>
-                <div><b>Código:</b> {{ $medicamento->codigo }}</div>
-                <div><b>Código barras:</b> {{ $medicamento->codigo_barras ?? '-' }}</div>
-                <div><b>Laboratorio:</b> {{ $medicamento->laboratorio ?? '-' }}</div>
-                <div><b>Categoría:</b> {{ $medicamento->categoria->nombre ?? '-' }}</div>
-            </div>
-        </div>
+
+{{-- INFO GENERAL DEL MEDICAMENTO --}}
+<div class="card mb-3">
+    <div class="card-header bg-primary text-white">
+        Información general
     </div>
+    <div class="card-body">
+        <div class="row">
 
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                @if($medicamento->sucursales->isEmpty())
-                <div class="alert alert-warning">Este medicamento aún no está asociado a ninguna sucursal.</div>
-                @else
-                <ul class="nav nav-tabs" role="tablist">
-                    @foreach($medicamento->sucursales as $i => $s)
-                    <li class="nav-item">
-                        <a class="nav-link {{ $i===0?'active':'' }}" data-bs-toggle="tab" href="#s{{ $s->id }}" role="tab">
-                            {{ $s->nombre }}
-                        </a>
-                    </li>
-                    @endforeach
-                </ul>
-
-                <div class="tab-content mt-3">
-                    @foreach($medicamento->sucursales as $i => $s)
-                    @php
-                    $info = $bySucursal[$s->id] ?? ['stock'=>0,'lotes'=>collect()];
-                    $pivot = $s->pivot;
-                    @endphp
-                    <div class="tab-pane fade {{ $i===0?'show active':'' }}" id="s{{ $s->id }}" role="tabpanel">
-                        <div class="row mb-3">
-                            <div class="col-md-4"><b>Precio:</b> {{ $pivot?->precio!==null ? number_format($pivot->precio,2) : '-' }}</div>
-                            <div class="col-md-4"><b>Ubicación:</b> {{ $pivot?->ubicacion ?? '-' }}</div>
-                            <div class="col-md-4"><b>Stock:</b> {{ $info['stock'] ?? 0 }}</div>
-                        </div>
-
-                        <h6>Lotes</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Código</th>
-                                        <th>Cantidad</th>
-                                        <th>Vencimiento</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($info['lotes'] as $l)
-                                    <tr>
-                                        <td>{{ $l->id }}</td>
-                                        <td>{{ $l->codigo ?? '-' }}</td>
-                                        <td>{{ $l->cantidad_actual }}</td>
-                                        <td>{{ $l->fecha_vencimiento ?? '-' }}</td>
-                                    </tr>
-                                    @empty
-                                    <tr>
-                                        <td colspan="4" class="text-muted">Sin lotes</td>
-                                    </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <a href="{{ route('inventario.medicamentos.editSucursal', [$medicamento->id, $s->id]) }}" class="btn btn-primary btn-sm">
-                            Editar en {{ $s->nombre }}
-                        </a>
-                    </div>
-                    @endforeach
-                </div>
-                @endif
+            <div class="col-md-6">
+                <p><strong>Código interno:</strong> {{ $medicamento->codigo }}</p>
+                <p><strong>Código de barra:</strong> {{ $medicamento->codigo_barra ?? '---' }}</p>
+                <p><strong>Laboratorio:</strong> {{ $medicamento->laboratorio ?? '---' }}</p>
             </div>
+
+            <div class="col-md-6">
+                <p><strong>Categoría:</strong> {{ $medicamento->categoria->nombre ?? '---' }}</p>
+                {{-- Aquí podrías mostrar más campos generales si los tienes --}}
+            </div>
+
         </div>
     </div>
 </div>
+
+{{-- DETALLE POR SUCURSAL --}}
+@forelse($sucursalesDetalle as $detalle)
+@php
+/** @var \App\Models\Sucursal $sucursal */
+$sucursal = $detalle['sucursal'];
+$stockTotal = $detalle['stock_total'];
+$precio = $detalle['precio'];
+$lotes = $detalle['lotes'];
+@endphp
+
+<div class="card mb-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Sucursal:</strong> {{ $sucursal->nombre }}
+        </div>
+        <div>
+            @if(!is_null($precio))
+            <strong>Precio venta:</strong> S/. {{ number_format($precio, 2) }}
+            @else
+            <span class="text-light">Precio venta: ---</span>
+            @endif
+            <span class="ml-3">
+                <strong>Stock total:</strong> {{ $stockTotal }}
+            </span>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        @if($lotes->isEmpty())
+        <p class="p-3 mb-0 text-muted">
+            No hay lotes registrados para esta sucursal.
+        </p>
+        @else
+        <table class="table table-sm table-striped mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 15%">Código lote</th>
+                    <th style="width: 20%">Ubicación</th>
+                    <th style="width: 20%">Fecha vencimiento</th>
+                    <th style="width: 15%" class="text-end">Stock</th>
+                    <th>Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($lotes as $lote)
+                <tr>
+                    <td>{{ $lote->codigo_lote }}</td>
+                    <td>{{ $lote->ubicacion ?? '---' }}</td>
+                    <td>{{ $lote->fecha_vencimiento ?? '---' }}</td>
+                    <td class="text-end">{{ $lote->stock_actual }}</td>
+                    <td>{{ $lote->observaciones ?? '' }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
+    </div>
+</div>
+
+@empty
+<div class="alert alert-warning">
+    Este medicamento no está disponible en ninguna de las sucursales que puedes ver.
+</div>
+@endforelse
+
+<a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-secondary">
+    Volver al listado
+</a>
+
 @stop

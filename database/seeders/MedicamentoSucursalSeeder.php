@@ -1,4 +1,5 @@
 <?php
+// ARCHIVO: MedicamentoSucursalSeeder.php (ACTUALIZADO)
 
 namespace Database\Seeders;
 
@@ -11,16 +12,20 @@ class MedicamentoSucursalSeeder extends Seeder
 {
     public function run(): void
     {
-        // Tomar 3 sucursales (primeras 3)
-        $sucursales = DB::table('sucursales')->orderBy('id')->limit(3)->pluck('id')->all();
-        if (count($sucursales) < 3) {
-            $this->command->warn('Se requieren 3 sucursales mínimas para este seeder.');
-            return;
+        // CAMBIO: Obtener las primeras 3 sucursales
+        $sucursales = DB::table('sucursales')->orderBy('id')->limit(3)->pluck('id');
+
+        if ($sucursales->count() < 3) {
+            $this->command->warn('Se esperaban 3 sucursales, pero se encontraron ' . $sucursales->count() . '.');
+            if ($sucursales->isEmpty()) {
+                $this->command->warn('No se encontraron sucursales.');
+                return;
+            }
         }
 
-        // IDs de medicamentos por código
-        $meds = DB::table('medicamentos')->pluck('id', 'codigo')->all();
-        if (count($meds) < 5) {
+        // 5 medicamentos
+        $meds = DB::table('medicamentos')->orderBy('id')->limit(5)->get(['id', 'codigo']);
+        if ($meds->count() < 5) {
             $this->command->warn('Se requieren 5 medicamentos para este seeder.');
             return;
         }
@@ -30,8 +35,8 @@ class MedicamentoSucursalSeeder extends Seeder
         Schema::enableForeignKeyConstraints();
 
         $ahora = Carbon::now();
+        $userId = DB::table('users')->value('id');
 
-        // Precio base por medicamento (puedes ajustar)
         $precios = [
             'PARA500' => 1.80,
             'IBU400'  => 2.50,
@@ -41,14 +46,17 @@ class MedicamentoSucursalSeeder extends Seeder
         ];
 
         $rows = [];
-        foreach ($precios as $codigo => $precio) {
-            foreach ($sucursales as $idx => $sucursalId) {
+
+        // CAMBIO: Bucle anidado para recorrer sucursales Y medicamentos
+        foreach ($sucursales as $sucursalId) {
+            foreach ($meds as $med) {
                 $rows[] = [
-                    'medicamento_id' => $meds[$codigo],
-                    'sucursal_id'    => $sucursalId,
-                    'stock_total'    => 0,       // LotesSeeder lo recalcula
-                    'precio_venta'   => $precio + ($idx * 0.10), // leve variación por sucursal
-                    'estado'         => 'vigente',
+                    'medicamento_id' => $med->id,
+                    'sucursal_id'    => $sucursalId, // Se usa el ID de la sucursal actual
+                    'stock_minimo'   => 10,
+                    'precio_venta'   => $precios[$med->codigo] ?? 2.00,
+                    'activo'         => true,
+                    'updated_by'     => $userId,
                     'created_at'     => $ahora,
                     'updated_at'     => $ahora,
                 ];

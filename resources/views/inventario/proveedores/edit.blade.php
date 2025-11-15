@@ -5,10 +5,9 @@
 @stop
 @section('content')
 @include('inventario.proveedores._form', [
-// Asegúrate de que aquí dice $proveedor
 'route' => route('inventario.proveedores.update', $proveedor),
 'method' => 'PUT',
 'submitText' => 'Actualizar',
-'proveedor' => $proveedor // Asegúrate de que aquí dice $proveedor
+'proveedor' => $proveedor
 ])
 @stop

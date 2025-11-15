@@ -9,7 +9,7 @@ use App\Http\Controllers\Inventario\MedicamentoController;
 use App\Http\Controllers\Inventario\MedicamentoSucursalController;
 use App\Http\Controllers\Configuracion\SucursalController;
 use App\Http\Controllers\Inventario\CategoriaController;
-
+use App\Http\Controllers\Inventario\ProveedorController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -26,7 +26,19 @@ Route::middleware('auth')->group(function () {
 
 
     // Route::resource('medicamentos', MedicamentoController::class);
+
+
+    Route::get('/elegir-sucursal', [SucursalController::class, 'elegir'])
+        ->name('sucursales.elegir');
+
+    Route::post('/elegir-sucursal', [SucursalController::class, 'guardarEleccion'])
+        ->name('sucursales.guardar');
+
+    Route::get('/cambiar-sucursal-select', [SucursalController::class, 'cambiarDesdeSelect'])
+        ->name('cambiar.sucursal.desdeSelect');
 });
+
+
 
 // ======================================================
 // MÓDULO: Ventas 
@@ -38,18 +50,46 @@ Route::middleware(['auth', 'can:ventas.ver'])->prefix('ventas')->name('ventas.')
 // MÓDULO: Inventario
 // ======================================================
 
+
 Route::middleware(['auth', 'can:medicamentos.ver'])
     ->prefix('inventario')
     ->name('inventario.')
     ->group(function () {
 
         // web.php
-        Route::get('medicamentos/lookup', [\App\Http\Controllers\Inventario\MedicamentoController::class, 'lookup'])
-            ->name('medicamentos.lookup');
 
+        // CATEGORÍAS (mismo prefijo/nombre del grupo)
+        Route::middleware('can:categorias.ver')->group(function () {
+            Route::resource('categorias', CategoriaController::class);
+        });
+
+        // PROVEEDORES (mismo prefijo/nombre del grupo)
+        Route::middleware('can:proveedores.ver')->group(function () {
+            Route::resource('proveedores', ProveedorController::class)
+                ->parameters([
+                    'proveedores' => 'proveedor', // 👈 clave: {proveedor} en vez de {proveedore}
+                ]);
+        });
+
+
+
+
+        Route::get('medicamentos/lookup', [\App\Http\Controllers\Inventario\MedicamentoController::class, 'lookup'])
+            ->name('medicamentos.lookup'); //para autorrellenar
+
+
+        Route::get('/medicamentos/{medicamento}', [MedicamentoController::class, 'show'])
+            ->name('medicamentos.show'); // vista completa
+
+
+        Route::delete('/medicamentos/{medicamento}/sucursal/{sucursal}', [MedicamentoSucursalController::class, 'destroy'])
+            ->name('medicamento_sucursal.destroy');  // para elimnar medicamnto pero solo de esa sucursal
 
 
         Route::get('medicamentos', [MedicamentoController::class, 'index'])->name('medicamentos.index');
+
+
+
         Route::get('medicamentos/crear', [MedicamentoController::class, 'create'])->middleware('can:medicamentos.crear')->name('medicamentos.create');
         Route::post('medicamentos', [MedicamentoController::class, 'store'])->middleware('can:medicamentos.crear')->name('medicamentos.store');
 
@@ -69,13 +109,6 @@ Route::middleware(['auth', 'can:medicamentos.ver'])
         // ASIGNAR (agregar) a otra sucursal
         Route::post('medicamentos/{medicamento}/sucursales', [MedicamentoSucursalController::class, 'attach'])
             ->middleware('can:medicamentos.editar')->name('medicamentos.attachSucursal');
-
-
-        // CATEGORÍAS (mismo prefijo/nombre del grupo)
-        // Si quieres un permiso distinto para categorías, puedes envolverlo en otro group con 'can:categorias.ver'
-        Route::middleware('can:categorias.ver')->group(function () {
-            Route::resource('categorias', CategoriaController::class);
-        });
     });
 
 // ======================================================

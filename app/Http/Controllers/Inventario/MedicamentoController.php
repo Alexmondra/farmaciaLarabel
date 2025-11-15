@@ -9,86 +9,241 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Inventario\Medicamento;
 use App\Models\Inventario\Lote;
 use App\Models\Sucursal;
+use App\Services\SucursalResolver;
 
 class MedicamentoController extends Controller
 {
+    protected SucursalResolver $sucursalResolver;
+
+    public function __construct(SucursalResolver $sucursalResolver)
+    {
+        $this->sucursalResolver = $sucursalResolver;
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
-        $esAdmin = $user->hasRole('Administrador');
-        $q = trim($request->get('q', ''));
-        $sucursalFiltro = $request->get('sucursal_id');
+        $q    = trim($request->get('q', ''));
 
-        $sucursalesDisponibles = $esAdmin
-            ? Sucursal::orderBy('nombre')->get()
-            : $user->sucursales()->select('sucursales.*')->orderBy('sucursales.nombre')->get();
+        // 1) Resolver contexto de sucursal desde el servicio
+        $ctx = $this->sucursalResolver->resolverPara($user);
 
-        if ($request->has('sucursal_id')) {
-            session(['sucursal_id' => $sucursalFiltro]);
-        } else {
-            $sucursalFiltro = session('sucursal_id');
-        }
-        if (!$esAdmin && empty($sucursalFiltro)) {
-            $sucursalFiltro = optional($sucursalesDisponibles->first())->id;
-            session(['sucursal_id' => $sucursalFiltro]);
-        }
+        $esAdmin              = $ctx['es_admin'];
+        $idsFiltroSucursales  = $ctx['ids_filtro'];            // null | [] | [id,...]
+        $sucursalSeleccionada = $ctx['sucursal_seleccionada']; // modelo Sucursal o null
 
+        // 2) Consulta base de medicamentos
         $query = Medicamento::query()
             ->with(['categoria'])
             ->when($q, function ($s) use ($q) {
                 $s->where(function ($w) use ($q) {
-                    $w->where('nombre', 'like', "%$q%")
-                        ->orWhere('codigo', 'like', "%$q%")
-                        ->orWhere('codigo_barra', 'like', "%$q%")
-                        ->orWhere('laboratorio', 'like', "%$q%");
+                    $w->where('nombre', 'like', "$q%")
+                        ->orWhere('codigo', 'like', "$q%")
+                        ->orWhere('codigo_barra', 'like', "$q%")
+                        ->orWhere('laboratorio', 'like', "$q%");
                 });
             });
 
-        if ($esAdmin) {
-            if (!empty($sucursalFiltro)) {
-                $query->whereHas('sucursales', fn($w) => $w->where('sucursal_id', $sucursalFiltro));
+        // 3) Filtrar medicamentos según sucursales que puede ver
+
+        if (is_array($idsFiltroSucursales)) {
+
+            if (count($idsFiltroSucursales) === 0) {
+                // Usuario sin sucursales
+                $query->whereRaw('1 = 0');
+            } else {
+
+                // Medicamentos que existan en esas sucursales
+                $query->whereHas('sucursales', function ($w) use ($idsFiltroSucursales) {
+                    $w->whereIn('sucursal_id', $idsFiltroSucursales);
+                });
+
+                // Cargar solo esas sucursales (para nombres y pivot)
+                $query->with(['sucursales' => function ($q_suc) use ($idsFiltroSucursales) {
+                    $q_suc->whereIn('sucursales.id', $idsFiltroSucursales);
+                }]);
             }
-        } else {
-            $ids = $sucursalesDisponibles->pluck('id');
-            $query->whereHas('sucursales', fn($w) => $w->whereIn('sucursal_id', $ids));
+        } elseif ($idsFiltroSucursales === null) {
+            // Admin sin filtro -> todas las sucursales del medicamento
+            $query->with('sucursales');
         }
 
-        $medicamentos = $query->orderBy('nombre')->paginate(12)->withQueryString();
+        // 4) Si HAY sucursal seleccionada -> usar withSum (subconsulta) para stock_unico
+        if ($sucursalSeleccionada) {
+            $sid = $sucursalSeleccionada->id;
 
-        // IMPORTANTE: cargar relaciones necesarias para calcular stock y precio
-        $medicamentos->getCollection()->load(['sucursales', 'lotes']);
+            $query->withSum(
+                ['lotes as stock_unico' => function ($q_lotes) use ($sid) {
+                    $q_lotes->where('sucursal_id', $sid);
+                }],
+                'stock_actual'
+            );
 
-        $medicamentos->getCollection()->transform(function ($m) use ($esAdmin, $sucursalFiltro) {
-            if ($esAdmin && empty($sucursalFiltro)) {
-                // Stock total sumando todos los lotes (usa 'cantidad', no 'cantidad_actual')
-                $m->stock_total = (int) $m->lotes->sum('cantidad');
-                // Desglose por sucursal
-                $m->desglose_stock = $m->lotes
-                    ->groupBy('sucursal_id')
-                    ->map(fn($grp) => (int) $grp->sum('cantidad'))
-                    ->toArray();
-            } else {
-                $sid = (int) $sucursalFiltro;
-                // Stock por sucursal
-                $m->stock = (int) $m->lotes->where('sucursal_id', $sid)->sum('cantidad');
-                // Precio base por sucursal desde la tabla pivote medicamento_sucursal
-                $pivot = $m->sucursales()->where('sucursal_id', $sid)->first()?->pivot;
+            // Nos aseguramos de cargar solo esa sucursal en la relación (con pivot)
+            $query->with(['sucursales' => function ($q_suc) use ($sid) {
+                $q_suc->where('sucursales.id', $sid);
+            }]);
+        }
+
+        // 5) Ejecutar consulta paginada
+        $medicamentos = $query
+            ->orderBy('nombre')
+            ->paginate(12)
+            ->withQueryString();
+
+        // 6) Post-procesar según haya o no sucursalSeleccionada
+
+        if ($sucursalSeleccionada) {
+
+            // ✅ Caso: una sucursal en contexto
+            $medicamentos->getCollection()->transform(function ($m) use ($sucursalSeleccionada) {
+
+                // Buscar la sucursal seleccionada dentro de la relación
+                $suc   = $m->sucursales->firstWhere('id', $sucursalSeleccionada->id);
+                $pivot = $suc?->pivot;
+
+                // Precio desde pivot
                 $m->precio_v = $pivot?->precio_venta;
-            }
-            return $m;
+
+                // stock_unico viene de withSum (puede venir null)
+                $m->stock_unico = (int) ($m->stock_unico ?? 0);
+
+                // Por consistencia, rellenamos stock_por_sucursal con un solo registro
+                $m->stock_por_sucursal = collect([[
+                    'sucursal_id'   => $sucursalSeleccionada->id,
+                    'sucursal_name' => $sucursalSeleccionada->nombre,
+                    'stock'         => $m->stock_unico,
+                ]]);
+
+                return $m;
+            });
+        } else {
+
+            // ✅ Caso: NO hay sucursal seleccionada -> desglose por sucursal
+
+            // IDs de medicamentos que están en esta página
+            $idsMedicamentos = $medicamentos->pluck('id');
+
+            // Consulta agregada a LOTES (una sola vez para todos los de la página)
+            $stocksRaw = Lote::select(
+                'medicamento_id',
+                'sucursal_id',
+                DB::raw('SUM(stock_actual) as stock')
+            )
+                ->whereIn('medicamento_id', $idsMedicamentos)
+                ->when(is_array($idsFiltroSucursales) && count($idsFiltroSucursales) > 0, function ($q) use ($idsFiltroSucursales) {
+                    $q->whereIn('sucursal_id', $idsFiltroSucursales);
+                })
+                ->groupBy('medicamento_id', 'sucursal_id')
+                ->get();
+
+            // Agrupamos por medicamento
+            $stocksPorMedicamento = $stocksRaw->groupBy('medicamento_id');
+
+            // Transformamos los medicamentos agregando stock_por_sucursal
+            $medicamentos->getCollection()->transform(function ($m) use ($stocksPorMedicamento) {
+
+                $rows = $stocksPorMedicamento->get($m->id, collect());
+
+                // Mapa de sucursales ya cargadas (para nombres)
+                $mapSucursales = $m->sucursales->keyBy('id');
+
+                $m->stock_por_sucursal = $rows->map(function ($row) use ($mapSucursales) {
+                    $sucursal = $mapSucursales->get($row->sucursal_id);
+                    $nombre   = $sucursal ? $sucursal->nombre : ('Sucursal ID ' . $row->sucursal_id);
+
+                    return [
+                        'sucursal_id'   => $row->sucursal_id,
+                        'sucursal_name' => $nombre,
+                        'stock'         => (int) $row->stock,
+                    ];
+                })->values();
+
+                // En este modo no hay un solo precio ni un solo stock_unico
+                $m->precio_v    = null;
+                $m->stock_unico = null;
+
+                return $m;
+            });
+        }
+
+        return view('inventario.medicamentos.index', [
+            'medicamentos'           => $medicamentos,
+            'q'                      => $q,
+            'esAdmin'                => $esAdmin,
+            'sucursalSeleccionada'   => $sucursalSeleccionada,
+            'idsFiltroSucursales'    => $idsFiltroSucursales,
+        ]);
+    }
+
+
+    public function show($id)
+    {
+        $user = Auth::user();
+
+        // 1) Resolver contexto de sucursal (igual que en index)
+        $ctx = $this->sucursalResolver->resolverPara($user);
+
+        $esAdmin              = $ctx['es_admin'];
+        $idsFiltroSucursales  = $ctx['ids_filtro'];            // null | [] | [id,...]
+        $sucursalSeleccionada = $ctx['sucursal_seleccionada']; // modelo Sucursal o null
+
+        // 2) Obtener el medicamento con su categoría
+        $medicamento = Medicamento::with('categoria')->findOrFail($id);
+
+        // 3) Sucursales en las que se puede ver este medicamento según el contexto
+
+        $relSucursales = $medicamento->sucursales(); // belongsToMany
+
+        if (is_array($idsFiltroSucursales) && count($idsFiltroSucursales) > 0) {
+            $relSucursales->whereIn('sucursales.id', $idsFiltroSucursales);
+        }
+        // si idsFiltroSucursales es null y es admin -> no filtramos (todas las sucursales del medicamento)
+
+        $sucursales = $relSucursales->get();
+
+        // 4) LOTES del medicamento (filtrados por las sucursales del contexto)
+
+        $lotesQuery = Lote::where('medicamento_id', $medicamento->id);
+
+        if (is_array($idsFiltroSucursales) && count($idsFiltroSucursales) > 0) {
+            $lotesQuery->whereIn('sucursal_id', $idsFiltroSucursales);
+        }
+        // admin sin filtro: ve todos los lotes de todas las sucursales del medicamento
+
+        $lotes = $lotesQuery
+            ->orderBy('sucursal_id')
+            ->orderBy('fecha_vencimiento')
+            ->get();
+
+        // 5) Agrupamos lotes por sucursal para la vista
+        $lotesPorSucursal = $lotes->groupBy('sucursal_id');
+
+        // 6) Construimos un arreglo de detalle por sucursal:
+        //    sucursal, precio_venta (pivot), stock_total, lotes
+        $sucursalesDetalle = $sucursales->map(function ($sucursal) use ($lotesPorSucursal) {
+            $lotesSucursal = $lotesPorSucursal->get($sucursal->id, collect());
+            $stockTotal    = $lotesSucursal->sum('stock_actual');
+            $precioVenta   = $sucursal->pivot->precio_venta ?? null;
+
+            return [
+                'sucursal'    => $sucursal,
+                'stock_total' => $stockTotal,
+                'precio'      => $precioVenta,
+                'lotes'       => $lotesSucursal,
+
+            ];
         });
 
-        $usuarioMasDeUnaSucursal = $sucursalesDisponibles->count() > 1;
-
-        return view('inventario.medicamentos.index', compact(
-            'medicamentos',
-            'q',
-            'sucursalFiltro',
-            'sucursalesDisponibles',
-            'esAdmin',
-            'usuarioMasDeUnaSucursal'
-        ));
+        return view('inventario.medicamentos.show', [
+            'medicamento'         => $medicamento,
+            'esAdmin'             => $esAdmin,
+            'sucursalSeleccionada' => $sucursalSeleccionada,
+            'sucursalesDetalle'   => $sucursalesDetalle,
+        ]);
     }
+
+
 
     public function lookup(Request $request)
     {
@@ -259,22 +414,5 @@ class MedicamentoController extends Controller
         return redirect()
             ->route('inventario.medicamentos.index')
             ->with('success', $mensaje);
-    }
-
-    public function show(Medicamento $medicamento)
-    {
-        $medicamento->load(['categoria', 'lotes.sucursal', 'sucursales']);
-        // Agregados por sucursal para la vista
-        $bySucursal = $medicamento->lotes->groupBy('sucursal_id')->map(function ($g) {
-            return [
-                'stock' => (int)$g->sum('cantidad_actual'),
-                'lotes' => $g->sortBy('fecha_vencimiento')->values(),
-            ];
-        });
-
-        return view('inventario.medicamentos.show', [
-            'medicamento' => $medicamento,
-            'bySucursal'  => $bySucursal,
-        ]);
     }
 }

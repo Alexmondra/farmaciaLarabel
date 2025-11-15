@@ -1,9 +1,12 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Inventario;
+
+use App\Models\Sucursal;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
 
 class MedicamentoSucursal extends Model
 {
@@ -11,14 +14,25 @@ class MedicamentoSucursal extends Model
 
     protected $table = 'medicamento_sucursal';
 
+
+
     protected $fillable = [
         'medicamento_id',
         'sucursal_id',
         'stock_total',
         'precio_venta',
-        'activo',
+        'deleted_at',
     ];
 
+
+    protected $casts = [
+        'deleted_at' => 'datetime',
+    ];
+
+    public function isActive()
+    {
+        return is_null($this->deleted_at);
+    }
     /* ===================== RELACIONES ===================== */
 
     // Un registro pertenece a una sucursal

@@ -5,30 +5,49 @@ namespace App\Http\Controllers\Inventario;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use App\Models\Inventario\Medicamento;
+use App\Models\Inventario\MedicamentoSucursal;       // 👈 IMPORTANTE
 use App\Models\Inventario\Lote;
-use App\Models\Sucursal;
+
 
 class MedicamentoSucursalController extends Controller
 {
-    public function edit($medicamentoId, $sucursalId)
+    /**
+     * "Eliminar" un medicamento SOLO en una sucursal (soft delete por deleted_at).
+     */
+    public function destroy($medicamentoId, $sucursalId)
     {
-        $user = Auth::user();
-        if (!$user->hasRole('Administrador')) {
-            $permitidas = $user->sucursales()->pluck('sucursales.id')->toArray();
-            if (!in_array((int)$sucursalId, $permitidas, true)) {
-                abort(403, 'No tienes permiso en esta sucursal.');
+        // 1) Buscar el registro pivot con esas dos llaves
+        $registro = MedicamentoSucursal::where('medicamento_id', $medicamentoId)
+            ->where('sucursal_id', $sucursalId)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
+        // 2) Seguridad básica
+        $user    = Auth::user();
+        $esAdmin = method_exists($user, 'hasRole') ? $user->hasRole('Administrador') : false;
+
+        if (!$esAdmin) {
+            $user->load('sucursales');
+            if (!$user->sucursales->contains('id', $registro->sucursal_id)) {
+                abort(403, 'No tienes permiso para modificar esta sucursal.');
             }
         }
 
-        $m = Medicamento::with(['sucursales', 'lotes' => fn($q) => $q->where('sucursal_id', $sucursalId)])
-            ->findOrFail($medicamentoId);
+        // 3) (Opcional) Bloquear si aún hay stock en esa sucursal
+        $stock = Lote::where('medicamento_id', $medicamentoId)
+            ->where('sucursal_id', $sucursalId)
+            ->sum('stock_actual');
 
-        $pivot = $m->sucursales()->where('sucursal_id', $sucursalId)->first()?->pivot;
-        $sucursal = Sucursal::findOrFail($sucursalId);
+        if ($stock > 0) {
+            return back()->with('error', "No puedes desactivar este medicamento en la sucursal porque aún hay {$stock} unidades en stock.");
+        }
 
-        return view('inventario.medicamentos.edit', compact('m', 'pivot', 'sucursal'));
+        // 4) Soft-delete: marcar deleted_at en el pivot
+        $registro->deleted_at = now();
+        $registro->save();
+
+        return back()->with('success', 'Medicamento desactivado en esta sucursal.');
     }
 
     public function update(Request $request, $medicamentoId, $sucursalId)
@@ -89,25 +108,5 @@ class MedicamentoSucursalController extends Controller
         ], fn($v) => !is_null($v)));
 
         return back()->with('success', 'Asociado a la sucursal correctamente.');
-    }
-
-    public function destroy(Request $request, $medicamentoId, $sucursalId)
-    {
-        $user = Auth::user();
-        if (!$user->hasRole('Administrador')) {
-            $permitidas = $user->sucursales()->pluck('sucursales.id')->toArray();
-            if (!in_array((int)$sucursalId, $permitidas, true)) {
-                return back()->withErrors('No tienes permiso en esta sucursal.');
-            }
-        }
-
-        $m = Medicamento::findOrFail($medicamentoId);
-
-        DB::transaction(function () use ($m, $sucursalId) {
-            Lote::where('medicamento_id', $m->id)->where('sucursal_id', $sucursalId)->delete();
-            $m->sucursales()->detach($sucursalId);
-        });
-
-        return back()->with('success', 'Eliminado de la sucursal.');
     }
 }

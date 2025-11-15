@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Lote extends Model
 {
+
     protected $fillable = [
         'medicamento_id',
         'sucursal_id',
         'codigo_lote',
-        'cantidad',
+        'stock_actual',
         'fecha_vencimiento',
         'ubicacion',
         'precio_compra',

@@ -1,138 +1,136 @@
 @extends('adminlte::page')
 
-@section('title','Medicamentos')
+@section('title', 'Medicamentos')
 
 @section('content_header')
-<h1>Medicamentos</h1>
+<h1 class="text-primary">Listado de Medicamentos</h1>
 @stop
 
 @section('content')
-<div class="card">
-    <div class="card-body">
 
-        {{-- Filtros --}}
-        <form method="GET" action="{{ route('inventario.medicamentos.index') }}" class="row g-2 mb-3">
-            <div class="col-md-3">
-                <label class="form-label">Sucursal</label>
-                <select name="sucursal_id" class="form-control" onchange="this.form.submit()">
-                    @if($esAdmin)
-                    <option value="" {{ empty($sucursalFiltro) ? 'selected' : '' }}>Todas las sucursales</option>
-                    @endif
-                    @foreach($sucursalesDisponibles as $s)
-                    <option value="{{ $s->id }}" {{ (string)$sucursalFiltro===(string)$s->id ? 'selected':'' }}>
-                        {{ $s->nombre }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Buscar</label>
-                <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Nombre, código, barras, laboratorio">
-            </div>
-            <div class="col-md-5 d-flex align-items-end">
-                <button class="btn btn-primary me-2">Aplicar</button>
-                <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-outline-secondary">Limpiar</a>
-                <a href="{{ route('inventario.medicamentos.create') }}" class="btn btn-success ms-auto">
-                    <i class="fas fa-plus"></i> Nuevo
-                </a>
-            </div>
-        </form>
+{{-- BUSCADOR --}}
+<form method="GET" class="mb-3">
+    <div class="input-group" style="max-width: 380px;">
+        <input type="text" class="form-control" name="q" value="{{ $q }}" placeholder="Buscar medicamento...">
+        <button class="btn btn-primary" type="submit">Buscar</button>
+    </div>
+</form>
 
-        {{-- Mensajes --}}
-        @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
-        @if($errors->any()) <div class="alert alert-danger">{{ $errors->first() }}</div> @endif
+<div class="card shadow-sm">
+    <div class="card-body p-0">
 
-        {{-- Banner admin en "todas" --}}
-        @if($esAdmin && empty($sucursalFiltro))
-        <div class="alert alert-info">Viendo <b>todas</b> las sucursales. Para <b>editar o eliminar</b>, selecciona una sucursal.</div>
-        @endif
+        <table class="table table-striped table-hover mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width: 28%">Medicamento</th>
+                    <th style="width: 20%">Categoría</th>
+                    <th style="width: 22%">Stock</th>
+                    <th style="width: 12%" class="text-end">Precio</th>
+                    <th style="width: 10%" class="text-end"></th>
+                </tr>
+            </thead>
 
-        {{-- Tabla --}}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Código</th>
-                        <th>Código de barras</th>
-                        <th>Categoría</th>
-                        @if($esAdmin && empty($sucursalFiltro))
-                        <th class="text-end">Stock total</th>
-                        <th>Desglose</th>
+            <tbody>
+                @forelse($medicamentos as $m)
+                <tr>
+                    {{-- Medicamento --}}
+                    <td>
+                        <strong>{{ $m->nombre }}</strong><br>
+                        <small class="text-muted">
+                            Cod: {{ $m->codigo }}<br>
+                            Barra: {{ $m->codigo_barra ?? '---' }}
+                        </small>
+                    </td>
+
+                    {{-- Categoría --}}
+                    <td>
+                        {{ $m->categoria->nombre ?? '---' }}
+                    </td>
+
+                    {{-- STOCK --}}
+                    <td>
+                        @if($sucursalSeleccionada)
+                        {{-- Solo una sucursal: mostrar 1 número --}}
+                        <strong>{{ $m->stock_unico ?? 0 }}</strong>
+                        <br>
+                        <small class="text-muted">
+                            {{ $sucursalSeleccionada->nombre }}
+                        </small>
                         @else
-                        <th class="text-end">Stock</th>
-                        <th>Precio</th>
-                        <th>Ubicación</th>
-                        @endif
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($medicamentos as $m)
-                    <tr>
-                        <td>{{ $m->nombre }}</td>
-                        <td>{{ $m->codigo }}</td>
-                        <td>{{ $m->codigo_barra ?? '-' }}</td>
-                        <td>{{ $m->categoria->nombre ?? '-' }}</td>
+                        {{-- Varias sucursales: desglose --}}
+                        @php
+                        $lista = $m->stock_por_sucursal ?? collect();
+                        @endphp
 
-                        @if($esAdmin && empty($sucursalFiltro))
-                        <td class="text-end">{{ $m->stock_total ?? 0 }}</td>
-                        <td>
-                            @php
-                            $map = $m->desglose_stock ?? [];
-                            $index = $sucursalesDisponibles->keyBy('id');
-                            @endphp
-                            <details>
-                                <summary>Ver</summary>
-                                <ul class="mb-0">
-                                    @forelse($map as $sid => $stk)
-                                    <li>{{ $index[$sid]->nombre ?? ('Suc. #'.$sid) }}: {{ $stk }}</li>
-                                    @empty
-                                    <li>Sin stock</li>
-                                    @endforelse
-                                </ul>
-                            </details>
-                        </td>
+                        @if($lista->isEmpty())
+                        <span class="text-muted">Sin stock</span>
                         @else
-                        <td class="text-end">{{ $m->stock ?? 0 }}</td>
-                        <td>
-                            <div class="small">
-                                <div><strong>V:</strong> {{ $m->precio_v !== null ? number_format($m->precio_v, 2) : '-' }}</div>
-                            </div>
-                        </td>
-                        <td>{{ $m->ubicacion ?? '-' }}</td>
+                        @foreach($lista as $item)
+                        <div>
+                            <strong>{{ $item['sucursal_name'] }}</strong>
+                            = {{ $item['stock'] }}
+                        </div>
+                        @endforeach
+                        @endif
+                        @endif
+                    </td>
+
+                    {{-- PRECIO --}}
+                    <td class="text-end">
+                        @if($m->precio_v)
+                        <strong>S/. {{ number_format($m->precio_v, 2) }}</strong>
+                        @else
+                        <span class="text-muted">---</span>
+                        @endif
+                    </td>
+
+                    {{-- ACCIONES --}}
+                    <td class="text-end">
+
+                        {{-- Botón VER (con icono) --}}
+                        <a href="{{ route('inventario.medicamentos.show', $m->id) }}"
+                            class="btn btn-sm btn-info mb-1"
+                            title="Ver Detalle">
+                            <i class="fas fa-eye"></i> {{-- Icono de "ver" --}}
+                        </a>
+
+                        {{-- Botón ELIMINAR (con icono) SOLO SI HAY sucursal seleccionada --}}
+                        @if($sucursalSeleccionada)
+                        <form method="POST"
+                            action="{{ route('inventario.medicamento_sucursal.destroy', [
+        'medicamento' => $m->id,
+        'sucursal'    => $sucursalSeleccionada->id,
+    ]) }}"
+                            class="d-inline"
+                            onsubmit="return confirm('¿Eliminar este medicamento SOLO de la sucursal {{ $sucursalSeleccionada->nombre }}?');">
+                            @csrf
+                            @method('DELETE')
+                            <button class="btn btn-sm btn-danger mb-1"
+                                title="Eliminar en esta sucursal">
+                                <i class="fas fa-trash"></i> {{-- Icono de "eliminar" --}}
+                            </button>
+                        </form>
                         @endif
 
-                        <td class="text-center">
-                            <a href="{{ route('inventario.medicamentos.show', $m->id) }}" class="btn btn-sm btn-outline-info">Ver</a>
+                    </td>
 
-                            @if($esAdmin && empty($sucursalFiltro))
-                            <button class="btn btn-sm btn-outline-secondary" disabled title="Selecciona sucursal">Editar</button>
-                            <button class="btn btn-sm btn-outline-danger" disabled title="Selecciona sucursal">Eliminar</button>
-                            @else
-                            <a href="{{ route('inventario.medicamentos.editSucursal', [$m->id, $sucursalFiltro]) }}" class="btn btn-sm btn-primary">
-                                Editar
-                            </a>
 
-                            <form method="POST" action="{{ route('inventario.medicamentos.detachSucursal', [$m->id, $sucursalFiltro]) }}"
-                                class="d-inline" onsubmit="return confirm('¿Eliminar solo de esta sucursal?');">
-                                @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-danger">Eliminar</button>
-                            </form>
-                            @endif
-                        </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="5" class="text-center p-3 text-muted">
+                        No se encontraron medicamentos.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
 
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="8" class="text-center">Sin registros.</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+    </div>
 
+    <div class="card-footer">
         {{ $medicamentos->links() }}
     </div>
 </div>
+
 @stop
