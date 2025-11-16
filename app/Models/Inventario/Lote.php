@@ -24,6 +24,9 @@ class Lote extends Model
 
     protected $casts = [
         'fecha_vencimiento' => 'date',
+        'stock_actual' => 'integer',
+        'precio_compra' => 'decimal:4',
+        'precio_oferta' => 'decimal:2',
     ];
 
     public function medicamento()
@@ -47,6 +50,12 @@ class Lote extends Model
 
 
     /* ===================== ATRIBUTOS PERSONALIZADOS ===================== */
+
+
+    public function estaVencido()
+    {
+        return $this->fecha_vencimiento && $this->fecha_vencimiento->isPast();
+    }
 
     // Precio efectivo: usa la oferta si existe, de lo contrario el precio base
     public function getPrecioVentaEfectivoAttribute()
@@ -76,6 +85,6 @@ class Lote extends Model
     // Solo lotes con stock disponible
     public function scopeConStock($query)
     {
-        return $query->where('cantidad', '>', 0);
+        return $query->where('stock_actual', '>', 0);
     }
 }

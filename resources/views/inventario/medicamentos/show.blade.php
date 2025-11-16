@@ -3,109 +3,174 @@
 @section('title', 'Detalle de medicamento')
 
 @section('content_header')
-<h1>Detalle de medicamento</h1>
-<p class="text-muted mb-0">
-    <strong>{{ $medicamento->nombre }}</strong>
-    @if($sucursalSeleccionada)
-    <span class="ml-2 badge bg-primary">
-        Sucursal actual: {{ $sucursalSeleccionada->nombre }}
-    </span>
-    @endif
-</p>
-@stop
+<div class="d-flex justify-content-between align-items-center">
+    <h1>Detalle de medicamento</h1>
+
+    <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Volver al listado
+    </a>
+</div>
+@endsection
 
 @section('content')
 
-{{-- INFO GENERAL DEL MEDICAMENTO --}}
-<div class="card mb-3">
-    <div class="card-header bg-primary text-white">
-        Información general
+{{-- DATOS GENERALES DEL MEDICAMENTO --}}
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>{{ $medicamento->nombre }}</strong>
     </div>
     <div class="card-body">
-        <div class="row">
 
-            <div class="col-md-6">
-                <p><strong>Código interno:</strong> {{ $medicamento->codigo }}</p>
-                <p><strong>Código de barra:</strong> {{ $medicamento->codigo_barra ?? '---' }}</p>
-                <p><strong>Laboratorio:</strong> {{ $medicamento->laboratorio ?? '---' }}</p>
+        <div class="row mb-2">
+            <div class="col-md-4">
+                <label class="text-muted mb-0">Código</label><br>
+                <span>{{ $medicamento->codigo ?? '—' }}</span>
             </div>
 
-            <div class="col-md-6">
-                <p><strong>Categoría:</strong> {{ $medicamento->categoria->nombre ?? '---' }}</p>
-                {{-- Aquí podrías mostrar más campos generales si los tienes --}}
+            <div class="col-md-4">
+                <label class="text-muted mb-0">Código de barra</label><br>
+                <span>{{ $medicamento->codigo_barra ?? '—' }}</span>
             </div>
 
+            <div class="col-md-4">
+                <label class="text-muted mb-0">Categoría</label><br>
+                <span>{{ $medicamento->categoria->nombre ?? '—' }}</span>
+            </div>
         </div>
+
+        <div class="row mb-2">
+            <div class="col-md-4">
+                <label class="text-muted mb-0">Laboratorio</label><br>
+                <span>{{ $medicamento->laboratorio ?? '—' }}</span>
+            </div>
+
+            <div class="col-md-4">
+                <label class="text-muted mb-0">Concentración</label><br>
+                <span>{{ $medicamento->concentracion ?? '—' }}</span>
+            </div>
+
+            <div class="col-md-4">
+                <label class="text-muted mb-0">Presentación</label><br>
+                <span>{{ $medicamento->presentacion ?? '—' }}</span>
+            </div>
+        </div>
+
     </div>
 </div>
 
+
 {{-- DETALLE POR SUCURSAL --}}
-@forelse($sucursalesDetalle as $detalle)
+@forelse($sucursalesDetalle as $item)
 @php
 /** @var \App\Models\Sucursal $sucursal */
-$sucursal = $detalle['sucursal'];
-$stockTotal = $detalle['stock_total'];
-$precio = $detalle['precio'];
-$lotes = $detalle['lotes'];
+$sucursal = $item['sucursal'];
+$precio = $item['precio'];
+$stock_total = $item['stock_total'];
+$lotes = $item['lotes'];
 @endphp
 
 <div class="card mb-4">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center">
+
         <div>
-            <strong>Sucursal:</strong> {{ $sucursal->nombre }}
+            <h5 class="mb-0">
+                Sucursal: <strong>{{ $sucursal->nombre }}</strong>
+            </h5>
+            <small class="text-muted">
+                Stock total: {{ $stock_total }} unidades
+            </small>
         </div>
-        <div>
-            @if(!is_null($precio))
-            <strong>Precio venta:</strong> S/. {{ number_format($precio, 2) }}
-            @else
-            <span class="text-light">Precio venta: ---</span>
-            @endif
-            <span class="ml-3">
-                <strong>Stock total:</strong> {{ $stockTotal }}
-            </span>
+
+        <div class="text-end">
+            <div class="mb-1">
+                <span class="text-muted">Precio de venta:</span>
+                @if(!is_null($precio))
+                <strong>S/ {{ number_format($precio, 2) }}</strong>
+                @else
+                <span class="text-muted">No definido</span>
+                @endif
+            </div>
+
+            {{-- Botón para “eliminar” (desactivar) SOLO en esta sucursal --}}
+            <form method="POST"
+                action="{{ route('inventario.medicamento_sucursal.destroy', [
+                                'medicamento' => $medicamento->id,
+                                'sucursal'    => $sucursal->id,
+                          ]) }}"
+                class="d-inline"
+                onsubmit="return confirm('¿Desactivar este medicamento SOLO en la sucursal {{ $sucursal->nombre }}?');">
+                @csrf
+                @method('DELETE')
+                <button class="btn btn-sm btn-danger">
+                    <i class="fas fa-trash"></i>
+                    Eliminar en esta sucursal
+                </button>
+            </form>
         </div>
+
     </div>
 
     <div class="card-body p-0">
+
+        {{-- LOTES DE ESTA SUCURSAL --}}
         @if($lotes->isEmpty())
-        <p class="p-3 mb-0 text-muted">
+        <div class="p-3 text-muted">
             No hay lotes registrados para esta sucursal.
-        </p>
+        </div>
         @else
-        <table class="table table-sm table-striped mb-0">
-            <thead>
-                <tr>
-                    <th style="width: 15%">Código lote</th>
-                    <th style="width: 20%">Ubicación</th>
-                    <th style="width: 20%">Fecha vencimiento</th>
-                    <th style="width: 15%" class="text-end">Stock</th>
-                    <th>Observaciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($lotes as $lote)
-                <tr>
-                    <td>{{ $lote->codigo_lote }}</td>
-                    <td>{{ $lote->ubicacion ?? '---' }}</td>
-                    <td>{{ $lote->fecha_vencimiento ?? '---' }}</td>
-                    <td class="text-end">{{ $lote->stock_actual }}</td>
-                    <td>{{ $lote->observaciones ?? '' }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Código lote</th>
+                        <th>Stock</th>
+                        <th>F. vencimiento</th>
+                        <th>Ubicación</th>
+                        <th>Precio compra</th>
+                        <th>Precio oferta</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($lotes as $lote)
+                    <tr>
+                        <td>{{ $lote->codigo_lote }}</td>
+                        <td>{{ $lote->stock_actual }}</td>
+                        <td>
+                            {{ $lote->fecha_vencimiento
+                                            ? \Carbon\Carbon::parse($lote->fecha_vencimiento)->format('d/m/Y')
+                                            : '—' }}
+                        </td>
+                        <td>{{ $lote->ubicacion ?? '—' }}</td>
+                        <td>
+                            @if(!is_null($lote->precio_compra))
+                            S/ {{ number_format($lote->precio_compra, 4) }}
+                            @else
+                            —
+                            @endif
+                        </td>
+                        <td>
+                            @if(!is_null($lote->precio_oferta))
+                            S/ {{ number_format($lote->precio_oferta, 2) }}
+                            @else
+                            —
+                            @endif
+                        </td>
+                        <td>{{ $lote->observaciones ?? '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
         @endif
+
     </div>
 </div>
 
 @empty
-<div class="alert alert-warning">
-    Este medicamento no está disponible en ninguna de las sucursales que puedes ver.
+<div class="alert alert-info">
+    Este medicamento no está asociado a ninguna sucursal visible para tu usuario.
 </div>
 @endforelse
 
-<a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-secondary">
-    Volver al listado
-</a>
-
-@stop
+@endsection

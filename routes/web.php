@@ -9,7 +9,10 @@ use App\Http\Controllers\Inventario\MedicamentoController;
 use App\Http\Controllers\Inventario\MedicamentoSucursalController;
 use App\Http\Controllers\Configuracion\SucursalController;
 use App\Http\Controllers\Inventario\CategoriaController;
-use App\Http\Controllers\Inventario\ProveedorController;
+use App\Http\Controllers\Compras\ProveedorController;
+use App\Http\Controllers\Compras\CompraController;
+
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -63,17 +66,6 @@ Route::middleware(['auth', 'can:medicamentos.ver'])
             Route::resource('categorias', CategoriaController::class);
         });
 
-        // PROVEEDORES (mismo prefijo/nombre del grupo)
-        Route::middleware('can:proveedores.ver')->group(function () {
-            Route::resource('proveedores', ProveedorController::class)
-                ->parameters([
-                    'proveedores' => 'proveedor', // 👈 clave: {proveedor} en vez de {proveedore}
-                ]);
-        });
-
-
-
-
         Route::get('medicamentos/lookup', [\App\Http\Controllers\Inventario\MedicamentoController::class, 'lookup'])
             ->name('medicamentos.lookup'); //para autorrellenar
 
@@ -110,6 +102,23 @@ Route::middleware(['auth', 'can:medicamentos.ver'])
         Route::post('medicamentos/{medicamento}/sucursales', [MedicamentoSucursalController::class, 'attach'])
             ->middleware('can:medicamentos.editar')->name('medicamentos.attachSucursal');
     });
+
+
+
+// comprass
+
+Route::middleware('auth')->group(function () {
+    Route::resource('compras', CompraController::class);
+});
+
+
+// PROVEEDORES (mismo prefijo/nombre del grupo)
+Route::middleware('can:proveedores.ver')->group(function () {
+    Route::resource('proveedores', ProveedorController::class)
+        ->parameters([
+            'proveedores' => 'proveedor', // 👈 clave: {proveedor} en vez de {proveedore}
+        ]);
+});
 
 // ======================================================
 // MÓDULO: Configuración - Sucursales

@@ -48,6 +48,7 @@ class Medicamento extends Model
         return $this->hasMany(Lote::class);
     }
 
+
     public function movimientos()
     {
         return $this->hasMany(MovimientoInventario::class);
@@ -56,5 +57,14 @@ class Medicamento extends Model
     public function scopeEnSucursal($query, int $sucursalId)
     {
         return $query->whereHas('sucursales', fn($q) => $q->where('sucursal_id', $sucursalId));
+    }
+
+    public function medicamentos()
+    {
+        return $this->belongsToMany(
+            \App\Models\Inventario\Medicamento::class,
+            'medicamento_sucursal'
+        )->withPivot(['precio_venta', 'deleted_at'])
+            ->withTimestamps();
     }
 }

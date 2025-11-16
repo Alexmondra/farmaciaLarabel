@@ -3,134 +3,137 @@
 @section('title', 'Medicamentos')
 
 @section('content_header')
-<h1 class="text-primary">Listado de Medicamentos</h1>
-@stop
+<h1 class="mb-3">Medicamentos</h1>
+
+{{-- Buscador --}}
+<form method="GET" action="{{ route('inventario.medicamentos.index') }}" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" value="{{ $q }}" class="form-control"
+            placeholder="Buscar por nombre, código, laboratorio...">
+        <button class="btn btn-primary">
+            <i class="fas fa-search"></i> Buscar
+        </button>
+    </div>
+</form>
+@endsection
+
 
 @section('content')
 
-{{-- BUSCADOR --}}
-<form method="GET" class="mb-3">
-    <div class="input-group" style="max-width: 380px;">
-        <input type="text" class="form-control" name="q" value="{{ $q }}" placeholder="Buscar medicamento...">
-        <button class="btn btn-primary" type="submit">Buscar</button>
-    </div>
-</form>
+{{-- Tabla --}}
+<div class="card">
+    <div class="card-body table-responsive p-0">
 
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-
-        <table class="table table-striped table-hover mb-0">
+        <table class="table table-hover text-nowrap">
             <thead class="bg-light">
                 <tr>
-                    <th style="width: 28%">Medicamento</th>
-                    <th style="width: 20%">Categoría</th>
-                    <th style="width: 22%">Stock</th>
-                    <th style="width: 12%" class="text-end">Precio</th>
-                    <th style="width: 10%" class="text-end"></th>
+                    <th style="width: 30%">Nombre</th>
+                    <th style="width: 15%">Categoría</th>
+                    <th style="width: 20%">Stock</th>
+                    <th style="width: 10%">Precio</th>
+                    <th style="width: 25%" class="text-end">Acciones</th>
                 </tr>
             </thead>
 
             <tbody>
+
                 @forelse($medicamentos as $m)
                 <tr>
-                    {{-- Medicamento --}}
+                    {{-- Nombre --}}
                     <td>
                         <strong>{{ $m->nombre }}</strong><br>
-                        <small class="text-muted">
-                            Cod: {{ $m->codigo }}<br>
-                            Barra: {{ $m->codigo_barra ?? '---' }}
-                        </small>
+                        <small class="text-muted">Código: {{ $m->codigo ?? '-' }}</small>
                     </td>
 
                     {{-- Categoría --}}
-                    <td>
-                        {{ $m->categoria->nombre ?? '---' }}
-                    </td>
+                    <td>{{ $m->categoria->nombre ?? '-' }}</td>
 
                     {{-- STOCK --}}
                     <td>
                         @if($sucursalSeleccionada)
-                        {{-- Solo una sucursal: mostrar 1 número --}}
-                        <strong>{{ $m->stock_unico ?? 0 }}</strong>
+                        {{-- 🟢 UNA sola sucursal seleccionada --}}
+                        <strong>{{ $m->stock_unico }}</strong>
                         <br>
                         <small class="text-muted">
                             {{ $sucursalSeleccionada->nombre }}
                         </small>
+
                         @else
-                        {{-- Varias sucursales: desglose --}}
-                        @php
-                        $lista = $m->stock_por_sucursal ?? collect();
-                        @endphp
+                        {{-- 🔵 MULTI-SUCURSAL --}}
+                        @php $lista = $m->stock_por_sucursal ?? collect(); @endphp
 
                         @if($lista->isEmpty())
                         <span class="text-muted">Sin stock</span>
                         @else
                         @foreach($lista as $item)
                         <div>
-                            <strong>{{ $item['sucursal_name'] }}</strong>
-                            = {{ $item['stock'] }}
+                            <strong>{{ $item['sucursal_name'] }}</strong>:
+                            {{ $item['stock'] }}
                         </div>
                         @endforeach
                         @endif
                         @endif
                     </td>
 
-                    {{-- PRECIO --}}
-                    <td class="text-end">
-                        @if($m->precio_v)
-                        <strong>S/. {{ number_format($m->precio_v, 2) }}</strong>
+                    {{-- Precio --}}
+                    <td>
+                        @if($sucursalSeleccionada && $m->precio_v)
+                        S/ {{ number_format($m->precio_v, 2) }}
                         @else
-                        <span class="text-muted">---</span>
+                        <span class="text-muted">—</span>
                         @endif
                     </td>
 
-                    {{-- ACCIONES --}}
+                    {{-- Acciones --}}
                     <td class="text-end">
 
-                        {{-- Botón VER (con icono) --}}
+                        {{-- Ver detalle --}}
                         <a href="{{ route('inventario.medicamentos.show', $m->id) }}"
-                            class="btn btn-sm btn-info mb-1"
-                            title="Ver Detalle">
-                            <i class="fas fa-eye"></i> {{-- Icono de "ver" --}}
+                            class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i>
+                            Ver
                         </a>
 
-                        {{-- Botón ELIMINAR (con icono) SOLO SI HAY sucursal seleccionada --}}
+                        {{-- Eliminar SOLO si hay sucursal seleccionada --}}
                         @if($sucursalSeleccionada)
                         <form method="POST"
                             action="{{ route('inventario.medicamento_sucursal.destroy', [
-        'medicamento' => $m->id,
-        'sucursal'    => $sucursalSeleccionada->id,
-    ]) }}"
+                                             'medicamento' => $m->id,
+                                             'sucursal'    => $sucursalSeleccionada->id
+                                      ]) }}"
                             class="d-inline"
                             onsubmit="return confirm('¿Eliminar este medicamento SOLO de la sucursal {{ $sucursalSeleccionada->nombre }}?');">
                             @csrf
                             @method('DELETE')
-                            <button class="btn btn-sm btn-danger mb-1"
-                                title="Eliminar en esta sucursal">
-                                <i class="fas fa-trash"></i> {{-- Icono de "eliminar" --}}
+                            <button class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                                Eliminar
                             </button>
                         </form>
                         @endif
 
                     </td>
-
-
                 </tr>
+
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center p-3 text-muted">
+                    <td colspan="5" class="text-center p-4 text-muted">
                         No se encontraron medicamentos.
                     </td>
                 </tr>
                 @endforelse
+
             </tbody>
         </table>
 
     </div>
 
+    {{-- Paginación --}}
+    @if ($medicamentos->hasPages())
     <div class="card-footer">
         {{ $medicamentos->links() }}
     </div>
+    @endif
 </div>
 
-@stop
+@endsection

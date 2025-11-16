@@ -18,14 +18,15 @@ return new class extends Migration
             $table->foreignId('proveedor_id')->nullable()->constrained('proveedores');
             $table->foreignId('user_id')->constrained('users'); // Quién registró
 
+            $table->string('tipo_comprobante', 30)->nullable();
             $table->string('numero_factura_proveedor', 100)->nullable();
             $table->date('fecha_recepcion');
 
             // El costo total que dice el papel (para verificar)
             $table->decimal('costo_total_factura', 10, 2);
             $table->text('observaciones')->nullable();
-
-            $table->enum('estado', ['recibida', 'pendiente', 'anulada'])->default('recibida');
+            $table->string('archivo_comprobante', 255)->nullable();
+            $table->enum('estado', ['registrada', 'recibida', 'pendiente', 'anulada'])->default('recibida');
             $table->timestamps();
         });
     }

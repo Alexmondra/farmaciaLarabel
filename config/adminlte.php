@@ -386,7 +386,7 @@ return [
             'text' => 'Proveedores',
             'icon' => 'fas fa-truck-loading',
             'submenu' => [
-                ['text' => 'Listado', 'url' => 'inventario/proveedores', 'icon' => 'far fa-list-alt'],
+                ['text' => 'Listado', 'url' => 'proveedores', 'icon' => 'far fa-list-alt'],
                 ['text' => 'Nuevo',   'url' => '#', 'icon' => 'fas fa-plus'],
             ],
         ],
@@ -394,8 +394,8 @@ return [
             'text' => 'Compras',
             'icon' => 'fas fa-file-invoice-dollar',
             'submenu' => [
-                ['text' => 'Órdenes de Compra',  'url' => '#', 'icon' => 'fas fa-file-signature'],
-                ['text' => 'Ingresos a Almacén', 'url' => '#', 'icon' => 'fas fa-dolly'],
+                ['text' => 'Órdenes de Compra',  'url' => 'listadoCompras', 'icon' => 'fas fa-file-signature'],
+                ['text' => 'Ingresos a Almacén', 'url' => 'compras', 'icon' => 'fas fa-dolly'],
             ],
         ],
 

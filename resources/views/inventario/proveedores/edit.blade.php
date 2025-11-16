@@ -5,7 +5,7 @@
 @stop
 @section('content')
 @include('inventario.proveedores._form', [
-'route' => route('inventario.proveedores.update', $proveedor),
+'route' => route('proveedores.update', $proveedor),
 'method' => 'PUT',
 'submitText' => 'Actualizar',
 'proveedor' => $proveedor

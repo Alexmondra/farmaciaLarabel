@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Inventario;
+namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
-use App\Models\Inventario\Proveedor;
+use App\Models\Compras\Proveedor;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Database\QueryException;

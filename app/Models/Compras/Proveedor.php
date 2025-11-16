@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Inventario; // O App\Models, según tu estructura
+namespace App\Models\Compras; // O App\Models, según tu estructura
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,12 +40,13 @@ class Proveedor extends Model
         'activo' => 'boolean', //
     ];
 
-    /**
-     * Obtiene las compras asociadas a este proveedor.
-    
-     *public function compras(): HasMany
-     *{
-     *   return $this->hasMany(Compra::class);
-     *}
-     */
+
+    // Obtiene las compras asociadas a este proveedor.
+
+
+
+    public function compras()
+    {
+        return $this->hasMany(Compra::class);
+    }
 }
