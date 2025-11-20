@@ -32,5 +32,12 @@ class DatabaseSeeder extends Seeder
         $this->call(MedicamentosSeeder::class);
         $this->call(MedicamentoSucursalSeeder::class);
         $this->call(ComprasLotesSeeder::class);
+
+        $this->call([
+            ClienteSeeder::class,
+            CajaSesionSeeder::class,
+            VentaSeeder::class,
+            DetalleVentaSeeder::class,
+        ]);
     }
 }

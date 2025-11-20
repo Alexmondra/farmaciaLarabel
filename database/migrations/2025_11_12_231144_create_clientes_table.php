@@ -13,14 +13,27 @@ return new class extends Migration
     {
         Schema::create('clientes', function (Blueprint $table) {
             $table->id();
-            $table->string('nombres', 150);
-            $table->string('apellidos', 150)->nullable();
-            $table->string('documento', 15)->nullable()->unique()->comment('DNI o RUC');
-            $table->string('direccion')->nullable();
-            $table->string('telefono', 20)->nullable();
-            $table->string('email')->nullable();
+            $table->string('tipo_documento', 10)->nullable();  // DNI / RUC / CE / PAS
+            $table->string('documento', 20)->nullable();       // Número del documento
+
+            $table->string('nombre', 255);
+            $table->string('apellidos', 255);
+            $table->enum('sexo', ['M', 'F']);
+            // NUEVOS CAMPOS
+            $table->date('fecha_nacimiento')->nullable();
+
+            // CONTACTO
+            $table->string('telefono', 30)->nullable();
+            $table->string('email', 100)->nullable();
+            $table->string('direccion', 255)->nullable();
+
             $table->boolean('activo')->default(true);
+
             $table->timestamps();
+
+            // Índices útiles
+            $table->index('documento');
+            $table->index('tipo_documento');
         });
     }
 

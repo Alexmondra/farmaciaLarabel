@@ -336,10 +336,10 @@ return [
             'text' => 'Ventas',
             'icon' => 'fas fa-shopping-bag',
             'submenu' => [
-                ['text' => 'Listado', 'url' => '#', 'icon' => 'far fa-list-alt', 'can' => 'ventas.ver'],
+                ['text' => 'Listado', 'url' => 'ventas', 'icon' => 'far fa-list-alt', 'can' => 'ventas.ver'],
                 ['text' => 'Nueva venta',  'url' => '#', 'icon' => 'fas fa-plus'],
                 ['text' => 'Devoluciones', 'url' => '#', 'icon' => 'fas fa-undo'],
-                ['text' => 'Cajas',        'url' => '#', 'icon' => 'fas fa-money-check-alt'],
+                ['text' => 'Cajas',        'url' => 'cajas', 'icon' => 'fas fa-money-check-alt'],
             ],
         ],
         [

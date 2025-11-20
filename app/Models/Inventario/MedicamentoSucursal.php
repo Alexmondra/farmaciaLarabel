@@ -7,6 +7,7 @@ use App\Models\Sucursal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Inventario\Medicamento;   // 👈 AÑADIR ESTA LÍNEA
 
 class MedicamentoSucursal extends Model
 {
@@ -36,6 +37,11 @@ class MedicamentoSucursal extends Model
     /* ===================== RELACIONES ===================== */
 
     // Un registro pertenece a una sucursal
+    public function medicamento()
+    {
+        return $this->belongsTo(Medicamento::class);
+    }
+
     public function sucursal()
     {
         return $this->belongsTo(Sucursal::class);
@@ -44,7 +50,7 @@ class MedicamentoSucursal extends Model
     // Un medicamento en una sucursal tiene muchos lotes
     public function lotes()
     {
-        return $this->hasMany(Inventario\Lote::class, 'medicamento_id', 'medicamento_id')
+        return $this->hasMany(Lote::class, 'medicamento_id', 'medicamento_id')
             ->where('sucursal_id', $this->sucursal_id);
     }
 

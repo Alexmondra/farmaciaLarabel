@@ -6,6 +6,7 @@ use App\Models\Sucursal;
 use Carbon\Carbon;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Inventario\MedicamentoSucursal;
 
 class Lote extends Model
 {
@@ -42,6 +43,13 @@ class Lote extends Model
     public function movimientos()
     {
         return $this->hasMany(MovimientoInventario::class);
+    }
+
+    // 🔹 RELACIÓN HACIA medicamento_sucursal (para obtener precio_venta)
+    public function medicamentoSucursal()
+    {
+        return $this->hasOne(MedicamentoSucursal::class, 'medicamento_id', 'medicamento_id')
+            ->where('sucursal_id', $this->sucursal_id);
     }
 
 

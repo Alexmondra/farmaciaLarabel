@@ -11,6 +11,9 @@ use App\Http\Controllers\Configuracion\SucursalController;
 use App\Http\Controllers\Inventario\CategoriaController;
 use App\Http\Controllers\Compras\ProveedorController;
 use App\Http\Controllers\Compras\CompraController;
+use App\Http\Controllers\Ventas\CajaSesionController;
+use App\Http\Controllers\Ventas\VentaController;
+
 
 
 
@@ -110,6 +113,38 @@ Route::middleware(['auth', 'can:medicamentos.ver'])
 Route::middleware('auth')->group(function () {
     Route::resource('compras', CompraController::class);
 });
+
+Route::middleware('auth')->group(function () {
+    //Route::resource('cajas', CajaSesionController::class);
+
+    Route::get('cajas', [CajaSesionController::class, 'index'])->name('cajas.index');
+    Route::post('cajas', [CajaSesionController::class, 'store'])->name('cajas.store'); // <-- AÑADIR ESTA LÍNEA
+    Route::get('cajas/{id}', [CajaSesionController::class, 'show'])->name('cajas.show');
+    Route::patch('cajas/{id}', [CajaSesionController::class, 'update'])->name('cajas.update'); // <-- AÑADIR ESTA LÍNEA
+
+
+    // Rutas de Ventas (NUEVAS)
+
+    Route::get('lotes/lookup-por-medicamento', [VentaController::class, 'lookupLotes'])
+        ->name('lotes.lookup');
+
+    Route::get('ventas/lookup-medicamentos', [VentaController::class, 'lookupMedicamentos'])
+        ->name('ventas.lookup_medicamentos');
+
+    Route::get('ventas/lookup-lotes', [VentaController::class, 'lookupLotes'])
+        ->name('ventas.lookup_lotes');
+
+    Route::get('ventas/lookup-cliente', [VentaController::class, ''])
+        ->name('ventas.buscar_cliente');
+
+
+    // Rutas de Ventas (RESOURCE) – SIEMPRE AL FINAL
+    Route::resource('ventas', VentaController::class);
+});
+
+
+
+
 
 
 // PROVEEDORES (mismo prefijo/nombre del grupo)
