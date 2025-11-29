@@ -324,12 +324,12 @@ return [
             'submenu' => [
                 [
                     'text' => 'Nueva Compra',
-                    'url'  => 'compras',
+                    'url'  => 'compras/create',
                     'icon' => 'fas fa-plus-circle',
                 ],
                 [
                     'text' => 'Historial Compras',
-                    'url'  => 'listadoCompras',
+                    'url'  => 'compras',
                     'icon' => 'fas fa-history',
                 ],
                 [

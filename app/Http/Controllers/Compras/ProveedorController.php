@@ -15,7 +15,7 @@ class ProveedorController extends Controller
         $this->middleware('can:proveedores.ver')->only(['index', 'show']);
         $this->middleware('can:proveedores.crear')->only(['create', 'store']);
         $this->middleware('can:proveedores.editar')->only(['edit', 'update']);
-        $this->middleware('can:proveedores.borrar')->only('destroy');
+        $this->middleware('can:proveedores.eliminar')->only('destroy');
     }
 
     public function index(Request $request)

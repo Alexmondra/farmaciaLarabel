@@ -8,29 +8,6 @@
 
 @section('content')
 
-{{-- ========== INICIO: TOAST (Mensaje de éxito/error) ========== --}}
-@if (session('success') || session('error'))
-<div class="toast-center">
-    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="3500">
-        <div class="toast-header @if(session('success')) bg-success text-white @elseif(session('error')) bg-danger text-white @endif">
-            <strong class="mr-auto">
-                @if(session('success')) <i class="fas fa-check-circle mr-1"></i> Éxito
-                @elseif(session('error')) <i class="fas fa-times-circle mr-1"></i> Error
-                @endif
-            </strong>
-            <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-        <div class="toast-body">
-            {{ session('success') ?? session('error') }}
-        </div>
-    </div>
-</div>
-@endif
-{{-- ========== FIN: TOAST ========== --}}
-
-
 <div class="card shadow-sm">
     <div class="card-header bg-white">
         <div class="d-flex align-items-center flex-wrap w-100">

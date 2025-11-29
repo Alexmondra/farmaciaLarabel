@@ -2,215 +2,140 @@
 
 use Illuminate\Support\Facades\Route;
 
-// Controladores Generales
+// --- Importación de Controladores ---
 use App\Http\Controllers\ProfileController;
-
-// Controladores de Seguridad
-use App\Http\Controllers\Seguridad\RolePermissionController;
-use App\Http\Controllers\Seguridad\UsuarioController;
-
-// Controladores de Inventario
-use App\Http\Controllers\Inventario\MedicamentoController;
-use App\Http\Controllers\Inventario\MedicamentoSucursalController;
-use App\Http\Controllers\Inventario\CategoriaController;
-
-// Controladores de Compras
-use App\Http\Controllers\Compras\ProveedorController;
-use App\Http\Controllers\Compras\CompraController;
-
-// Controladores de Ventas
-use App\Http\Controllers\Ventas\CajaSesionController;
-use App\Http\Controllers\Ventas\VentaController;
-
-// Controladores de Configuración
+use App\Http\Controllers\Seguridad\{RolePermissionController, UsuarioController};
+use App\Http\Controllers\Inventario\{MedicamentoController, MedicamentoSucursalController, CategoriaController};
+use App\Http\Controllers\Compras\{ProveedorController, CompraController};
+use App\Http\Controllers\Ventas\{CajaSesionController, VentaController};
 use App\Http\Controllers\Configuracion\SucursalController;
 
-
 // =========================================================================
-// RUTAS PÚBLICAS
+// 1. RUTAS PÚBLICAS
 // =========================================================================
-
 Route::get('/', function () {
-    return view('welcome');
+    return view('auth/login');
 });
 
+require __DIR__ . '/auth.php';
 
 // =========================================================================
-// DASHBOARD Y PERFIL BASE (Breeze/Laravel)
+// 2. RUTAS PROTEGIDAS (SOLO REQUIEREN LOGIN)
 // =========================================================================
+// Nota: La seguridad específica (Permisos) se gestiona dentro de cada Controlador.
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth'])->group(function () {
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+    // --- Dashboard y Perfil Base ---
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
 
-
-// =========================================================================
-// UTILIDADES GLOBALES (Requieren Autenticación)
-// =========================================================================
-Route::middleware('auth')->group(function () {
-
-    // --- Selector de Sucursal (Sesión) ---
-    Route::get('/elegir-sucursal', [SucursalController::class, 'elegir'])
-        ->name('sucursales.elegir');
-    Route::post('/elegir-sucursal', [SucursalController::class, 'guardarEleccion'])
-        ->name('sucursales.guardar');
-    Route::get('/cambiar-sucursal-select', [SucursalController::class, 'cambiarDesdeSelect'])
-        ->name('cambiar.sucursal.desdeSelect');
-
-    // --- Mi Perfil Personalizado (Usuario actual) ---
-    Route::get('/mi-perfil', [UsuarioController::class, 'miPerfil'])
-        ->name('perfil.editar');
-    Route::put('/mi-perfil', [UsuarioController::class, 'updateMiPerfil'])
-        ->name('perfil.update');
-
-    // --- Visualización de Imágenes Protegidas ---
-    Route::get('seguridad/usuarios/{usuario}/imagen', [UsuarioController::class, 'mostrarImagen'])
-        ->name('seguridad.usuarios.imagen');
-});
-
-
-// =========================================================================
-// MÓDULO: SEGURIDAD (Roles, Permisos y Usuarios)
-// =========================================================================
-Route::middleware(['auth'])->prefix('seguridad')->name('seguridad.')->group(function () {
-
-    // --- Roles ---
-    Route::middleware(['can:roles.ver'])->group(function () {
-        Route::get('/roles', [RolePermissionController::class, 'index'])->name('roles.index');
-        Route::post('/roles', [RolePermissionController::class, 'storeRole'])
-            ->middleware('can:roles.crear')->name('roles.store');
-        Route::delete('/roles/{role}', [RolePermissionController::class, 'destroyRole'])
-            ->middleware('can:roles.editar')->name('roles.destroy');
-
-        // Permisos dentro de Roles
-        Route::post('/roles/{role}/permisos', [RolePermissionController::class, 'syncRolePermissions'])
-            ->middleware('can:roles.editar')->name('roles.permisos.sync');
-        Route::delete('/roles/{role}/permisos/{permission}', [RolePermissionController::class, 'revokePermissionFromRole'])
-            ->middleware('can:roles.editar')->name('roles.permisos.revoke');
+    Route::controller(ProfileController::class)->group(function () {
+        Route::get('/profile', 'edit')->name('profile.edit');
+        Route::patch('/profile', 'update')->name('profile.update');
+        Route::delete('/profile', 'destroy')->name('profile.destroy');
     });
 
-    // --- Permisos (Solo creación interna) ---
-    Route::post('/permisos', [RolePermissionController::class, 'storePermission'])
-        ->middleware('can:permisos.ver')->name('permisos.store');
+    // --- Utilidades Globales ---
+    Route::controller(SucursalController::class)->group(function () {
+        Route::get('/elegir-sucursal', 'elegir')->name('sucursales.elegir');
+        Route::post('/elegir-sucursal', 'guardarEleccion')->name('sucursales.guardar');
+        Route::get('/cambiar-sucursal-select', 'cambiarDesdeSelect')->name('cambiar.sucursal.desdeSelect');
+    });
 
-    // --- Usuarios ---
-    Route::middleware(['can:usuarios.ver'])->group(function () {
+    Route::controller(UsuarioController::class)->group(function () {
+        Route::get('/mi-perfil', 'miPerfil')->name('perfil.editar');
+        Route::put('/mi-perfil', 'updateMiPerfil')->name('perfil.update');
+        Route::get('seguridad/usuarios/{usuario}/imagen', 'mostrarImagen')->name('seguridad.usuarios.imagen');
+    });
 
-        // Reset Password (Ruta específica antes del resource)
-        Route::patch('usuarios/{usuario}/reset-password', [UsuarioController::class, 'resetPassword'])
-            ->name('usuarios.reset_password');
+    // =================================================================
+    // MÓDULO: SEGURIDAD
+    // =================================================================
+    Route::prefix('seguridad')->name('seguridad.')->group(function () {
 
-        // Activar Usuario
-        Route::post('/usuarios/{usuario}/activar', [UsuarioController::class, 'activar'])
-            ->middleware('can:usuarios.editar')->name('usuarios.activar');
+        // Roles y Permisos
+        Route::resource('roles', RolePermissionController::class);
 
-        // Resource estándar (excluyendo show si no se usa)
+        // Rutas extra de Roles (Sync/Revoke)
+        Route::controller(RolePermissionController::class)->group(function () {
+            Route::post('/roles/{role}/permisos', 'syncRolePermissions')->name('roles.permisos.sync');
+            Route::delete('/roles/{role}/permisos/{permission}', 'revokePermissionFromRole')->name('roles.permisos.revoke');
+            Route::post('/permisos', 'storePermission')->name('permisos.store');
+        });
+
+        // Usuarios
+        Route::controller(UsuarioController::class)->group(function () {
+            Route::patch('usuarios/{usuario}/reset-password', 'resetPassword')->name('usuarios.reset_password');
+            Route::post('/usuarios/{usuario}/activar', 'activar')->name('usuarios.activar');
+        });
         Route::resource('usuarios', UsuarioController::class)->except(['show']);
     });
-});
 
+    // =================================================================
+    // MÓDULO: INVENTARIO
+    // =================================================================
+    Route::prefix('inventario')->name('inventario.')->group(function () {
 
-// =========================================================================
-// MÓDULO: INVENTARIO (Medicamentos y Categorías)
-// =========================================================================
-Route::middleware(['auth', 'can:medicamentos.ver'])->prefix('inventario')->name('inventario.')->group(function () {
-
-    // --- Categorías ---
-    Route::middleware('can:categorias.ver')->group(function () {
         Route::resource('categorias', CategoriaController::class);
+
+        // Medicamentos: Rutas Custom
+        Route::controller(MedicamentoController::class)->group(function () {
+            Route::get('medicamentos/buscar', 'lookup')->name('medicamentos.lookup');
+            Route::post('medicamentos/store-rapido', 'storeRapido')->name('medicamentos.storeRapido');
+        });
+
+        // Medicamentos: Sucursales
+        Route::controller(MedicamentoSucursalController::class)->group(function () {
+            Route::get('medicamentos/{medicamento}/sucursales/{sucursal}/editar', 'edit')->name('medicamento_sucursal.edit');
+            Route::put('medicamentos/{medicamento}/sucursales/{sucursal}', 'update')->name('medicamento_sucursal.update');
+            Route::delete('medicamentos/{medicamento}/sucursales/{sucursal}', 'destroy')
+                ->name('medicamento_sucursal.destroy');
+
+            Route::post('medicamentos/{medicamento}/sucursales', 'attach')->name('medicamento_sucursal.store');
+
+            Route::get('medicamentos/{medicamento}/sucursales/{sucursal}/historial', 'historial')
+                ->name('medicamento_sucursal.historial');
+            Route::put('medicamentos/{medicamento}/sucursales/{sucursal}', 'update')->name('medicamentos.updateSucursal');
+        });
+
+        Route::resource('medicamentos', MedicamentoController::class);
     });
 
-    // --- Medicamentos: Rutas Específicas (Deben ir antes de resource) ---
+    // =================================================================
+    // MÓDULO: COMPRAS
+    // =================================================================
+    // Nota: Usamos name('inventario.') para mantener compatibilidad con tus vistas
+    Route::resource('proveedores', ProveedorController::class)
+        ->names('inventario.proveedores')
+        ->parameters(['proveedores' => 'proveedor']);
 
-    // Búsqueda para autocompletado
-    Route::get('medicamentos/buscar', [MedicamentoController::class, 'lookup'])
-        ->name('medicamentos.lookup');
-
-    // Creación Rápida
-    Route::post('medicamentos/store-rapido', [MedicamentoController::class, 'storeRapido'])
-        ->name('medicamentos.storeRapido');
-
-    // Gestión por Sucursal (Stocks/Precios específicos)
-    Route::get('medicamentos/{medicamento}/sucursales/{sucursal}/editar', [MedicamentoSucursalController::class, 'edit'])
-        ->middleware('can:medicamentos.editar')->name('medicamentos.editSucursal');
-
-    Route::put('medicamentos/{medicamento}/sucursales/{sucursal}', [MedicamentoSucursalController::class, 'update'])
-        ->middleware('can:medicamentos.editar')->name('medicamentos.updateSucursal');
-
-    Route::delete('medicamentos/{medicamento}/sucursales/{sucursal}', [MedicamentoSucursalController::class, 'destroy'])
-        ->middleware('can:medicamentos.eliminar')->name('medicamentos.detachSucursal');
-
-    Route::post('medicamentos/{medicamento}/sucursales', [MedicamentoSucursalController::class, 'attach'])
-        ->middleware('can:medicamentos.editar')->name('medicamentos.attachSucursal');
-
-    // --- Medicamentos: Resource Principal ---
-    // Sobrescribimos store para validar permiso específico
-    Route::post('medicamentos', [MedicamentoController::class, 'store'])
-        ->middleware('can:medicamentos.crear')->name('medicamentos.store');
-
-    Route::resource('medicamentos', MedicamentoController::class)->except(['store']);
-});
-
-
-// =========================================================================
-// MÓDULO: COMPRAS (Proveedores y Órdenes)
-// =========================================================================
-Route::middleware('auth')->group(function () {
-
-    // --- Proveedores ---
-    Route::middleware('can:proveedores.ver')->name('inventario.')->group(function () {
-
-        Route::resource('proveedores', ProveedorController::class)
-            ->parameters(['proveedores' => 'proveedor']);
-    });
-
-    // --- Compras ---
     Route::resource('compras', CompraController::class);
-});
 
+    // =================================================================
+    // MÓDULO: VENTAS
+    // =================================================================
+    Route::controller(CajaSesionController::class)->group(function () {
+        Route::get('cajas', 'index')->name('cajas.index');
+        Route::post('cajas', 'store')->name('cajas.store');
+        Route::get('cajas/{id}', 'show')->name('cajas.show');
+        Route::patch('cajas/{id}', 'update')->name('cajas.update');
+    });
 
-// =========================================================================
-// MÓDULO: VENTAS (Cajas y Punto de Venta)
-// =========================================================================
-Route::middleware('auth')->group(function () {
+    Route::controller(VentaController::class)->prefix('ventas')->name('ventas.')->group(function () {
+        Route::get('lookup-medicamentos', 'lookupMedicamentos')->name('lookup_medicamentos');
+        Route::get('lookup-lotes', 'lookupLotes')->name('lookup_lotes');
+        Route::get('lookup-cliente', 'buscarCliente')->name('buscar_cliente');
+    });
 
-    // --- Control de Caja (Sesiones) ---
-    Route::get('cajas', [CajaSesionController::class, 'index'])->name('cajas.index');
-    Route::post('cajas', [CajaSesionController::class, 'store'])->name('cajas.store');
-    Route::get('cajas/{id}', [CajaSesionController::class, 'show'])->name('cajas.show');
-    Route::patch('cajas/{id}', [CajaSesionController::class, 'update'])->name('cajas.update');
-
-    // --- Ventas: Lookups (AJAX) ---
-    Route::get('ventas/lookup-medicamentos', [VentaController::class, 'lookupMedicamentos'])
-        ->name('ventas.lookup_medicamentos');
-
-    Route::get('ventas/lookup-lotes', [VentaController::class, 'lookupLotes'])
-        ->name('ventas.lookup_lotes');
-
-    Route::get('ventas/lookup-cliente', [VentaController::class, 'buscarCliente'])
-        ->name('ventas.buscar_cliente');
-
-    // --- Ventas: Resource Principal ---
     Route::resource('ventas', VentaController::class);
+
+    // =================================================================
+    // MÓDULO: CONFIGURACIÓN
+    // =================================================================
+    Route::prefix('configuracion')->name('configuracion.')->group(function () {
+        Route::resource('sucursales', SucursalController::class)
+            ->parameters(['sucursales' => 'sucursal']);
+    });
 });
-
-
-// =========================================================================
-// MÓDULO: CONFIGURACIÓN (Sucursales)
-// =========================================================================
-Route::middleware(['auth', 'can:sucursales.ver'])->prefix('configuracion')->name('configuracion.')->group(function () {
-    Route::resource('sucursales', SucursalController::class)
-        ->parameters(['sucursales' => 'sucursal']);
-});
-
-
-// =========================================================================
-// RUTAS DE AUTENTICACIÓN (Breeze)
-// =========================================================================
-require __DIR__ . '/auth.php';

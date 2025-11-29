@@ -4,7 +4,7 @@ namespace App\Models\Inventario;
 
 use App\Models\Sucursal;
 use Carbon\Carbon;
-
+use App\Models\Compras\DetalleCompra;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Inventario\MedicamentoSucursal;
 
@@ -50,6 +50,12 @@ class Lote extends Model
     {
         return $this->hasOne(MedicamentoSucursal::class, 'medicamento_id', 'medicamento_id')
             ->where('sucursal_id', $this->sucursal_id);
+    }
+
+    public function detalleCompra()
+    {
+        // Un lote pertenece a una línea de detalle de compra
+        return $this->hasOne(DetalleCompra::class, 'lote_id', 'id');
     }
 
 

@@ -30,17 +30,29 @@ class MedicamentoController extends Controller
         $user = Auth::user();
         $q    = trim($request->get('q', ''));
 
+        // 1. Resolvemos Sucursal (Tu lógica actual)
         $ctx = $this->sucursalResolver->resolverPara($user);
 
+        // 2. Buscamos (Tu lógica actual)
         $medicamentos = $this->medicamentoRepo->buscarMedicamentos($q, $ctx);
 
-        return view('inventario.medicamentos.index', [
+        // VARIABLES PARA LA VISTA
+        $data = [
             'medicamentos'         => $medicamentos,
             'q'                    => $q,
             'esAdmin'              => $ctx['es_admin'],
             'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
             'idsFiltroSucursales'  => $ctx['ids_filtro'],
-        ]);
+        ];
+
+        // === AQUÍ ESTÁ EL CAMBIO MÁGICO ===
+        if ($request->ajax()) {
+            // Si es AJAX, devolvemos SOLO la tabla renderizada
+            return view('inventario.medicamentos._index_tabla', $data)->render();
+        }
+
+        // Si es carga normal, devolvemos toda la página
+        return view('inventario.medicamentos.index', $data);
     }
 
 

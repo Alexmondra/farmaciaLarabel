@@ -8,6 +8,6 @@
 'route' => route('inventario.proveedores.store'),
 'method' => 'POST',
 'submitText' => 'Guardar',
-'proveedor' => new \App\Models\Inventario\Proveedor(['activo' => true])
+'proveedor' => new \App\Models\Compras\Proveedor(['activo' => true])
 ])
 @stop
