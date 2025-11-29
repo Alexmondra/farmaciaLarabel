@@ -43,10 +43,22 @@ class ProveedorController extends Controller
 
     public function store(Request $request)
     {
+        // 1. Validamos igual que siempre (reutilizando tu función)
         $data = $this->validatedData($request);
 
-        Proveedor::create($data);
+        // 2. Creamos el proveedor y lo guardamos en una variable
+        $proveedor = Proveedor::create($data);
 
+        // 3. DETECTAR SI ES AJAX (Desde el Modal)
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Proveedor registrado correctamente.',
+                'data'    => $proveedor
+            ]);
+        }
+
+        // 4. SI ES NORMAL (Desde la vista index), redirigimos
         return redirect()
             ->route('inventario.proveedores.index')
             ->with('success', 'Proveedor creado exitosamente.');
@@ -106,8 +118,16 @@ class ProveedorController extends Controller
 
         $data = $request->validate($rules);
 
-        // checkbox: si no viene, false; si viene, true
-        $data['activo'] = $request->boolean('activo');
+        if ($request->has('activo')) {
+            $data['activo'] = $request->boolean('activo');
+        } else {
+            if ($proveedor) {
+                $data['activo'] = false;
+            } else {
+                // ESTAMOS CREANDO:
+                $data['activo'] = true;
+            }
+        }
 
         return $data;
     }

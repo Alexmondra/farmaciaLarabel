@@ -13,6 +13,8 @@ return new class extends Migration {
             $table->string('nombre', 120);
             $table->string('direccion', 200)->nullable();
             $table->string('telefono', 30)->nullable();
+            $table->string('imagen_sucursal', 255)->nullable();
+            $table->decimal('impuesto_porcentaje', 5, 2)->default(18.00);
             $table->boolean('activo')->default(true);
             $table->timestamps();
         });

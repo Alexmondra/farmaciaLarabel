@@ -81,12 +81,52 @@
         @each('adminlte::partials.navbar.menu-item', $adminlte->menu('navbar-right'), 'item')
 
         {{-- User menu link --}}
-        @if(Auth::user())
-        @if(config('adminlte.usermenu_enabled'))
-        @include('adminlte::partials.navbar.menu-item-dropdown-user-menu')
-        @else
-        @include('adminlte::partials.navbar.menu-item-logout-link')
-        @endif
+        {{-- User menu link (PERSONALIZADO) --}}
+        {{-- User menu link (DISEÑO VERTICAL Y COMPACTO) --}}
+        @if(Auth::check())
+        @php
+        $user = Auth::user();
+        $imgUrl = $user->imagen_perfil
+        ? route('seguridad.usuarios.imagen', $user->id) . '?t=' . time()
+        : asset('img/default-avatar.png');
+        @endphp
+
+        <li class="nav-item dropdown user-menu">
+            {{-- 1. BARRA SUPERIOR: Solo Foto --}}
+            <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                <img src="{{ $imgUrl }}" class="user-image img-circle elevation-2" alt="User Image" style="width: 30px; height: 30px; object-fit: cover;">
+            </a>
+
+            {{-- 2. MENÚ DESPLEGABLE: Vertical y Elegante --}}
+            <ul class="dropdown-menu dropdown-menu-right shadow border-0" style="min-width: 180px; border-radius: 10px;">
+
+                {{-- Pequeño saludo (Opcional, para que sepa qué cuenta es) --}}
+                <li class="px-3 py-2 text-center text-muted border-bottom" style="font-size: 0.85rem; background-color: #f8f9fa;">
+                    Hola, <strong>{{ Str::limit($user->name, 15) }}</strong>
+                </li>
+
+                {{-- Opción 1: Mi Perfil --}}
+                <li>
+                    <a href="{{ route('perfil.editar') }}" class="dropdown-item py-2 text-dark">
+                        <i class="fas fa-user-cog text-primary mr-2" style="width: 20px; text-align: center;"></i>
+                        Mi Perfil
+                    </a>
+                </li>
+
+                {{-- Opción 2: Salir (En Rojo suave) --}}
+                <li>
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                        class="dropdown-item py-2 text-danger">
+                        <i class="fas fa-sign-out-alt mr-2" style="width: 20px; text-align: center;"></i>
+                        Cerrar Sesión
+                    </a>
+                </li>
+
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                    @csrf
+                </form>
+            </ul>
+        </li>
         @endif
 
         {{-- Right sidebar toggler link --}}

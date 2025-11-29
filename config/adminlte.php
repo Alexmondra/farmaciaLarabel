@@ -6,15 +6,9 @@ return [
     |--------------------------------------------------------------------------
     | Title
     |--------------------------------------------------------------------------
-    |
-    | Here you can change the default title of your admin panel.
-    |
-    | For detailed instructions you can look the title section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
-    'title' => 'AdminLTE 3',
+    'title' => 'FarmaciaSys', // Nombre más profesional
     'title_prefix' => '',
     'title_postfix' => '',
 
@@ -22,12 +16,6 @@ return [
     |--------------------------------------------------------------------------
     | Favicon
     |--------------------------------------------------------------------------
-    |
-    | Here you can activate the favicon.
-    |
-    | For detailed instructions you can look the favicon section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
     'use_ico_only' => false,
@@ -37,14 +25,6 @@ return [
     |--------------------------------------------------------------------------
     | Google Fonts
     |--------------------------------------------------------------------------
-    |
-    | Here you can allow or not the use of external google fonts. Disabling the
-    | google fonts may be useful if your admin panel internet access is
-    | restricted somehow.
-    |
-    | For detailed instructions you can look the google fonts section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
     'google_fonts' => [
@@ -55,32 +35,19 @@ return [
     |--------------------------------------------------------------------------
     | Admin Panel Logo
     |--------------------------------------------------------------------------
-    |
-    | Here you can change the logo of your admin panel.
-    |
-    | For detailed instructions you can look the logo section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
-    'logo' => '<b>Admin</b>LTE',
+    'logo' => '<i class="fas fa-clinic-medical mr-1"></i> <b>Farma</b>Sys',
     'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
-    'logo_img_alt' => 'Admin Logo',
+    'logo_img_alt' => 'Farmacia Logo',
 
     /*
     |--------------------------------------------------------------------------
     | Authentication Logo
     |--------------------------------------------------------------------------
-    |
-    | Here you can setup an alternative logo to use on your login and register
-    | screens. When disabled, the admin panel logo will be used instead.
-    |
-    | For detailed instructions you can look the auth logo section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
     'auth_logo' => [
@@ -98,15 +65,6 @@ return [
     |--------------------------------------------------------------------------
     | Preloader Animation
     |--------------------------------------------------------------------------
-    |
-    | Here you can change the preloader animation configuration. Currently, two
-    | modes are supported: 'fullscreen' for a fullscreen preloader animation
-    | and 'cwrapper' to attach the preloader animation into the content-wrapper
-    | element and avoid overlapping it with the sidebars and the top navbar.
-    |
-    | For detailed instructions you can look the preloader section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
     'preloader' => [
@@ -114,8 +72,8 @@ return [
         'mode' => 'fullscreen',
         'img' => [
             'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-            'alt' => 'AdminLTE Preloader Image',
-            'effect' => 'animation__shake',
+            'alt' => 'Cargando...',
+            'effect' => 'animation__pulse', // Efecto más sutil
             'width' => 60,
             'height' => 60,
         ],
@@ -125,17 +83,11 @@ return [
     |--------------------------------------------------------------------------
     | User Menu
     |--------------------------------------------------------------------------
-    |
-    | Here you can activate and change the user menu.
-    |
-    | For detailed instructions you can look the user menu section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
     'usermenu_enabled' => true,
-    'usermenu_header' => false,
-    'usermenu_header_class' => 'bg-primary',
+    'usermenu_header' => true, // Activado para ver perfil
+    'usermenu_header_class' => 'bg-teal', // Color farmacia
     'usermenu_image' => false,
     'usermenu_desc' => false,
     'usermenu_profile_url' => false,
@@ -144,18 +96,12 @@ return [
     |--------------------------------------------------------------------------
     | Layout
     |--------------------------------------------------------------------------
-    |
-    | Here we change the layout of your admin panel.
-    |
-    | For detailed instructions you can look the layout section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Layout-and-Styling-Configuration
-    |
     */
 
     'layout_topnav' => null,
     'layout_boxed' => null,
-    'layout_fixed_sidebar' => null,
-    'layout_fixed_navbar' => null,
+    'layout_fixed_sidebar' => true, // Fijo para mejor UX
+    'layout_fixed_navbar' => true,
     'layout_fixed_footer' => null,
     'layout_dark_mode' => null,
 
@@ -163,40 +109,28 @@ return [
     |--------------------------------------------------------------------------
     | Authentication Views Classes
     |--------------------------------------------------------------------------
-    |
-    | Here you can change the look and behavior of the authentication views.
-    |
-    | For detailed instructions you can look the auth classes section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Layout-and-Styling-Configuration
-    |
     */
 
-    'classes_auth_card' => 'card-outline card-primary',
+    'classes_auth_card' => 'card-outline card-teal', // Borde verde azulado
     'classes_auth_header' => '',
     'classes_auth_body' => '',
     'classes_auth_footer' => '',
     'classes_auth_icon' => '',
-    'classes_auth_btn' => 'btn-flat btn-primary',
+    'classes_auth_btn' => 'btn-flat btn-teal', // Botones verdes
 
     /*
     |--------------------------------------------------------------------------
     | Admin Panel Classes
     |--------------------------------------------------------------------------
-    |
-    | Here you can change the look and behavior of the admin panel.
-    |
-    | For detailed instructions you can look the admin panel classes here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Layout-and-Styling-Configuration
-    |
     */
 
     'classes_body' => '',
-    'classes_brand' => '',
+    'classes_brand' => 'bg-teal', // Fondo del logo en verde farmacia
     'classes_brand_text' => '',
     'classes_content_wrapper' => '',
     'classes_content_header' => '',
     'classes_content' => '',
-    'classes_sidebar' => 'sidebar-dark-primary elevation-4',
+    'classes_sidebar' => 'sidebar-dark-teal elevation-4', // Sidebar oscura con hover teal
     'classes_sidebar_nav' => '',
     'classes_topnav' => 'navbar-white navbar-light',
     'classes_topnav_nav' => 'navbar-expand',
@@ -206,12 +140,6 @@ return [
     |--------------------------------------------------------------------------
     | Sidebar
     |--------------------------------------------------------------------------
-    |
-    | Here we can modify the sidebar of the admin panel.
-    |
-    | For detailed instructions you can look the sidebar section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Layout-and-Styling-Configuration
-    |
     */
 
     'sidebar_mini' => 'lg',
@@ -228,12 +156,6 @@ return [
     |--------------------------------------------------------------------------
     | Control Sidebar (Right Sidebar)
     |--------------------------------------------------------------------------
-    |
-    | Here we can modify the right sidebar aka control sidebar of the admin panel.
-    |
-    | For detailed instructions you can look the right sidebar section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Layout-and-Styling-Configuration
-    |
     */
 
     'right_sidebar' => false,
@@ -248,12 +170,6 @@ return [
     |--------------------------------------------------------------------------
     | URLs
     |--------------------------------------------------------------------------
-    |
-    | Here we can modify the url settings of the admin panel.
-    |
-    | For detailed instructions you can look the urls section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Basic-Configuration
-    |
     */
 
     'use_route_url' => false,
@@ -270,16 +186,6 @@ return [
     |--------------------------------------------------------------------------
     | Laravel Asset Bundling
     |--------------------------------------------------------------------------
-    |
-    | Here we can enable the Laravel Asset Bundling option for the admin panel.
-    | Currently, the next modes are supported: 'mix', 'vite' and 'vite_js_only'.
-    | When using 'vite_js_only', it's expected that your CSS is imported using
-    | JavaScript. Typically, in your application's 'resources/js/app.js' file.
-    | If you are not using any of these, leave it as 'false'.
-    |
-    | For detailed instructions you can look the asset bundling section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Other-Configuration
-    |
     */
 
     'laravel_asset_bundling' => false,
@@ -290,21 +196,13 @@ return [
     |--------------------------------------------------------------------------
     | Menu Items
     |--------------------------------------------------------------------------
-    |
-    | Here we can modify the sidebar/top navigation of the admin panel.
-    |
-    | For detailed instructions you can look here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
-    |
     */
 
     'menu' => [
         // Navbar items:
-
-
         [
             'type' => 'navbar-search',
-            'text' => 'searchhhh',
+            'text' => 'Buscar medicamento, lote o venta...',
             'topnav_right' => true,
         ],
         [
@@ -312,157 +210,201 @@ return [
             'topnav_right' => true,
         ],
 
-
-
         // Sidebar items:
         [
             'type' => 'sidebar-menu-search',
-            'text' => 'search',
+            'text' => 'Buscar módulo...',
+        ],
+
+        ['header' => 'PRINCIPAL'],
+        [
+            'text' => 'Dashboard',
+            'url'  => 'dashboard', // Asumiendo que tienes una ruta home
+            'icon' => 'fas fa-tachometer-alt',
+            'label'       => 'Resumen',
+            'label_color' => 'success',
+        ],
+
+        // =============================================
+        // MÓDULO DE CAJA Y MOSTRADOR (Lo más usado)
+        // =============================================
+        ['header' => 'MOSTRADOR Y CAJA'],
+
+        [
+            'text'    => 'Punto de Venta (POS)',
+            'url'     => '#', // Futura ruta
+            'icon'    => 'fas fa-cash-register',
+            'icon_color' => 'cyan',
+            'active'  => ['pos*'],
         ],
         [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
-        ],
-        // ========== OPERACIONES ==========
-        ['header' => 'OPERACIONES'],
-        [
-            'text' => 'Punto de Venta',
-            'url'  => '#',
-            'icon' => 'fas fa-cash-register',
-            'active' => ['pos*'], // cuando luego uses /pos
-        ],
-        [
-            'text' => 'Ventas',
-            'icon' => 'fas fa-shopping-bag',
+            'text' => 'Operaciones de Caja',
+            'icon' => 'fas fa-wallet',
             'submenu' => [
-                ['text' => 'Listado', 'url' => 'ventas', 'icon' => 'far fa-list-alt', 'can' => 'ventas.ver'],
-                ['text' => 'Nueva venta',  'url' => '#', 'icon' => 'fas fa-plus'],
-                ['text' => 'Devoluciones', 'url' => '#', 'icon' => 'fas fa-undo'],
-                ['text' => 'Cajas',        'url' => 'cajas', 'icon' => 'fas fa-money-check-alt'],
+                [
+                    'text' => 'Apertura / Cierre',
+                    'url'  => 'cajas',
+                    'icon' => 'fas fa-door-open',
+                    'active' => ['cajas*'],
+                ],
+                [
+                    'text' => 'Movimientos de Efectivo',
+                    'url'  => '#',
+                    'icon' => 'fas fa-money-bill-wave',
+                ],
             ],
         ],
         [
-            'text' => 'Facturación SUNAT',
-            'icon' => 'fas fa-file-invoice',
+            'text'    => 'Historial de Ventas',
+            'url'     => 'ventas',
+            'icon'    => 'fas fa-receipt',
+            'can'     => 'ventas.ver',
+        ],
+
+        // =============================================
+        // MÓDULO FARMACÉUTICO (El corazón del negocio)
+        // =============================================
+        ['header' => 'GESTIÓN FARMACÉUTICA'],
+
+        [
+            'text' => 'Catálogo Productos',
+            'icon' => 'fas fa-prescription-bottle-alt',
             'submenu' => [
-                ['text' => 'Comprobantes',      'url' => '#', 'icon' => 'fas fa-receipt'],
-                ['text' => 'Emitir Factura',    'url' => '#', 'icon' => 'fas fa-file-invoice'],
-                ['text' => 'Emitir Boleta',     'url' => '#', 'icon' => 'fas fa-file-invoice'],
-                ['text' => 'Notas (NC/ND)',     'url' => '#', 'icon' => 'fas fa-sticky-note'],
-                ['text' => 'Envíos a SUNAT',    'url' => '#', 'icon' => 'fas fa-paper-plane'],
-                ['text' => 'CDR / Estados',     'url' => '#', 'icon' => 'fas fa-exchange-alt'],
-                ['text' => 'Resúmenes / Bajas', 'url' => '#', 'icon' => 'fas fa-file-export'],
+                [
+                    'text' => 'Medicamentos',
+                    'url'  => 'inventario/medicamentos',
+                    'icon' => 'fas fa-pills',
+                    'can'  => 'medicamentos.ver',
+                ],
+                [
+                    'text' => 'Categorías / Familias',
+                    'url'  => 'inventario/categorias',
+                    'icon' => 'fas fa-tags',
+                    'can'  => 'categorias.ver',
+                ],
+                [
+                    'text' => 'Laboratorios',
+                    'url'  => '#',
+                    'icon' => 'fas fa-flask',
+                ],
             ],
         ],
         [
-            'text' => 'Guías de Remisión',
-            'icon' => 'fas fa-truck',
+            'text' => 'Control de Stock',
+            'icon' => 'fas fa-cubes',
             'submenu' => [
-                ['text' => 'Listado',   'url' => '#', 'icon' => 'far fa-list-alt'],
-                ['text' => 'Nueva Guía', 'url' => '#', 'icon' => 'fas fa-plus'],
+                [
+                    'text' => 'Kardex Físico',
+                    'url'  => '#',
+                    'icon' => 'fas fa-clipboard-list',
+                ],
+                [
+                    'text' => 'Lotes y Vencimientos',
+                    'url'  => '#',
+                    'icon' => 'fas fa-calendar-times',
+                    'label'       => 'Alerta',
+                    'label_color' => 'danger', // Esto llama la atención visualmente
+                ],
+                [
+                    'text' => 'Ajustes de Inventario',
+                    'url'  => '#',
+                    'icon' => 'fas fa-sliders-h',
+                ],
             ],
         ],
 
-        // ========== INVENTARIO ==========
-        ['header' => 'INVENTARIO'],
+        // =============================================
+        // MÓDULO DE COMPRAS
+        // =============================================
+        ['header' => 'ABASTECIMIENTO'],
+
         [
-            'text' => 'Medicamentos',
-            'icon' => 'fas fa-pills',
+            'text' => 'Gestión de Compras',
+            'icon' => 'fas fa-shopping-cart',
             'submenu' => [
-                ['text' => 'Listado',        'url' => 'inventario/medicamentos', 'icon' => 'far fa-list-alt', 'can' => 'medicamentos.ver'],
-                ['text' => 'Nuevo Medicamento', 'url' => '#', 'icon' => 'fas fa-plus'],
-                ['text' => 'Categorías',     'url' => 'inventario/categorias', 'icon' => 'fas fa-tags', 'can' => 'categorias.ver'],
-                ['text' => 'Unidades',       'url' => '#', 'icon' => 'fas fa-ruler'],
-                ['text' => 'Lotes / Venc.',  'url' => '#', 'icon' => 'fas fa-calendar-times'],
-                ['text' => 'Kardex / Stock', 'url' => '#', 'icon' => 'fas fa-warehouse'],
-                ['text' => 'Inventarios',    'url' => '#', 'icon' => 'fas fa-clipboard-check'],
+                [
+                    'text' => 'Nueva Compra',
+                    'url'  => 'compras',
+                    'icon' => 'fas fa-plus-circle',
+                ],
+                [
+                    'text' => 'Historial Compras',
+                    'url'  => 'listadoCompras',
+                    'icon' => 'fas fa-history',
+                ],
+                [
+                    'text' => 'Proveedores',
+                    'url'  => 'proveedores',
+                    'icon' => 'fas fa-truck',
+                ],
             ],
         ],
 
-        // ========== COMPRAS ==========
-        ['header' => 'COMPRAS'],
-        [
-            'text' => 'Proveedores',
-            'icon' => 'fas fa-truck-loading',
-            'submenu' => [
-                ['text' => 'Listado', 'url' => 'proveedores', 'icon' => 'far fa-list-alt'],
-                ['text' => 'Nuevo',   'url' => '#', 'icon' => 'fas fa-plus'],
-            ],
-        ],
-        [
-            'text' => 'Compras',
-            'icon' => 'fas fa-file-invoice-dollar',
-            'submenu' => [
-                ['text' => 'Órdenes de Compra',  'url' => 'listadoCompras', 'icon' => 'fas fa-file-signature'],
-                ['text' => 'Ingresos a Almacén', 'url' => 'compras', 'icon' => 'fas fa-dolly'],
-            ],
-        ],
-
-        // ========== CLIENTES ==========
-        ['header' => 'CLIENTES'],
-        [
-            'text' => 'Clientes / Pacientes',
-            'icon' => 'fas fa-user-injured',
-            'submenu' => [
-                ['text' => 'Listado',        'url' => '#', 'icon' => 'far fa-list-alt'],
-                ['text' => 'Nuevo',          'url' => '#', 'icon' => 'fas fa-plus'],
-                ['text' => 'Recetas Médicas', 'url' => '#', 'icon' => 'fas fa-prescription'],
-            ],
-        ],
-
-        // ========== REPORTES ==========
+        // =============================================
+        // REPORTES E INTELIGENCIA
+        // =============================================
         ['header' => 'REPORTES'],
+
         [
-            'text' => 'Reportes',
-            'icon' => 'fas fa-chart-line',
+            'text' => 'Reportes Gerenciales',
+            'icon' => 'fas fa-chart-pie',
             'submenu' => [
-                ['text' => 'Ventas por fecha',   'url' => '#', 'icon' => 'fas fa-calendar-day'],
-                ['text' => 'vendidos', 'url' => '#', 'icon' => 'fas fa-poll-h'],
-                ['text' => 'IGV / SUNAT',        'url' => '#', 'icon' => 'fas fa-percentage'],
-                ['text' => 'Stock valorizado',   'url' => '#', 'icon' => 'fas fa-balance-scale'],
-                ['text' => 'Vencimientos',       'url' => '#', 'icon' => 'fas fa-exclamation-triangle'],
-                ['text' => 'Compras por proveedor', 'url' => '#', 'icon' => 'fas fa-file-import'],
+                ['text' => 'Reporte del Día', 'url' => '#', 'icon' => 'far fa-circle'],
+                ['text' => 'Productos más vendidos', 'url' => '#', 'icon' => 'far fa-circle'],
+                ['text' => 'Utilidad / Ganancia', 'url' => '#', 'icon' => 'far fa-circle'],
             ],
         ],
 
-        // ========== SEGURIDAD / CONFIG ==========
-        ['header' => 'SEGURIDAD Y CONFIGURACIÓN'],
+        // =============================================
+        // ADMINISTRACIÓN
+        // =============================================
+        ['header' => 'CONFIGURACIÓN'],
+
         [
-            'text' => 'Usuarios y Roles',
-            'icon' => 'fas fa-users-cog',
-            'can' => 'usuarios.ver',
+            'text' => 'Acceso y Seguridad',
+            'icon' => 'fas fa-lock',
+            'can'  => 'usuarios.ver',
             'submenu' => [
-                ['text' => 'Usuarios',  'url' => 'seguridad/usuarios', 'icon' => 'fas fa-user', 'can' => 'usuarios.ver'],
-                ['text' => 'Roles y permisos', 'url' => 'seguridad/roles', 'icon' => 'fas fa-user-shield', 'can' => 'roles.ver'], ////
-                // ['text' => 'Permisos',  'url' => '#', 'icon' => 'fas fa-key'],
-                //['text' => 'Auditoría', 'url' => '', 'icon' => 'fas fa-clipboard-list'],
+                [
+                    'text' => 'Usuarios del Sistema',
+                    'url'  => 'seguridad/usuarios',
+                    'icon' => 'fas fa-users',
+                    'can'  => 'usuarios.ver',
+                ],
+                [
+                    'text' => 'Roles y Permisos',
+                    'url'  => 'seguridad/roles',
+                    'icon' => 'fas fa-user-shield',
+                    'can'  => 'roles.ver',
+                ],
             ],
         ],
         [
-            'text' => 'Parámetros del Sistema',
+            'text' => 'Parametros Generales',
             'icon' => 'fas fa-cogs',
             'submenu' => [
-                ['text' => 'Empresa/Sucursal',    'url' => 'configuracion/sucursales', 'icon' => 'fas fa-building', 'can' => 'sucursales.ver'],
-                ['text' => 'Series y Numeración', 'url' => '#', 'icon' => 'fas fa-hashtag'],
-                ['text' => 'Impuestos (IGV)',     'url' => '#', 'icon' => 'fas fa-percentage'],
-                ['text' => 'SUNAT (Certificados)', 'url' => '#', 'icon' => 'fas fa-certificate'],
-                ['text' => 'Almacenes/Cajas',     'url' => '#', 'icon' => 'fas fa-store-alt'],
+                [
+                    'text' => 'Datos de Farmacia',
+                    'url'  => 'configuracion/sucursales',
+                    'icon' => 'fas fa-clinic-medical',
+                    'can'  => 'sucursales.ver',
+                ],
+                ['text' => 'Impresoras / Tickets', 'url' => '#', 'icon' => 'fas fa-print'],
             ],
         ],
 
+        ['header' => 'SOPORTE'],
+        [
+            'text' => 'Blog / Novedades',
+            'url'  => 'admin/blog',
+            'icon' => 'fas fa-info-circle',
+            'can'  => 'manage-blog',
+        ],
     ],
-
     /*
     |--------------------------------------------------------------------------
     | Menu Filters
     |--------------------------------------------------------------------------
-    |
-    | Here we can modify the menu filters of the admin panel.
-    |
-    | For detailed instructions you can look the menu filters section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
-    |
     */
 
     'filters' => [
@@ -479,12 +421,6 @@ return [
     |--------------------------------------------------------------------------
     | Plugins Initialization
     |--------------------------------------------------------------------------
-    |
-    | Here we can modify the plugins used inside the admin panel.
-    |
-    | For detailed instructions you can look the plugins section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Plugins-Configuration
-    |
     */
 
     'plugins' => [
@@ -534,12 +470,12 @@ return [
             ],
         ],
         'Sweetalert2' => [
-            'active' => false,
+            'active' => true,
             'files' => [
                 [
                     'type' => 'js',
                     'asset' => false,
-                    'location' => '//cdn.jsdelivr.net/npm/sweetalert2@8',
+                    'location' => '//cdn.jsdelivr.net/npm/sweetalert2@11',
                 ],
             ],
         ],
@@ -564,13 +500,6 @@ return [
     |--------------------------------------------------------------------------
     | IFrame
     |--------------------------------------------------------------------------
-    |
-    | Here we change the IFrame mode configuration. Note these changes will
-    | only apply to the view that extends and enable the IFrame mode.
-    |
-    | For detailed instructions you can look the iframe mode section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/IFrame-Mode-Configuration
-    |
     */
 
     'iframe' => [
@@ -597,12 +526,6 @@ return [
     |--------------------------------------------------------------------------
     | Livewire
     |--------------------------------------------------------------------------
-    |
-    | Here we can enable the Livewire support.
-    |
-    | For detailed instructions you can look the livewire here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Other-Configuration
-    |
     */
 
     'livewire' => false,

@@ -7,11 +7,15 @@ use App\Models\Compras\Compra;
 use App\Models\Inventario\Lote;
 use App\Models\Compras\Proveedor;
 use App\Models\Inventario\Medicamento;
+use App\Models\Inventario\Categoria;
+
 use App\Models\Compras\DetalleCompra;
 use App\Repository\CompraRepository;
 use App\Services\SucursalResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Inventario\MedicamentoSucursal;
+
 
 use Illuminate\Support\Facades\DB;
 
@@ -98,30 +102,28 @@ class CompraController extends Controller
         $user = Auth::user();
         $ctx  = $this->sucursalResolver->resolverPara($user);
 
-        // Requerimos una sucursal activa para registrar compra
         if (!$ctx['sucursal_seleccionada']) {
-            return redirect()
-                ->route('compras.index')
-                ->with('error', 'Debes seleccionar una sucursal antes de registrar una compra.');
+            return redirect()->route('compras.index')
+                ->with('error', 'Selecciona una sucursal.');
         }
 
-        $proveedores  = Proveedor::orderBy('razon_social')->get();
-        $medicamentos = Medicamento::orderBy('nombre')->get();
+        $sucursalId = $ctx['sucursal_seleccionada']->id;
+        $proveedores = Proveedor::orderBy('razon_social')->get();
 
+        // MODIFICACIÓN: Cargamos la relación 'sucursales' filtrada por la sucursal actual
+        // para poder sacar el precio_venta actual en la vista.
+        $medicamentos = Medicamento::with(['sucursales' => function ($q) use ($sucursalId) {
+            $q->where('sucursal_id', $sucursalId);
+        }])->orderBy('nombre')->get();
+        $categorias = Categoria::orderBy('nombre')->get();
         return view('inventario.compras.create', [
+            'categorias' => $categorias,
             'proveedores'          => $proveedores,
             'medicamentos'         => $medicamentos,
             'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
         ]);
     }
 
-
-
-
-
-    /**
-     * GUARDAR compra + detalles + lotes
-     */
     public function store(Request $request)
     {
         $user = Auth::user();
@@ -129,49 +131,47 @@ class CompraController extends Controller
         $sucursalSeleccionada = $ctx['sucursal_seleccionada'];
 
         if (!$sucursalSeleccionada) {
-            return redirect()
-                ->back()
-                ->with('error', 'Debes seleccionar una sucursal para registrar esta compra.');
+            return redirect()->back()->with('error', 'Debes seleccionar una sucursal.');
         }
 
-        // 1) VALIDACIÓN DE CABECERA + ITEMS
+        // 1) VALIDACIÓN
         $data = $request->validate([
-            'proveedor_id'              => 'required|exists:proveedores,id',
-            'fecha_recepcion'           => 'required|date',
-            'tipo_comprobante'          => 'nullable|string|max:30',
-            'numero_factura_proveedor'  => 'nullable|string|max:100',
-            'costo_total_factura'       => 'nullable|numeric|min:0', // lo recalculamos igual
-            'observaciones'             => 'nullable|string|max:500',
-            'archivo_comprobante'       => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
+            'proveedor_id'             => 'required|exists:proveedores,id',
+            'fecha_recepcion'          => 'required|date',
+            'tipo_comprobante'         => 'nullable|string|max:30',
+            'numero_factura_proveedor' => 'nullable|string|max:100',
+            'observaciones'            => 'nullable|string|max:500',
+            'archivo_comprobante'      => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
 
-            'items'                             => 'required|array|min:1',
+            'items'                            => 'required|array|min:1',
             'items.*.medicamento_id'           => 'required|exists:medicamentos,id',
             'items.*.codigo_lote'              => 'nullable|string|max:80',
             'items.*.fecha_vencimiento'        => 'nullable|date',
             'items.*.cantidad_recibida'        => 'required|integer|min:1',
             'items.*.precio_compra_unitario'   => 'required|numeric|min:0',
             'items.*.precio_oferta'            => 'nullable|numeric|min:0',
+            // NUEVO CAMPO VALIDADO
+            'items.*.precio_venta'             => 'required|numeric|min:0',
             'items.*.ubicacion'                => 'nullable|string|max:100',
         ]);
 
-        // 2) SUBIDA DE ARCHIVO (SI HAY)
+        // 2) SUBIDA DE ARCHIVO (Igual que antes...)
         $pathArchivo = null;
         if ($request->hasFile('archivo_comprobante')) {
-            $pathArchivo = $request->file('archivo_comprobante')
-                ->store('compras', 'public'); // storage/app/public/compras
+            $pathArchivo = $request->file('archivo_comprobante')->store('compras', 'public');
         }
 
-        // 3) TRANSACCIÓN: COMPRA + LOTES + DETALLES
+        // 3) TRANSACCIÓN
         $compra = DB::transaction(function () use ($data, $user, $sucursalSeleccionada, $pathArchivo) {
 
-            // 3.1 Crear CABECERA de compra
+            // 3.1 CABECERA (Igual que antes...)
             $compra = Compra::create([
                 'proveedor_id'             => $data['proveedor_id'],
                 'sucursal_id'              => $sucursalSeleccionada->id,
                 'user_id'                  => $user->id,
                 'numero_factura_proveedor' => $data['numero_factura_proveedor'] ?? null,
                 'fecha_recepcion'          => $data['fecha_recepcion'],
-                'costo_total_factura'      => 0, // se recalcula abajo
+                'costo_total_factura'      => 0,
                 'observaciones'            => $data['observaciones'] ?? null,
                 'estado'                   => 'recibida',
                 'tipo_comprobante'         => $data['tipo_comprobante'] ?? null,
@@ -180,23 +180,22 @@ class CompraController extends Controller
 
             $total = 0;
 
-            // 3.2 Recorrer ITEMS → crear LOTE + DETALLE
+            // 3.2 ITEMS
             foreach ($data['items'] as $item) {
 
-                // 3.2.1 Crear LOTE
+                // A. LOTE (Igual...)
                 $lote = Lote::create([
                     'medicamento_id'    => $item['medicamento_id'],
                     'sucursal_id'       => $sucursalSeleccionada->id,
                     'codigo_lote'       => $item['codigo_lote'] ?? null,
-                    'stock_actual'      => $item['cantidad_recibida'], // entra todo como stock
+                    'stock_actual'      => $item['cantidad_recibida'],
                     'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
                     'ubicacion'         => $item['ubicacion'] ?? null,
                     'precio_compra'     => $item['precio_compra_unitario'],
                     'precio_oferta'     => $item['precio_oferta'] ?? null,
-                    'observaciones'     => null,
                 ]);
 
-                // 3.2.2 Crear DETALLE_COMPRA
+                // B. DETALLE (Igual...)
                 DetalleCompra::create([
                     'compra_id'              => $compra->id,
                     'lote_id'                => $lote->id,
@@ -204,25 +203,33 @@ class CompraController extends Controller
                     'precio_compra_unitario' => $item['precio_compra_unitario'],
                 ]);
 
-                // 3.2.3 Acumular total
-                $total += $item['cantidad_recibida'] * $item['precio_compra_unitario'];
+                // C. MEDICAMENTO_SUCURSAL (ACTUALIZAR PRECIO VENTA)
+                // Usamos firstOrNew para buscar si existe. Si no, crea instancia vacía.
+                $medSucursal = MedicamentoSucursal::firstOrNew([
+                    'medicamento_id' => $item['medicamento_id'],
+                    'sucursal_id'    => $sucursalSeleccionada->id
+                ]);
 
-                // 3.2.4 (Opcional) registrar movimiento de inventario aquí
-                // MovimientoInventario::create([...]);
+                // Asignamos el precio que viene del formulario
+                $medSucursal->precio_venta = $item['precio_venta'];
+
+                // Si es nuevo registro, definimos stock mínimo por defecto
+                if (!$medSucursal->exists) {
+                    $medSucursal->stock_minimo = 10;
+                }
+
+                $medSucursal->save();
+
+                $total += $item['cantidad_recibida'] * $item['precio_compra_unitario'];
             }
 
-            // 3.3 Actualizar total calculado
-            $compra->update([
-                'costo_total_factura' => $total,
-            ]);
-
+            $compra->update(['costo_total_factura' => $total]);
             return $compra;
         });
 
-        // 4) REDIRECCIÓN
         return redirect()
             ->route('compras.show', $compra->id)
-            ->with('success', 'Compra registrada y stock actualizado correctamente.');
+            ->with('success', 'Compra registrada exitosamente.');
     }
 
 

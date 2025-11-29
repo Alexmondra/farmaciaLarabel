@@ -14,183 +14,95 @@ class RolesPermisosSeeder extends Seeder
         // Limpia cache de permisos
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // === Permisos (alineados a tu menú) ===
+        // === LISTA LIMPIA DE PERMISOS PARA FARMACIA ===
         $permisos = [
-            // POS / Ventas
-            'pos.ver',
-            'ventas.ver',
-            'ventas.crear',
-            'ventas.editar',
-            'ventas.anular',
-            'devoluciones.ver',
-            'devoluciones.crear',
-            'cajas.ver',
-            'cajas.cerrar',
+            // 1. VENTAS Y POS
+            'ventas.ver',       // Ver historial y dashboard de ventas
+            'ventas.crear',     // Acceso al POS / Registrar venta
+            'ventas.anular',    // Permitir anular una venta
+            'cajas.ver',        // Ver estado de cajas
+            'cajas.abrir',      // Abrir/Cerrar caja
+            'clientes.ver',     // Ver lista de clientes
+            'clientes.crear',   // Registrar clientes
 
-            // Facturación SUNAT
-            'comprobantes.ver',
-            'facturas.crear',
-            'boletas.crear',
-            'notas.ver',
-            'notas.crear',
-            'sunat.envios',
-            'sunat.estado',
-            'sunat.resumenes',
+            // 2. INVENTARIO (Medicamentos)
+            'medicamentos.ver',     // Ver lista y stock
+            'medicamentos.crear',   // Agregar nuevos productos
+            'medicamentos.editar',  // Editar precios/datos
+            'medicamentos.eliminar', // Borrar productos
+            'categorias.ver',       // Gestionar categorías
+            'lotes.ver',            // Ver vencimientos y lotes
+            'stock.ajustar',        // Hacer ajustes manuales de stock (pérdidas, etc)
 
-            // Guías
-            'guias.ver',
-            'guias.crear',
-
-            // Inventario
-            'medicamentos.ver',
-            'medicamentos.crear',
-            'medicamentos.editar',
-            'medicamentos.borrar',
-            'categorias.ver',
-            'unidades.ver',
-            'lotes.ver',
-            'kardex.ver',
-            'inventarios.ver',
-
-            // Compras / Proveedores
-            'proveedores.ver',
-            'proveedores.crear',
+            // 3. COMPRAS (Proveedores)
+            'compras.ver',          // Ver historial de compras
+            'compras.crear',        // Registrar ingreso de mercadería
+            'proveedores.ver',      // Ver proveedores
+            'proveedores.crear',    // Gestionar proveedores
             'proveedores.editar',
-            'proveedores.borrar',
-            'compras.ver',
-            'ordenes.ver',
-            'ingresos.ver',
-
-            // Clientes / Recetas
-            'clientes.ver',
-            'clientes.crear',
-            'recetas.ver',
-            'recetas.crear',
-
-            // Reportes
-            'reportes.ver',
-            'reportes.ventas',
-            'reportes.medicamentos',
-            'reportes.impuestos',
-            'reportes.stock',
-            'reportes.venc',
-            'reportes.compras',
-
-            // Seguridad / Config
+            'proveedores.eliminar',
+            // 4. SEGURIDAD (Usuarios y Roles)
             'usuarios.ver',
             'usuarios.crear',
             'usuarios.editar',
-            'usuarios.borrar',
-            'roles.ver',
-            'roles.crear',
-            'roles.editar',
-            'roles.borrar',
-            'permisos.ver',
-            //'auditoria.ver',
-            'config.ver',
-            'config.empresa',
-            'config.series',
-            'config.impuestos',
-            'config.sunat',
-            'config.infra',
+            'usuarios.eliminar',
+            'roles.ver',            // Ver panel de roles
+            'roles.crear',          // Crear nuevos roles
+            'roles.editar',         // Asignar permisos a roles
+            'roles.eliminar',
 
-            // parametros de sucursales
+            // 5. REPORTES Y CONFIGURACIÓN
+            'reportes.ver',         // Acceso general a reportes
+            'config.ver',           // Ver configuración del sistema
+            'config.editar',        // Editar datos de la empresa/impresora
 
+            // 3. COMPRAS (Proveedores)
             'sucursales.ver',
             'sucursales.crear',
             'sucursales.editar',
-            'sucursales.borrar',
-
+            'sucursales.eliminar',
         ];
 
         foreach ($permisos as $p) {
             Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
 
-        // === Roles (ejemplo) ===
-        $admin       = Role::firstOrCreate(['name' => 'Administrador']);
-        $vendedor    = Role::firstOrCreate(['name' => 'Vendedor']);
-        $almacenero  = Role::firstOrCreate(['name' => 'Almacenero']);
-        $contador    = Role::firstOrCreate(['name' => 'Contador']);
-        $supervisor  = Role::firstOrCreate(['name' => 'Supervisor']);
+        // === ROLES POR DEFECTO ===
 
-        // Admin: todos los permisos
+        // 1. Administrador (Tiene TODO)
+        $admin = Role::firstOrCreate(['name' => 'Administrador']);
         $admin->syncPermissions(Permission::all());
 
-        // Vendedor: POS y ventas
+        // 2. Vendedor (Solo vende y ve clientes)
+        $vendedor = Role::firstOrCreate(['name' => 'Vendedor']);
         $vendedor->syncPermissions([
-            'pos.ver',
             'ventas.ver',
             'ventas.crear',
-            'ventas.editar',
-            'ventas.anular',
-            'devoluciones.ver',
-            'devoluciones.crear',
-            'cajas.ver',
-            'cajas.cerrar',
-            'comprobantes.ver',
-            'facturas.crear',
-            'boletas.crear',
+            'cajas.abrir',
             'clientes.ver',
             'clientes.crear',
-            'reportes.ver',
-            'reportes.ventas',
-            'reportes.medicamentos',
+            'medicamentos.ver', // Necesita ver para buscar precios
         ]);
 
-        // Almacenero: inventario + compras
-        $almacenero->syncPermissions([
+        // 3. Farmacéutico/Almacenero (Controla Stock y Compras)
+        $farmaceutico = Role::firstOrCreate(['name' => 'Farmacéutico']);
+        $farmaceutico->syncPermissions([
             'medicamentos.ver',
             'medicamentos.crear',
             'medicamentos.editar',
-            'medicamentos.borrar',
             'categorias.ver',
-            'unidades.ver',
             'lotes.ver',
-            'kardex.ver',
-            'inventarios.ver',
+            'compras.ver',
+            'compras.crear',
             'proveedores.ver',
             'proveedores.crear',
-            'proveedores.editar',
-            'proveedores.borrar',
-            'compras.ver',
-            'ordenes.ver',
-            'ingresos.ver',
-            'guias.ver',
-            'guias.crear',
-            'reportes.ver',
-            'reportes.stock',
-            'reportes.venc',
-            'reportes.compras',
+            'stock.ajustar'
         ]);
 
-        // Contador: facturación y reportes impuestos
-        $contador->syncPermissions([
-            'comprobantes.ver',
-            'sunat.envios',
-            'sunat.estado',
-            'sunat.resumenes',
-            'reportes.ver',
-            'reportes.impuestos',
-        ]);
-
-        // Supervisor: lectura general y reportes
-        $supervisor->syncPermissions([
-            'ventas.ver',
-            'comprobantes.ver',
-            'medicamentos.ver',
-            'proveedores.ver',
-            'clientes.ver',
-            'reportes.ver',
-            'reportes.ventas',
-            'reportes.medicamentos',
-            'reportes.stock',
-        ]);
-
-        // Usuario admin inicial (ajusta email)
+        // Asignar Admin al primer usuario (TÚ)
         $user = User::first();
         if ($user) {
-            $user->syncRoles([$admin]); // lo haces admin para empezar
+            $user->assignRole($admin);
         }
     }
 }

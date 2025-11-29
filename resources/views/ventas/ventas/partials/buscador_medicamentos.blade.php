@@ -6,10 +6,6 @@
     </div>
     <div class="card-body pt-2 pb-2" style="min-height: 150px;">
 
-        {{-- VARIABLE PHP A JS: Pasamos las categorías para usarlas en el script --}}
-        <script>
-            window.listadoCategorias = @json($categorias ?? []);
-        </script>
 
         <div class="row">
             {{-- COLUMNA 1: BUSCADOR DE CATEGORÍAS --}}

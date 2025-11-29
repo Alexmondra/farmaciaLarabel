@@ -5,7 +5,7 @@
 @stop
 @section('content')
 @include('inventario.proveedores._form', [
-'route' => route('proveedores.store'),
+'route' => route('inventario.proveedores.store'),
 'method' => 'POST',
 'submitText' => 'Guardar',
 'proveedor' => new \App\Models\Inventario\Proveedor(['activo' => true])

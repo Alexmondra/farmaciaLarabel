@@ -74,6 +74,15 @@ class VentaController extends Controller
         ]);
     }
 
+    public function show($id)
+    {
+        // Cargamos la venta con todos sus detalles y relaciones
+        $venta = Venta::with(['detalles.lote.medicamento', 'cliente', 'usuario', 'sucursal'])
+            ->findOrFail($id);
+
+        return view('ventas.ventas.show', compact('venta'));
+    }
+
     public function create(Request $request)
     {
         $user = Auth::user();
@@ -116,14 +125,18 @@ class VentaController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validación de formulario (Datos básicos)
+        // 1. VALIDACIÓN: Hacemos cliente_id 'nullable' (opcional)
         $data = $request->validate([
             'caja_sesion_id'   => ['required', 'integer', 'exists:caja_sesiones,id'],
-            'cliente_id'       => ['required', 'integer', 'exists:clientes,id'],
+            'cliente_id'       => ['nullable', 'integer', 'exists:clientes,id'], // <--- CAMBIO AQUÍ
             'tipo_comprobante' => ['required', 'string', 'in:BOLETA,FACTURA,TICKET'],
             'medio_pago'       => ['required', 'string', 'in:EFECTIVO,TARJETA,YAPE,PLIN'],
-            'items'            => ['required', 'string'], // JSON string
+            'items'            => ['required', 'string'],
         ]);
+
+        if (empty($data['cliente_id'])) {
+            $data['cliente_id'] = 1;
+        }
 
         $items = json_decode($data['items'], true);
 
@@ -233,7 +246,7 @@ class VentaController extends Controller
                     'total_descuento'  => 0,
                     'total_neto'       => $totalNeto,
                     'medio_pago'       => $data['medio_pago'],
-                    'estado'           => 'COMPLETADA',
+                    'estado'           => 'EMITIDA',
                 ]);
 
                 // G. Guardar todos los detalles de golpe

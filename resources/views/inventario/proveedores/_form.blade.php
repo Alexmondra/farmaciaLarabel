@@ -134,7 +134,7 @@
 
         {{-- Footer con botones --}}
         <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
-            <a href="{{ route('proveedores.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('inventario.proveedores.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left mr-1"></i>Cancelar
             </a>
             <button type="submit" class="btn btn-primary">

@@ -7,95 +7,76 @@
 @stop
 
 @section('content')
-
-{{-- Mensajes flash --}}
-@if(session('success'))
-<x-adminlte-alert theme="success" title="OK">
-    {{ session('success') }}
-</x-adminlte-alert>
-@endif
-@if(session('error'))
-<x-adminlte-alert theme="danger" title="Error">
-    {{ session('error') }}
-</x-adminlte-alert>
-@endif
-@if ($errors->any())
-<x-adminlte-alert theme="danger" title="Validación">
-    <ul class="mb-0">
-        @foreach ($errors->all() as $e)
-        <li>{{ $e }}</li>
-        @endforeach
-    </ul>
-</x-adminlte-alert>
-@endif
-
 <div class="row">
 
     {{-- Columna izquierda: lista de roles + crear/eliminar --}}
+    {{-- Columna izquierda: lista de roles + crear --}}
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">Roles</div>
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user-tag mr-2"></i> Roles del Sistema</h3>
+            </div>
             <div class="card-body p-0">
                 @can('roles.ver')
                 <ul class="list-group list-group-flush">
                     @forelse($roles as $r)
-                    <li class="list-group-item d-flex justify-content-between align-items-center {{ $selectedRole && $selectedRole->id === $r->id ? 'bg-light' : '' }}">
-                        <a href="{{ route('seguridad.roles.index', ['role' => $r->id]) }}">
-                            <i class="fas fa-user-shield mr-2"></i> {{ $r->name }}
+                    <li class="list-group-item d-flex justify-content-between align-items-center {{ $selectedRole && $selectedRole->id === $r->id ? 'bg-light font-weight-bold' : '' }}">
+
+                        {{-- Enlace para seleccionar el rol --}}
+                        <a href="{{ route('seguridad.roles.index', ['role' => $r->id]) }}" class="text-dark" style="text-decoration: none; width: 80%;">
+                            <i class="fas fa-user-shield mr-2 text-primary"></i> {{ $r->name }}
                         </a>
-                        @can('roles.borrar')
-                        <form method="POST" action="{{ route('seguridad.roles.destroy', $r) }}" onsubmit="return confirm('¿Eliminar rol {{ $r->name }}?');">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger" {{ $r->name==='Administrador' ? 'disabled' : '' }}>
-                                <i class="fas fa-trash"></i>
+
+                        {{-- Botón de Eliminar (Protegido para NO borrar al Admin) --}}
+                        @if($r->name !== 'Administrador')
+                        <form method="POST" action="{{ route('seguridad.roles.destroy', $r) }}"
+                            onsubmit="return confirm('⚠️ ¿Estás seguro de ELIMINAR el rol {{ $r->name }}?\n\n- Se quitará a todos los usuarios que lo tengan.\n- Esta acción es irreversible.');"
+                            style="display: inline;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm text-danger p-0" title="Eliminar este rol">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
                         </form>
-                        @endcan
+                        @else
+                        {{-- Candado para el Admin --}}
+                        <span class="text-muted" title="Rol de Sistema (No se puede borrar)">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        @endif
                     </li>
                     @empty
-                    <li class="list-group-item text-muted">No hay roles definidos.</li>
+                    <li class="list-group-item text-muted text-center py-4">
+                        <i class="fas fa-ghost mb-2 d-block" style="font-size: 20px;"></i>
+                        No hay roles registrados.
+                    </li>
                     @endforelse
-                    <li id="noRoleResults" class="list-group-item text-center text-muted" style="display: none;">No se encontraron roles.</li>
                 </ul>
                 @endcan
-
             </div>
-            <div class="card-footer">
+
+            {{-- Formulario para CREAR ROL (Esto sí lo dejamos) --}}
+            <div class="card-footer bg-light">
                 @can('roles.crear')
-                <form method="POST" action="{{ route('seguridad.roles.store') }}" class="form-inline">
+                <form method="POST" action="{{ route('seguridad.roles.store') }}">
                     @csrf
-                    <div class="form-group mr-2 mb-2">
-                        <input type="text" name="name" class="form-control" placeholder="Nuevo rol" required>
+                    <div class="input-group">
+                        <input type="text" name="name" class="form-control" placeholder="Nombre del nuevo rol..." required>
+                        <span class="input-group-append">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </span>
                     </div>
-
-                    <button class="btn btn-primary mb-2">
-                        <i class="fas fa-plus"></i> Crear
-                    </button>
-
                 </form>
                 @endcan
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">Crear nuevo permiso</div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('seguridad.permisos.store') }}">
-                    @csrf
-                    <div class="form-group">
-                        <label>Nombre del permiso</label>
-                        <input type="text" name="name" class="form-control" placeholder="p.ej. ventas.ver" required>
-                        <small class="form-text text-muted">Usa un nombre consistente (módulo.acción).</small>
-                    </div>
-                    <button class="btn btn-secondary"><i class="fas fa-key"></i> Crear permiso</button>
-                </form>
             </div>
         </div>
 
     </div>
 
     {{-- Columna derecha: permisos del rol seleccionado --}}
-    @can('permisos.ver')
+
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
@@ -214,7 +195,7 @@
 
         </div>
     </div>
-    @endcan
+
 </div>
 @stop
 

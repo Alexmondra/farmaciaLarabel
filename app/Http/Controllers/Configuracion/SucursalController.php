@@ -6,21 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class SucursalController extends Controller
 {
     public function index(Request $request)
     {
-        $q = trim($request->get('q', ''));
-        $sucursales = Sucursal::query()
-            ->when($q, fn($w) => $w->where('nombre', 'like', "%$q%")
-                ->orWhere('codigo', 'like', "%$q%")
-                ->orWhere('direccion', 'like', "%$q%"))
-            ->orderBy('nombre')
-            ->paginate(10)
-            ->withQueryString();
+        $sucursales = Sucursal::orderBy('nombre')->get();
 
-        return view('configuracion.sucursales.index', compact('sucursales', 'q'));
+        return view('configuracion.sucursales.index', compact('sucursales'));
     }
 
     public function create()
@@ -30,19 +24,35 @@ class SucursalController extends Controller
 
     public function store(Request $request)
     {
+        // 1. Quitamos 'codigo' de la validación inicial porque el usuario ya no lo envía
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:20', 'unique:sucursales,codigo'],
             'nombre' => ['required', 'string', 'max:120'],
             'direccion' => ['nullable', 'string', 'max:200'],
             'telefono' => ['nullable', 'string', 'max:30'],
+            'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
+            'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
             'activo' => ['sometimes', 'boolean'],
         ]);
 
+
+        $ultimoId = Sucursal::max('id');
+        $nuevoNumero = $ultimoId + 1;
+
+        // Generamos: 'SUC-001', 'SUC-002'... (Rellena con ceros a la izquierda)
+        $data['codigo'] = 'SUC-' . str_pad($nuevoNumero, 3, '0', STR_PAD_LEFT);
+
+        // ----------------------------------------------------
+
         $data['activo'] = $request->boolean('activo');
+
+        if ($request->hasFile('imagen_sucursal')) {
+            $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
+        }
 
         Sucursal::create($data);
 
-        return redirect()->route('configuracion.sucursales.index')->with('success', 'Sucursal registrada correctamente.');
+        return redirect()->route('configuracion.sucursales.index')
+            ->with('success', 'Sucursal registrada con código: ' . $data['codigo']);
     }
 
     public function edit(Sucursal $sucursal)
@@ -53,29 +63,65 @@ class SucursalController extends Controller
     public function update(Request $request, Sucursal $sucursal)
     {
         $data = $request->validate([
-            'codigo' => ['required', 'string', 'max:20', Rule::unique('sucursales', 'codigo')->ignore($sucursal->id)],
             'nombre' => ['required', 'string', 'max:120'],
             'direccion' => ['nullable', 'string', 'max:200'],
             'telefono' => ['nullable', 'string', 'max:30'],
+
+            // --- VALIDACIONES NUEVAS ---
+            'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
+            'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            // ---------------------------
+
             'activo' => ['sometimes', 'boolean'],
         ]);
 
         $data['activo'] = $request->boolean('activo');
 
+        // --- LÓGICA DE REEMPLAZO DE IMAGEN ---
+        if ($request->hasFile('imagen_sucursal')) {
+            // 1. Si ya tenía una imagen antes, la borramos del disco para ahorrar espacio
+            if ($sucursal->imagen_sucursal) {
+                Storage::disk('public')->delete($sucursal->imagen_sucursal);
+            }
+
+            // 2. Guardamos la nueva
+            $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
+        }
+        // -------------------------------------
+
         $sucursal->update($data);
 
-        return redirect()->route('configuracion.sucursales.index')->with('success', 'Sucursal actualizada correctamente.');
+        return redirect()->route('configuracion.sucursales.index')
+            ->with('success', 'Sucursal actualizada correctamente.');
     }
 
     public function destroy(Sucursal $sucursal)
     {
-        $sucursal->delete();
-        return redirect()->route('configuracion.sucursales.index')->with('success', 'Sucursal eliminada.');
+        try {
+            // 1. Intentamos eliminar la imagen y el registro
+            if ($sucursal->imagen_sucursal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($sucursal->imagen_sucursal);
+            }
+
+            $sucursal->delete();
+
+            return redirect()->route('configuracion.sucursales.index')
+                ->with('success', 'Sucursal eliminada correctamente.');
+        } catch (\Illuminate\Database\QueryException $e) {
+
+            if ($e->getCode() == "23000") {
+                return redirect()->route('configuracion.sucursales.index')
+                    ->with('error', 'No se puede eliminar: Esta sucursal tiene movimientos, cajas o usuarios asociados.');
+            }
+
+            return redirect()->route('configuracion.sucursales.index')
+                ->with('error', 'Ocurrió un error inesperado al eliminar.');
+        }
     }
 
-
-
-
+    // ---------------------------------------------------------------
+    // MÉTODOS DE SELECCIÓN (SIN CAMBIOS, SOLO COPIADOS PARA MANTENER)
+    // ---------------------------------------------------------------
 
     public function elegir()
     {
@@ -118,10 +164,8 @@ class SucursalController extends Controller
         return redirect()->route('dashboard');
     }
 
-
     public function cambiarDesdeSelect(Request $request)
     {
-        // Puede venir vacío (para limpiar filtro) o entero (para fijar sucursal)
         $request->validate([
             'sucursal_id' => 'nullable|integer',
         ]);
@@ -129,24 +173,19 @@ class SucursalController extends Controller
         $user = auth()->user();
         $user->load('sucursales');
 
-        // 1) Si NO viene sucursal_id -> limpiar selección (ver todas las que permite el resolver)
         if (!$request->filled('sucursal_id')) {
             session()->forget(['sucursal_id', 'sucursal_nombre']);
-
             return redirect()
                 ->back()
-                ->with('success', 'Filtro de sucursal eliminado. Ahora ves todas las sucursales permitidas.');
+                ->with('success', 'Filtro de sucursal eliminado.');
         }
 
-        // 2) Si viene sucursal_id -> fijar esa sucursal
         $esAdmin = method_exists($user, 'hasRole') ? $user->hasRole('Administrador') : false;
         $id = (int) $request->sucursal_id;
 
         if ($esAdmin) {
-            // Admin puede elegir cualquier sucursal
             $sucursal = \App\Models\Sucursal::find($id);
         } else {
-            // Usuario normal: solo sus sucursales
             $sucursal = $user->sucursales->firstWhere('id', $id);
         }
 

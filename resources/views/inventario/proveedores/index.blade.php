@@ -36,7 +36,7 @@
         <div class="d-flex align-items-center flex-wrap w-100">
 
             {{-- Buscador (adaptado a tu controller) --}}
-            <form method="GET" action="{{ route('proveedores.index') }}" class="input-group" style="max-width: 420px;">
+            <form method="GET" action="{{ route('inventario.proveedores.index') }}" class="input-group" style="max-width: 420px;">
                 <div class="input-group-prepend">
                     <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
                 </div>
@@ -48,7 +48,7 @@
                     value="{{ $busqueda }}" {{-- <- Coincide con tu controller --}}
                     autocomplete="off">
                 <div class="input-group-append">
-                    <a href="{{ route('proveedores.index') }}" class="btn btn-outline-secondary {{ $busqueda ? '' : 'd-none' }}" title="Limpiar">
+                    <a href="{{ route('inventario.proveedores.index') }}" class="btn btn-outline-secondary {{ $busqueda ? '' : 'd-none' }}" title="Limpiar">
                         <i class="fas fa-times-circle"></i>
                     </a>
                     <button class="btn btn-primary" type="submit">
@@ -59,7 +59,7 @@
 
             <div class="ml-auto mt-2 mt-md-0">
                 @can('proveedores.crear')
-                <a href="{{ route('proveedores.create') }}" class="btn btn-primary">
+                <a href="{{ route('inventario.proveedores.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus mr-1"></i> Nuevo Proveedor
                 </a>
                 @endcan
@@ -100,7 +100,7 @@
                     <td class="text-right">
                         <div class="btn-group">
                             @can('proveedores.editar')
-                            <a href="{{ route('proveedores.edit', $prov) }}"
+                            <a href="{{ route('inventario.proveedores.edit', $prov) }}"
                                 class="btn btn-outline-primary btn-sm"
                                 data-toggle="tooltip"
                                 title="Editar">
@@ -108,13 +108,13 @@
                             </a>
                             @endcan
 
-                            @can('proveedores.borrar')
+                            @can('proveedores.eliminar')
                             <button
                                 type="button"
                                 class="btn btn-outline-danger btn-sm"
                                 data-toggle="modal"
                                 data-target="#confirmDeleteModal"
-                                data-action="{{ route('proveedores.destroy', $prov) }}"
+                                data-action="{{ route('inventario.proveedores.destroy', $prov) }}"
                                 data-name="{{ $prov->razon_social }}"
                                 title="Eliminar">
                                 <i class="fas fa-trash"></i>

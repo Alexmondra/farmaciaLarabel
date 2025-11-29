@@ -19,6 +19,7 @@ class Medicamento extends Model
         'registro_sanitario',
         'codigo_barra',
         'descripcion',
+        'unidades_por_envase',
         'imagen_path',
         'categoria_id',
         'user_id',

@@ -8,23 +8,21 @@ class Sucursal extends Model
 {
     protected $table = 'sucursales';
 
-    protected $fillable = ['codigo', 'nombre', 'direccion', 'telefono', 'activo'];
-    /*
-    public function stocks()
-    {
-        return $this->hasMany(MedicamentoSucursal::class);
-    }
+    protected $fillable = [
+        'codigo',
+        'nombre',
+        'direccion',
+        'telefono',
+        'imagen_sucursal',
+        'impuesto_porcentaje',
+        'activo'
+    ];
 
-    public function medicamentos()
-    {
-        return $this->belongsToMany(Medicamento::class, 'medicamento_sucursal')
-            ->withPivot('stock', 'stock_min', 'precio_venta', 'ubicacion')
-            ->withTimestamps();
-    }
+    protected $casts = [
+        'activo' => 'boolean',
+        'impuesto_porcentaje' => 'decimal:2', // Asegura que siempre devuelva 18.00 y no "18.00" (string)
+    ];
 
-    */
-
-    // Usuarios asignados a esta sucursal
     public function usuarios()
     {
         return $this->hasMany(User::class);

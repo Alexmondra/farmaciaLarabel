@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Inventario\Medicamento;
+use App\Models\Inventario\Categoria;
 use App\Models\Inventario\Lote;
 use App\Models\Sucursal;
 use App\Services\SucursalResolver;
@@ -61,172 +62,129 @@ class MedicamentoController extends Controller
 
     public function lookup(Request $request)
     {
-        $q = trim($request->query('q') ?? $request->query('term') ?? '');
+        $term = trim($request->get('term') ?: $request->get('q'));
 
-        if ($q === '') {
-            return response()->json(['exact' => null, 'suggestions' => []]);
+        if (empty($term)) {
+            return response()->json(['results' => []]);
         }
 
-        // Consulta base: selecciona solo campos de medicamento
-        $base = \App\Models\Inventario\Medicamento::query()
-            ->select([
-                'id',
-                'codigo',
-                'nombre',
-                'categoria_id',
-                'laboratorio',
-                'presentacion',
-                'forma_farmaceutica',
-                'concentracion',
-                'registro_sanitario',
-                'codigo_barra', // importante: singular
-                'descripcion',
-                \DB::raw('imagen_path as imagen_url'),
-            ]);
+        // Obtener la sucursal activa del usuario
+        $user = \Illuminate\Support\Facades\Auth::user();
+        // Si no usas SucursalResolver, puedes usar $user->sucursal_id directamente
+        $sucursalId = $user->sucursal_id ?? 1;
 
-        // Coincidencia exacta por código interno, nombre o código de barra
-        $exact = (clone $base)
-            ->where('codigo', $q)
-            ->orWhere('nombre', $q)
-            ->orWhere('codigo_barra', $q)
-            ->first();
+        // Consulta optimizada
+        $medicamentos = Medicamento::query()
+            ->with(['categoria']) // Cargamos la categoría para obtener su nombre
+            ->with(['sucursales' => function ($q) use ($sucursalId) {
+                // Cargamos solo el precio/stock de la sucursal actual
+                $q->where('sucursales.id', $sucursalId);
+            }])
+            ->where(function ($query) use ($term) {
+                $query->where('nombre', 'LIKE', "%$term%")
+                    ->orWhere('codigo', 'LIKE', "$term%")
+                    ->orWhere('codigo_barra', 'LIKE', "$term%");
+            })
+            ->where('activo', true)
+            ->limit(20)
+            ->get();
 
-        // Sugerencias si no hay exacto
-        $suggestions = [];
-        if (!$exact) {
-            $like = '%' . str_replace(' ', '%', $q) . '%';
-            $suggestions = (clone $base)
-                ->where(function ($w) use ($like) {
-                    $w->where('nombre', 'like', $like)
-                        ->orWhere('codigo', 'like', $like)
-                        ->orWhere('codigo_barra', 'like', $like);
-                })
-                ->limit(10)
-                ->get();
-        }
+        $results = $medicamentos->map(function ($med) {
+            $sucursalData = $med->sucursales->first()->pivot ?? null;
 
-        return response()->json([
-            'exact' => $exact,
-            'suggestions' => $suggestions,
-        ]);
-    }
-
-
-    public function create()
-    {
-        $categorias = \App\Models\Inventario\Categoria::orderBy('nombre')->get();
-        $user = Auth::user();
-        $esAdmin = $user->hasRole('Administrador');
-        $sucursales = $esAdmin
-            ? Sucursal::orderBy('nombre')->get()
-            : $user->sucursales()->select('sucursales.*')->orderBy('sucursales.nombre')->get();
-
-        return view('inventario.medicamentos.create',  compact('categorias', 'sucursales'));
-    }
-
-    public function store(Request $request)
-    {
-        $user = Auth::user();
-
-        // Determinar si es medicamento existente o nuevo
-        $medicamentoExistente = $request->filled('medicamento_id');
-
-        $rules = [
-            'sucursal_id' => ['required', 'integer', 'exists:sucursales,id'],
-            // Pivot
-            'precio' => ['nullable', 'numeric', 'min:0'],
-            'stock_minimo' => ['nullable', 'integer', 'min:0'],
-            'ubicacion' => ['nullable', 'string', 'max:120'],
-            // Lote inicial
-            'lote_codigo' => ['nullable', 'string', 'max:80'],
-            'cantidad_inicial' => ['nullable', 'integer', 'min:0'],
-            'fecha_vencimiento' => ['nullable', 'date'],
-        ];
-
-        // Si es medicamento NUEVO, validar campos del medicamento
-        if (!$medicamentoExistente) {
-            $rules = array_merge($rules, [
-                'codigo' => ['required', 'string', 'max:50', 'unique:medicamentos,codigo'],
-                'codigo_barras' => ['nullable', 'string', 'max:50'],
-                'nombre' => ['required', 'string', 'max:150'],
-                'laboratorio' => ['nullable', 'string', 'max:150'],
-                'categoria_id' => ['nullable', 'integer', 'exists:categorias,id'],
-                'imagen' => ['nullable', 'image', 'max:2048'],
-            ]);
-        } else {
-            // Si es existente, solo validar que exista
-            $rules['medicamento_id'] = ['required', 'integer', 'exists:medicamentos,id'];
-        }
-
-        $data = $request->validate($rules);
-        $sucursalId = (int)$data['sucursal_id'];
-
-        // Verificar permisos de sucursal
-        if (!$user->hasRole('Administrador')) {
-            $permitidas = $user->sucursales()->pluck('sucursales.id')->toArray();
-            if (!in_array($sucursalId, $permitidas, true)) {
-                return back()->withErrors('No tienes permiso para esa sucursal.')->withInput();
-            }
-        }
-
-        DB::transaction(function () use ($data, $sucursalId, $request, $medicamentoExistente) {
-            // Obtener o crear el medicamento
-            if ($medicamentoExistente) {
-                // Medicamento existente
-                $m = Medicamento::findOrFail($data['medicamento_id']);
-
-                // Verificar si ya está asociado a esta sucursal
-                if ($m->sucursales()->where('sucursal_id', $sucursalId)->exists()) {
-                    throw new \Exception('Este medicamento ya está registrado en la sucursal seleccionada.');
-                }
-            } else {
-                // Medicamento NUEVO
-                $imagenPath = null;
-                if ($request->hasFile('imagen')) {
-                    $imagenPath = $request->file('imagen')->store('medicamentos', 'public');
-                }
-
-                $m = Medicamento::create([
-                    'codigo' => $data['codigo'],
-                    'codigo_barras' => $data['codigo_barras'] ?? null,
-                    'nombre' => $data['nombre'],
-                    'laboratorio' => $data['laboratorio'] ?? null,
-                    'categoria_id' => $data['categoria_id'] ?? null,
-                    'imagen_path' => $imagenPath,
-                    'user_id' => auth()->id(), // Agregar esto
-                ]);
+            // PREPARAR IMAGEN: Tu modelo usa 'imagen_path', hay que convertirlo a URL
+            $imgUrl = null;
+            if ($med->imagen_path) {
+                $imgUrl = asset('storage/' . $med->imagen_path);
             }
 
-            // Asociar a la sucursal con datos pivot
-            $pivot = array_filter([
-                'precio_venta' => $data['precio'] ?? null,
-                'stock_minimo' => $data['stock_minimo'] ?? null,
-                'ubicacion' => $data['ubicacion'] ?? null,
-                'updated_by' => auth()->id(),
-            ], fn($v) => !is_null($v));
+            return [
+                'id' => $med->id,
+                'text' => $med->nombre . ' - ' . ($med->presentacion ?? ''),
 
-            $m->sucursales()->attach($sucursalId, $pivot);
+                // AQUÍ ESTÁ LA MAGIA: Enviamos TODOS los datos corregidos al JS
+                'full_data' => [
+                    'id'                  => $med->id,
+                    'nombre'              => $med->nombre,
+                    'codigo'              => $med->codigo ?? 'S/C',
+                    'codigo_barra'        => $med->codigo_barra ?? '',
 
-            // Crear lote inicial si hay cantidad
-            if (!empty($data['cantidad_inicial'])) {
-                Lote::create([
-                    'medicamento_id' => $m->id,
-                    'sucursal_id' => $sucursalId,
-                    'codigo_lote' => $data['lote_codigo'] ?? 'LOTE-' . now()->format('YmdHis'),
-                    'cantidad_inicial' => (int)$data['cantidad_inicial'],
-                    'cantidad_actual' => (int)$data['cantidad_inicial'],
-                    'fecha_vencimiento' => $data['fecha_vencimiento'] ?? null,
-                    'estado' => 'vigente',
-                ]);
-            }
+                    // CORRECCIÓN LABORATORIO: En tu modelo es un string, no una relación
+                    'laboratorio'         => $med->laboratorio ?? '',
+
+                    // CORRECCIÓN CATEGORÍA: Verificamos si existe la relación
+                    'categoria'           => $med->categoria ? $med->categoria->nombre : 'Sin Categoría',
+
+                    'presentacion'        => $med->presentacion ?? '',
+                    'concentracion'       => $med->concentracion ?? '',
+                    'registro_sanitario'  => $med->registro_sanitario ?? '',
+                    'descripcion'         => $med->descripcion ?? '',
+                    'unidades_por_envase' => $med->unidades_por_envase ?? 1,
+
+                    // DATOS DE SUCURSAL
+                    'stock_actual'        => $sucursalData->stock_actual ?? 0,
+                    'precio_venta'        => $sucursalData->precio_venta ?? 0,
+
+                    // IMAGEN CORRECTA
+                    'imagen_url'          => $imgUrl
+                ]
+            ];
         });
 
-        $mensaje = $medicamentoExistente
-            ? 'Lote agregado al medicamento existente.'
-            : 'Medicamento creado correctamente.';
+        return response()->json(['results' => $results]);
+    }
 
-        return redirect()
-            ->route('inventario.medicamentos.index')
-            ->with('success', $mensaje);
+    public function storeRapido(Request $request)
+    {
+        // 1. VALIDACIÓN RIGUROSA
+        $request->validate([
+            'codigo'              => 'required|string|max:30|unique:medicamentos,codigo',
+            'nombre'              => 'required|string|max:180|unique:medicamentos,nombre', // Valida nombre repetido
+            'codigo_barra'        => 'nullable|string|max:50|unique:medicamentos,codigo_barra', // Valida código barras repetido
+            'laboratorio'         => 'nullable|string|max:120',
+            'categoria_id'        => 'nullable|exists:categorias,id',
+            'presentacion'        => 'nullable|string|max:120',
+            'concentracion'       => 'nullable|string|max:100',
+            'registro_sanitario'  => 'nullable|string|max:60',
+            'descripcion'         => 'nullable|string',
+            'unidades_por_envase' => 'required|integer|min:1',
+            'imagen'              => 'nullable|image|max:2048', // Valida imagen (máx 2MB, jpg/png)
+        ], [
+            // Mensajes personalizados para que el usuario entienda qué pasó
+            'codigo.unique'       => 'El Código Interno ya existe.',
+            'nombre.unique'       => 'Ya existe un medicamento con ese Nombre.',
+            'codigo_barra.unique' => 'Ese Código de Barras ya pertenece a otro producto.',
+            'imagen.image'        => 'El archivo debe ser una imagen válida.',
+            'imagen.max'          => 'La imagen no debe pesar más de 2MB.'
+        ]);
+
+        $urlImagen = null;
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('medicamentos', 'public');
+            $urlImagen = asset('storage/' . $path);
+        }
+
+        // 3. CREAR MEDICAMENTO (Solo datos maestros)
+        $medicamento = \App\Models\Inventario\Medicamento::create([
+            'codigo'              => $request->codigo,
+            'nombre'              => $request->nombre,
+            'codigo_barra'        => $request->codigo_barra,
+            'laboratorio'         => $request->laboratorio,
+            'categoria_id'        => $request->categoria_id,
+            'presentacion'        => $request->presentacion,
+            'concentracion'       => $request->concentracion,
+            'registro_sanitario'  => $request->registro_sanitario,
+            'descripcion'         => $request->descripcion,
+            'unidades_por_envase' => $request->unidades_por_envase,
+            'imagen_url'          => $urlImagen, // Guardamos la URL aquí
+            'user_id'             => auth()->id(),
+            'activo'              => true
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Medicamento registrado con éxito.',
+            'data'    => $medicamento
+        ]);
     }
 }

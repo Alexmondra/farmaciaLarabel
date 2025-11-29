@@ -229,23 +229,60 @@
                         return;
                     }
                     lotes.forEach(function(l) {
-                        // ... (Tu HTML de filas de lotes) ...
-                        let precio = l.precio_venta ? parseFloat(l.precio_venta) : 0;
+                        // 1. PREPARAMOS LOS PRECIOS
+                        let precioNormal = l.precio_venta ? parseFloat(l.precio_venta) : 0;
+                        let precioOferta = l.precio_oferta ? parseFloat(l.precio_oferta) : null;
+
+                        // 2. LÓGICA: ¿Cuál precio vamos a cobrar?
+                        // Si existe oferta y es menor al normal (opcional), usamos la oferta.
+                        let precioFinal = precioNormal;
+                        let htmlPrecio = `S/ ${precioNormal.toFixed(2)}`;
+
+                        // Si hay oferta, cambiamos el HTML y el precio final
+                        if (precioOferta !== null && precioOferta > 0) {
+                            precioFinal = precioOferta;
+                            htmlPrecio = `
+            <small class="text-muted" style="text-decoration: line-through;">S/ ${precioNormal.toFixed(2)}</small>
+            <br>
+            <span class="text-danger font-weight-bold" title="Precio de Oferta">
+                <i class="fas fa-tag"></i> S/ ${precioOferta.toFixed(2)}
+            </span>
+        `;
+                        }
+
                         let stock = l.stock_actual;
-                        let fecha = l.fecha_vencimiento;
+                        let fecha = l.fecha_vencimiento ? l.fecha_vencimiento : '-';
+
+                        // 3. RENDERIZAMOS LA FILA
+                        // Fíjate que en 'data-precio' guardamos el precioFinal (sea oferta o normal)
+                        // Así el botón "Agregar" jala el correcto automáticamente.
+
+                        let rowClass = (precioOferta !== null) ? 'table-warning' : ''; // Opcional: Pinta amarillo suave si tiene oferta
+
                         tbody.append(`
-                            <tr data-lote-id="${l.id}">
-                                <td class="text-xs">${l.codigo_lote}</td>
-                                <td class="text-xs">${fecha}</td>
-                                <td class="text-center font-weight-bold">${stock}</td>
-                                <td><input type="number" class="form-control form-control-sm input-cant-lote text-center" min="1" max="${stock}" value="1"></td>
-                                <td>S/ ${precio.toFixed(2)}</td>
-                                <td><button type="button" class="btn btn-sm btn-success btn-agregar-lote"><i class="fas fa-plus"></i></button></td>
-                                <td style="display:none;" class="data-precio">${precio}</td>
-                                <td style="display:none;" class="data-codigo-lote">${l.codigo_lote}</td>
-                                <td style="display:none;" class="data-venc">${fecha}</td>
-                            </tr>
-                         `);
+        <tr data-lote-id="${l.id}" class="${rowClass}">
+            <td class="text-xs align-middle">${l.codigo_lote}</td>
+            <td class="text-xs align-middle">${fecha}</td>
+            <td class="text-center font-weight-bold align-middle">${stock}</td>
+            
+            <td class="align-middle">
+                <input type="number" class="form-control form-control-sm input-cant-lote text-center" min="1" max="${stock}" value="1">
+            </td>
+            
+            <td class="align-middle text-right" style="line-height: 1.1;">
+                ${htmlPrecio}
+            </td>
+            
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-sm btn-success btn-agregar-lote">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </td>
+
+            <td style="display:none;" class="data-precio">${precioFinal}</td> 
+            <td style="display:none;" class="data-codigo-lote">${l.codigo_lote}</td>
+        </tr>
+     `);
                     });
                 }
             });
@@ -292,31 +329,135 @@
         }
 
         function renderCarrito() {
-            // ... (Tu lógica existente para pintar la tabla derecha) ...
             let tbody = $('#carrito-tbody');
             tbody.empty();
+
             let total = 0;
-            Object.values(carrito).forEach(item => {
-                let sub = item.cantidad * item.precio_venta;
-                total += sub;
-                tbody.append(`<tr>
-                    <td>${item.nombre}</td>
-                    <td>${item.cantidad}</td>
-                    <td>S/ ${sub.toFixed(2)}</td>
-                    <td><button class="btn btn-xs btn-danger btn-eliminar-item"><i class="fas fa-times"></i></button></td>
-                </tr>`);
+            let itemsArray = Object.values(carrito);
+
+            // 1. Si está vacío, mostrar mensaje bonito
+            if (itemsArray.length === 0) {
+                tbody.html(`
+                    <tr id="carrito-vacio">
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="fas fa-shopping-basket fa-3x mb-3 text-gray-300"></i><br>
+                            El carrito está vacío.<br>
+                            <small>Busque productos arriba para comenzar.</small>
+                        </td>
+                    </tr>
+                `);
+                $('#total-venta').text('0.00');
+                $('#input-items-json').val('[]');
+                return;
+            }
+
+            // 2. Si hay items, dibujar filas
+            itemsArray.forEach(item => {
+                let precio = parseFloat(item.precio_venta);
+                let subtotal = item.cantidad * precio;
+                total += subtotal;
+
+                // Ajuste de presentación (si es null, pon vacío)
+                let presentacion = item.presentacion ? item.presentacion : '';
+
+                // AQUI ESTÁ LA MAGIA VISUAL:
+                // - Usamos 'align-middle' para centrar verticalmente.
+                // - 'text-right' para dineros.
+                // - Agregamos data-lote-id al TR para que funcione el borrar.
+                tbody.append(`
+                    <tr data-lote-id="${item.lote_id}">
+                        <td class="align-middle">
+                            <span class="font-weight-bold text-dark">${item.nombre}</span><br>
+                            <small class="text-muted">${presentacion}</small>
+                        </td>
+
+                        <td class="align-middle text-center">
+                            <span class="font-weight-bold" style="font-size: 1.1rem;">${item.cantidad}</span>
+                        </td>
+                        <td class="align-middle text-right">
+                            S/ ${precio.toFixed(2)}
+                        </td>
+                        <td class="align-middle text-right font-weight-bold text-success">
+                            S/ ${subtotal.toFixed(2)}
+                        </td>
+                        <td class="align-middle text-center">
+                            <button type="button" class="btn btn-xs btn-outline-danger btn-eliminar-item" title="Quitar del carrito">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
             });
+
+            // 3. Actualizar Totales
             $('#total-venta').text(total.toFixed(2));
-            $('#input-items-json').val(JSON.stringify(Object.values(carrito))); // Importante para el backend
+            $('#input-items-json').val(JSON.stringify(itemsArray));
         }
 
+        // ==========================================
+        // ELIMINAR ITEM (BOTÓN ROJO)
+        // ==========================================
         $(document).on('click', '.btn-eliminar-item', function() {
-            let id = $(this).closest('tr').data('lote-id'); // Ajusta esto según tu HTML del carrito
-            // (Ojo: en tu renderCarrito anterior no pusiste data-lote-id en el TR, asegúrate de ponerlo)
-            delete carrito[id]; // O busca la forma de borrarlo
-            // Lo ideal es renderizar el TR con data-lote-id="${item.lote_id}"
-            renderCarrito();
+            // Buscamos el ID en el TR padre
+            let fila = $(this).closest('tr');
+            let loteId = fila.data('lote-id');
+
+            if (loteId) {
+                delete carrito[loteId]; // Borrar del objeto JS
+                renderCarrito(); // Re-dibujar la tabla
+            }
         });
 
+    });
+
+
+    // ==========================================
+    // 1. LOGICA DE CLIENTE (SIMPLIFICADA)
+    // ==========================================
+
+    // Ya no forzamos un valor por defecto al inicio.
+    // Dejamos los inputs limpios para que el usuario decida.
+
+    $('#btn-buscar-cliente').on('click', function() {
+        let doc = $('#busqueda_cliente').val().trim();
+
+        if (doc.length < 8) {
+            alert("Ingrese un documento válido para buscar.");
+            return;
+        }
+
+        let btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: "{{ route('ventas.buscar_cliente') }}",
+            method: 'GET',
+            data: {
+                documento: doc
+            },
+            success: function(resp) {
+                if (resp.success) {
+                    // Cliente encontrado
+                    $('#cliente_id_hidden').val(resp.cliente.id);
+                    $('#nombre_cliente_display').val(resp.cliente.nombre_completo || resp.cliente.razon_social);
+                    $('#busqueda_cliente').val('');
+                } else {
+                    // Cliente no encontrado
+                    if (confirm('Cliente no existe. ¿Desea registrarlo ahora?')) {
+                        $('#modalNuevoCliente').modal('show');
+                    } else {
+                        // Si dice que no, limpiamos para que sea venta anónima
+                        $('#cliente_id_hidden').val('');
+                        $('#nombre_cliente_display').val('--- Venta sin Cliente ---');
+                    }
+                }
+            },
+            error: function() {
+                alert('Error al buscar cliente.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="fas fa-search"></i>');
+            }
+        });
     });
 </script>

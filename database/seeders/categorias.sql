@@ -1,22 +1,4 @@
-<?php
-
-namespace Database\Seeders;
-
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use App\Models\Inventario\Categoria;
-use Illuminate\Support\Facades\DB;
-
-
-class CategoriasSeeder extends Seeder
-{
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
-    {
-        DB::unprepared("
-       INSERT INTO categorias (nombre, descripcion, activo, created_at, updated_at) VALUES
+INSERT INTO categorias (nombre, descripcion, activo, created_at, updated_at) VALUES
 ('Analgésicos no opioides', 'Medicamentos para dolor leve a moderado sin opioides (paracetamol, metamizol, etc.).', 1, NOW(), NOW()),
 ('Analgésicos opioides', 'Medicamentos para dolor moderado a severo que contienen opioides.', 1, NOW(), NOW()),
 ('Antiinflamatorios no esteroideos (AINEs)', 'Medicamentos para inflamación y dolor, como ibuprofeno, naproxeno, diclofenaco.', 1, NOW(), NOW()),
@@ -57,7 +39,3 @@ class CategoriasSeeder extends Seeder
 ('Oftálmicos', 'Gotas, ungüentos y soluciones para uso ocular.', 1, NOW(), NOW()),
 ('Otológicos', 'Gotas y preparados para el oído.', 1, NOW(), NOW()),
 ('Productos naturales / fitoterápicos', 'Productos de origen natural utilizados con fines terapéuticos.', 1, NOW(), NOW());
-
-    ");
-    }
-}
