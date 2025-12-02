@@ -11,7 +11,7 @@ use App\Models\Inventario\Categoria;
 use App\Models\Inventario\Lote;
 use App\Models\Sucursal;
 use App\Services\SucursalResolver;
-use App\Repository\MedicamentoRepository;
+use App\Repositories\MedicamentoRepository;
 
 
 class MedicamentoController extends Controller
@@ -28,30 +28,33 @@ class MedicamentoController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $q    = trim($request->get('q', ''));
 
-        // 1. Resolvemos Sucursal (Tu lógica actual)
+        $q   = trim($request->get('q', ''));
+        $min = $request->get('min'); // Nuevo
+        $max = $request->get('max'); // Nuevo
+
         $ctx = $this->sucursalResolver->resolverPara($user);
 
-        // 2. Buscamos (Tu lógica actual)
+        $ctx['min'] = $min;
+        $ctx['max'] = $max;
+
+        // 3. Delegamos el trabajo sucio al Repositorio
         $medicamentos = $this->medicamentoRepo->buscarMedicamentos($q, $ctx);
 
-        // VARIABLES PARA LA VISTA
+        // 4. Preparamos datos para la vista
         $data = [
             'medicamentos'         => $medicamentos,
-            'q'                    => $q,
+            'q'                    => $q, // Para mantener el texto en el input
             'esAdmin'              => $ctx['es_admin'],
             'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
             'idsFiltroSucursales'  => $ctx['ids_filtro'],
         ];
 
-        // === AQUÍ ESTÁ EL CAMBIO MÁGICO ===
+        // 5. Respuesta AJAX (Solo Tabla) o Full (Página entera)
         if ($request->ajax()) {
-            // Si es AJAX, devolvemos SOLO la tabla renderizada
             return view('inventario.medicamentos._index_tabla', $data)->render();
         }
 
-        // Si es carga normal, devolvemos toda la página
         return view('inventario.medicamentos.index', $data);
     }
 

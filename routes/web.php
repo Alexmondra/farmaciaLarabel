@@ -9,6 +9,7 @@ use App\Http\Controllers\Inventario\{MedicamentoController, MedicamentoSucursalC
 use App\Http\Controllers\Compras\{ProveedorController, CompraController};
 use App\Http\Controllers\Ventas\{CajaSesionController, VentaController};
 use App\Http\Controllers\Configuracion\SucursalController;
+use App\Http\Controllers\Ventas\ClienteController;
 
 // =========================================================================
 // 1. RUTAS PÚBLICAS
@@ -22,8 +23,6 @@ require __DIR__ . '/auth.php';
 // =========================================================================
 // 2. RUTAS PROTEGIDAS (SOLO REQUIEREN LOGIN)
 // =========================================================================
-// Nota: La seguridad específica (Permisos) se gestiona dentro de cada Controlador.
-
 Route::middleware(['auth'])->group(function () {
 
     // --- Dashboard y Perfil Base ---
@@ -131,6 +130,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('ventas', VentaController::class);
 
+
+    Route::get('clientes/check-documento', [ClienteController::class, 'checkDocumento'])->name('clientes.check');
+    Route::get('clientes/search', [ClienteController::class, 'search'])->name('clientes.search');
+    Route::resource('clientes', ClienteController::class);
     // =================================================================
     // MÓDULO: CONFIGURACIÓN
     // =================================================================

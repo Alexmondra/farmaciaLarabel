@@ -210,6 +210,13 @@ return [
             'topnav_right' => true,
         ],
 
+        [
+            'type' => 'darkmode-widget',
+            'topnav_right' => true, // Para que salga a la derecha
+            'icon_enabled' => 'fas fa-moon',
+            'icon_disabled' => 'far fa-moon',
+        ],
+
         // Sidebar items:
         [
             'type' => 'sidebar-menu-search',
@@ -281,11 +288,6 @@ return [
                     'url'  => 'inventario/categorias',
                     'icon' => 'fas fa-tags',
                     'can'  => 'categorias.ver',
-                ],
-                [
-                    'text' => 'Laboratorios',
-                    'url'  => '#',
-                    'icon' => 'fas fa-flask',
                 ],
             ],
         ],

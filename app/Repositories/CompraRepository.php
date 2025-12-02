@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repository;
+namespace App\Repositories;
 
 use App\Models\Compras\Compra;
 use App\Models\Compras\DetalleCompra;

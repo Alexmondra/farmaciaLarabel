@@ -10,7 +10,7 @@ use App\Models\Inventario\Medicamento;
 use App\Models\Inventario\Categoria;
 
 use App\Models\Compras\DetalleCompra;
-use App\Repository\CompraRepository;
+use App\Repositories\CompraRepository;
 use App\Services\SucursalResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

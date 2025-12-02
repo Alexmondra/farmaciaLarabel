@@ -4,8 +4,6 @@ namespace App\Models\Ventas;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Ventas\Venta;
-
 
 class Cliente extends Model
 {
@@ -18,8 +16,10 @@ class Cliente extends Model
         'documento',
         'nombre',
         'apellidos',
+        'razon_social',
         'sexo',
         'fecha_nacimiento',
+        'puntos',
         'telefono',
         'email',
         'direccion',
@@ -29,11 +29,20 @@ class Cliente extends Model
     protected $casts = [
         'fecha_nacimiento' => 'date',
         'activo' => 'boolean',
+        'puntos' => 'integer',
     ];
 
-    /** Relación con ventas (cuando ya tengas la tabla ventas) */
+    public function getNombreCompletoAttribute()
+    {
+        if (!empty($this->razon_social)) {
+            return $this->razon_social;
+        }
+        return trim("{$this->nombre} {$this->apellidos}");
+    }
+
+
     public function ventas()
     {
-        return $this->hasMany(Venta::class, 'cliente_id');
+        return $this->hasMany(Venta::class);
     }
 }

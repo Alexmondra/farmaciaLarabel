@@ -8,48 +8,27 @@ use Illuminate\Http\Request;
 
 class CategoriaController extends Controller
 {
-    /**
-     * Listado de categorías con búsqueda.
-     */
-    public function index(Request $request)
+
+    public function index()
     {
-        $q = $request->input('q');
+        $categorias = Categoria::orderBy('nombre')->get();
 
-        $categorias = Categoria::when($q, function ($query) use ($q) {
-            $query->where(function ($qq) use ($q) {
-                $qq->where('nombre', 'like', "%{$q}%")
-                    ->orWhere('descripcion', 'like', "%{$q}%");
-            });
-        })
-            ->orderBy('nombre')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('inventario.categorias.index', compact('categorias', 'q'));
+        return view('inventario.categorias.index', compact('categorias'));
     }
+
 
     /**
      * Formulario de creación.
-     */
-    public function create()
-    {
-        // Por defecto activo = true
-        $categoria = new Categoria(['activo' => true]);
-        return view('inventario.categorias.create', compact('categoria'));
-    }
-
-    /**
-     * Guardar nueva categoría.
      */
     public function store(Request $request)
     {
         $data = $request->validate([
             'nombre'      => ['required', 'string', 'max:120'],
             'descripcion' => ['nullable', 'string'],
-            'activo'      => ['nullable', 'boolean'],
+            // 'activo' no hace falta validarlo aquí si lo manejamos abajo
         ]);
 
-        // Checkbox: si no viene, es false
+        // El checkbox no envía nada si no está marcado, así que usamos has()
         $data['activo'] = $request->has('activo');
 
         Categoria::create($data);
@@ -60,22 +39,13 @@ class CategoriaController extends Controller
     }
 
     /**
-     * Formulario de edición.
-     */
-    public function edit(Categoria $categoria)
-    {
-        return view('inventario.categorias.edit', compact('categoria'));
-    }
-
-    /**
-     * Actualizar categoría existente.
+     * Actualizar categoría (Viene del Modal).
      */
     public function update(Request $request, Categoria $categoria)
     {
         $data = $request->validate([
             'nombre'      => ['required', 'string', 'max:120'],
             'descripcion' => ['nullable', 'string'],
-            'activo'      => ['nullable', 'boolean'],
         ]);
 
         $data['activo'] = $request->has('activo');

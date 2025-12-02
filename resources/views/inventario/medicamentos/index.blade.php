@@ -93,10 +93,9 @@
     </div>
 </div>
 @endsection
-
 @section('js')
 <script>
-    // 1. CONFIGURACIÓN TOAST CENTRADO
+    // 1. CONFIGURACIÓN TOAST
     const ToastCentro = Swal.mixin({
         toast: true,
         position: 'center',
@@ -109,33 +108,56 @@
         timerProgressBar: true
     });
 
-    // 2. LÓGICA DE BÚSQUEDA MULTI-FILTRO
+    // 2. BUSCADOR OPTIMIZADO (State Check)
     let timeout = null;
+    let ultimaBusqueda = ""; // <--- AQUÍ GUARDAMOS EL "RSTRO" ANTERIOR
 
     function aplicarFiltros() {
-        let q = $('#searchInput').val();
+        let q = $('#searchInput').val().trim(); // .trim() quita espacios al inicio/final
         let min = $('#minPrice').val();
         let max = $('#maxPrice').val();
 
-        // Construimos la URL con todos los parámetros
-        let url = "{{ route('inventario.medicamentos.index') }}";
-        // URLSearchParams facilita armar el string ?q=...&min=...
+        // CREAMOS LA HUELLA DIGITAL DE LA BÚSQUEDA ACTUAL
+        // Esto crea un string único: "q=amox&min=10&max="
         let params = new URLSearchParams({
             q: q,
             min: min,
             max: max
-        });
+        }).toString();
 
+        // === REGLA 1: NO REPETIR BÚSQUEDA ===
+        // Si lo que vas a buscar es IDÉNTICO a lo último que buscaste, DETENTE.
+        // Esto evita que busque si presionas Shift, Ctrl, o flechas sin cambiar texto.
+        if (params === ultimaBusqueda) {
+            return;
+        }
+
+        // === REGLA 2: RESET INTELIGENTE ===
+        // Si todo está vacío, volvemos a la URL base (Reset)
+        // Pero si ya estábamos en la base, la Regla 1 nos detendrá antes.
+        let url = "{{ route('inventario.medicamentos.index') }}";
+
+        // Solo agregamos parámetros si existen
+        if (params) {
+            url += "?" + params;
+        }
+
+        // Guardamos esta búsqueda como la "última realizada"
+        ultimaBusqueda = params;
+
+        // EJECUTAMOS AJAX
         $('#tabla-contenedor').css('opacity', '0.5');
 
         $.ajax({
-            url: url + "?" + params.toString(),
+            url: url,
             type: 'GET',
             success: function(data) {
                 $('#tabla-contenedor').html(data);
                 $('#tabla-contenedor').css('opacity', '1');
             },
             error: function() {
+                // Si falla, permitimos buscar de nuevo borrando el rastro
+                ultimaBusqueda = "";
                 ToastCentro.fire({
                     icon: 'error',
                     title: 'Error al filtrar.'
@@ -145,29 +167,32 @@
         });
     }
 
-    // Escuchamos eventos en los 3 inputs
-    // Usamos 'keyup' para escribir y 'change' para las flechitas del input number
-    $('#searchInput, #minPrice, #maxPrice').on('keyup change', function() {
+    // LISTENER MEJORADO
+    $('#searchInput, #minPrice, #maxPrice').on('keyup change', function(e) {
+        // Ignorar teclas que no escriben (Shift, Ctrl, Alt, CapsLock, Flechas)
+        // Códigos: 16, 17, 18, 20, 37-40
+        if ([16, 17, 18, 20, 37, 38, 39, 40].includes(e.keyCode)) return;
+
         clearTimeout(timeout);
-        timeout = setTimeout(aplicarFiltros, 500); // Espera 500ms
+
+        // Esperamos 500ms a que termines de escribir
+        timeout = setTimeout(aplicarFiltros, 500);
     });
 
-    // Paginación
+    // PAGINACIÓN (Se mantiene igual)
     $(document).on('click', '.pagination a', function(e) {
         e.preventDefault();
-        // Al paginar, debemos mantener los filtros actuales
         let url = $(this).attr('href');
 
-        // Truco: Agregamos los filtros actuales a la URL de paginación si no los tiene
-        let q = $('#searchInput').val();
+        // MANTENER FILTROS AL PAGINAR
+        let q = $('#searchInput').val().trim();
         let min = $('#minPrice').val();
         let max = $('#maxPrice').val();
 
-        if (url.indexOf('q=') === -1) url += "&q=" + q;
-        if (url.indexOf('min=') === -1) url += "&min=" + min;
-        if (url.indexOf('max=') === -1) url += "&max=" + max;
+        if (url.indexOf('q=') === -1 && q) url += "&q=" + q;
+        if (url.indexOf('min=') === -1 && min) url += "&min=" + min;
+        if (url.indexOf('max=') === -1 && max) url += "&max=" + max;
 
-        // Reutilizamos la lógica AJAX directa (sin llamar a aplicarFiltros para no duplicar params)
         $('#tabla-contenedor').css('opacity', '0.5');
         $.ajax({
             url: url,
@@ -175,11 +200,13 @@
             success: function(data) {
                 $('#tabla-contenedor').html(data);
                 $('#tabla-contenedor').css('opacity', '1');
+                // Actualizamos el rastro para que la paginación no rompa la lógica
+                // (Opcional, pero recomendable)
             }
         });
     });
 
-    // 3. LÓGICA PRECIO (IGUAL QUE ANTES)
+    // 3. LÓGICA PRECIO (IGUAL)
     function abrirModalPrecio(id, nombre, precioActual) {
         $('#medIdHidden').val(id);
         $('#lblNombreMedicamento').text(nombre);

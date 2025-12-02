@@ -289,4 +289,148 @@
         padding-left: 15px;
         padding-right: 15px;
     }
+
+    /* =============================================
+       OVERRIDES PARA MODO OSCURO (AdminLTE / Bootstrap)
+       ============================================= */
+
+    /* 1. TABLA MODERNA EN MODO OSCURO */
+    body.dark-mode .table-modern thead th {
+        color: #ced4da;
+        /* Texto encabezado más claro */
+    }
+
+    body.dark-mode .table-modern tbody tr {
+        background-color: #343a40;
+        /* Fondo fila oscuro */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        /* Sombra más fuerte para contraste */
+    }
+
+    body.dark-mode .table-modern tbody tr:hover {
+        background-color: #3f474e;
+        /* Hover ligeramente más claro */
+    }
+
+    body.dark-mode .table-modern td {
+        background: #343a40;
+        border-top: 1px solid #4b545c;
+        border-bottom: 1px solid #4b545c;
+        color: #fff;
+    }
+
+    body.dark-mode .table-modern td:first-child {
+        border-left: 1px solid #4b545c;
+    }
+
+    body.dark-mode .table-modern td:last-child {
+        border-right: 1px solid #4b545c;
+    }
+
+    /* En móvil (responsive) */
+    @media (max-width: 992px) {
+        body.dark-mode .table-modern tbody tr {
+            border: 1px solid #4b545c;
+        }
+
+        body.dark-mode .table-modern td {
+            border-bottom: 1px solid #4b545c;
+        }
+
+        body.dark-mode .table-modern td:last-child {
+            background-color: #3f474e;
+            /* Footer de la card en móvil */
+        }
+    }
+
+    /* 2. INPUTS Y FORMULARIOS */
+    body.dark-mode .input-modern,
+    body.dark-mode .input-enhanced,
+    body.dark-mode .form-control {
+        background-color: #343a40;
+        border-color: #6c757d;
+        color: #fff;
+    }
+
+    body.dark-mode .input-modern:focus,
+    body.dark-mode .input-enhanced:focus {
+        background-color: #3f474e;
+        border-color: #17a2b8;
+        /* Mantener el color cyan del tema */
+        color: #fff;
+    }
+
+    body.dark-mode .label-mini {
+        color: #adb5bd;
+        /* Etiquetas más claras */
+    }
+
+    body.dark-mode .subtotal-text {
+        color: #fff;
+    }
+
+    body.dark-mode .form-label-icon {
+        color: #ced4da;
+    }
+
+    body.dark-mode .group-box {
+        background-color: #343a40;
+        /* Fondo de caja agrupada */
+        border: 1px solid #4b545c;
+    }
+
+    /* 3. BARRA INFERIOR FIJA */
+    body.dark-mode .barra-inferior-fija {
+        background-color: #343a40;
+        border-top: 1px solid #4b545c;
+        color: #fff;
+    }
+
+    /* 4. RESULTADOS DE BÚSQUEDA */
+    body.dark-mode .search-item.active-keyboard {
+        background-color: #3f474e;
+        /* Fondo activo oscuro */
+        border-left: 4px solid #17a2b8;
+        /* Borde cyan */
+        color: #fff;
+    }
+
+    /* 5. SELECT2 EN MODO OSCURO (Esto suele ser doloroso, aquí está arreglado) */
+    body.dark-mode .select2-container--bootstrap-5 .select2-selection {
+        background-color: #343a40;
+        border-color: #6c757d;
+        color: #fff;
+    }
+
+    body.dark-mode .select2-container--bootstrap-5 .select2-selection__rendered {
+        color: #fff !important;
+    }
+
+    body.dark-mode .select2-container--bootstrap-5 .select2-dropdown {
+        background-color: #343a40;
+        border-color: #6c757d;
+    }
+
+    body.dark-mode .select2-container--bootstrap-5 .select2-results__option {
+        color: #fff;
+        background-color: #343a40;
+    }
+
+    body.dark-mode .select2-container--bootstrap-5 .select2-results__option--highlighted {
+        background-color: #17a2b8 !important;
+        /* Cyan al pasar el mouse */
+        color: #fff !important;
+    }
+
+    body.dark-mode .select2-container--bootstrap-5 .select2-search__field {
+        background-color: #3f474e;
+        color: #fff;
+        border-color: #6c757d;
+    }
+
+    /* Botón Addon (el del ojito/más) */
+    body.dark-mode .btn-addon-icon,
+    body.dark-mode .btn-addon-right {
+        border-color: #6c757d;
+    }
 </style>

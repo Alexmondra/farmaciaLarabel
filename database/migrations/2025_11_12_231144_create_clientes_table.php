@@ -9,33 +9,40 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+
     public function up(): void
     {
         Schema::create('clientes', function (Blueprint $table) {
             $table->id();
-            $table->string('tipo_documento', 10)->nullable();  // DNI / RUC / CE / PAS
-            $table->string('documento', 20)->nullable();       // Número del documento
 
-            $table->string('nombre', 255);
-            $table->string('apellidos', 255);
-            $table->enum('sexo', ['M', 'F']);
-            // NUEVOS CAMPOS
+            // IDENTIFICACIÓN
+            $table->string('tipo_documento', 10)->nullable();  // DNI, RUC, CE
+            $table->string('documento', 20)->unique();         // EL NÚMERO (7234..., 2010...)
+
+            // DATOS
+            $table->string('nombre', 255)->nullable();         // Para DNI (Nombres)
+            $table->string('apellidos', 255)->nullable();      // Para DNI (Apellidos)
+            $table->string('razon_social', 255)->nullable();   // NUEVO: Para RUC (Nombre de empresa)
+
+            $table->enum('sexo', ['M', 'F'])->nullable();
             $table->date('fecha_nacimiento')->nullable();
+
+            // PUNTOS (Lo que pediste)
+            $table->integer('puntos')->default(0);             // Aquí guardas el saldo acumulado
 
             // CONTACTO
             $table->string('telefono', 30)->nullable();
             $table->string('email', 100)->nullable();
-            $table->string('direccion', 255)->nullable();
+            $table->string('direccion', 255)->nullable();      // Importante para Facturas RUC
 
             $table->boolean('activo')->default(true);
-
             $table->timestamps();
 
-            // Índices útiles
+            // Índices para búsqueda rápida
             $table->index('documento');
-            $table->index('tipo_documento');
         });
     }
+
 
     /**
      * Reverse the migrations.

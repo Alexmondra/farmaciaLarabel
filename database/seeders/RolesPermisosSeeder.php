@@ -24,6 +24,9 @@ class RolesPermisosSeeder extends Seeder
             'cajas.abrir',      // Abrir/Cerrar caja
             'clientes.ver',     // Ver lista de clientes
             'clientes.crear',   // Registrar clientes
+            'clientes.editar',   // Registrar clientes
+            'clientes.eliminar',   // Registrar clientes
+
 
             // 2. INVENTARIO (Medicamentos)
             'medicamentos.ver',     // Ver lista y stock

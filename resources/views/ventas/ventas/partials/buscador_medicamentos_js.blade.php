@@ -1,128 +1,40 @@
 <script>
     $(document).ready(function() {
 
+        // ==========================================
+        // 1. CONFIGURACIÓN Y VARIABLES
+        // ==========================================
         const RUTA_LOOKUP_MEDICAMENTOS = "{{ route('ventas.lookup_medicamentos') }}";
         const RUTA_LOOKUP_LOTES = "{{ route('ventas.lookup_lotes') }}";
-        const RUTA_BUSCAR_CLIENTE = "{{ route('ventas.buscar_cliente') ?? '/ruta-temporal-cliente' }}";
         const sucursalId = $('#sucursal_id').val();
 
-        // Obtenemos las categorías que definimos en el HTML
-        const categoriasData = window.listadoCategorias || [];
-
+        // Variables de estado
+        let selectedIndex = -1;
+        let resultCount = 0;
         let carrito = {};
         let medicamentoSeleccionado = null;
         let timeoutBusqueda = null;
 
         // ==========================================
-        // 1. LOGICA DE CLIENTE (Tu código existente)
+        // 2. BUSCADOR DE MEDICAMENTOS (AJAX)
         // ==========================================
-        $('#tipo_comprobante').on('change', function() {
-            let tipo = $(this).val();
-            let input = $('#busqueda_cliente');
-            let label = $('#label-documento');
-            $('#cliente_id_hidden').val('');
-            $('#busqueda_cliente').val('');
-            if (tipo === 'FACTURA') {
-                label.text('RUC');
-                input.attr('placeholder', '11 Dígitos');
-            } else {
-                label.text('DNI');
-                input.attr('placeholder', '8 Dígitos');
-            }
-        });
-        // (Aquí iría tu lógica AJAX de cliente si la tienes...)
-
-
-        // ==========================================
-        // 2. LOGICA DE CATEGORÍAS (LO NUEVO)
-        // ==========================================
-
-        // A. Filtrar categorías mientras escribes
-        $('#busqueda_categoria').on('input focus', function() {
-            let texto = $(this).val().toLowerCase();
-            let contenedor = $('#resultados-categorias');
-            contenedor.empty();
-
-            // Si no hay categorías cargadas, salir
-            if (categoriasData.length === 0) return;
-
-            // Filtrar el array en JS (es instantáneo)
-            let filtrados = categoriasData.filter(c => c.nombre.toLowerCase().includes(texto));
-
-            if (filtrados.length === 0) {
-                contenedor.hide();
-                return;
-            }
-
-            filtrados.forEach(c => {
-                contenedor.append(`
-                    <button type="button" class="list-group-item list-group-item-action py-1 px-2 item-categoria" 
-                            data-id="${c.id}" data-nombre="${c.nombre}">
-                        ${c.nombre}
-                    </button>
-                `);
-            });
-            contenedor.show();
-        });
-
-        // B. Seleccionar una categoría
-        $(document).on('click', '.item-categoria', function() {
-            let id = $(this).data('id');
-            let nombre = $(this).data('nombre');
-
-            // 1. Poner el nombre en el input y guardar el ID oculto
-            $('#filtro_categoria_id').val(id);
-            $('#busqueda_categoria').val(nombre);
-
-            // 2. Esconder lista y mostrar botón de limpiar
-            $('#resultados-categorias').hide();
-            $('#btn-limpiar-cat').show();
-
-            // 3. !!! DISPARAR LA BÚSQUEDA DE MEDICAMENTOS INMEDIATAMENTE !!!
-            // Esto llenará la lista de la derecha con los medicamentos de esa categoría
-            buscarMedicamentos();
-        });
-
-        // C. Limpiar categoría (Botón X)
-        $('#btn-limpiar-cat').on('click', function() {
-            $('#filtro_categoria_id').val('');
-            $('#busqueda_categoria').val('');
-            $(this).hide();
-            // Volver a buscar (limpiará la lista de medicamentos o mostrará vacío)
-            buscarMedicamentos();
-        });
-
-        // D. Cerrar lista si clic fuera
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.search-container-cat').length) {
-                $('#resultados-categorias').hide();
-            }
-        });
-
-
-        // ==========================================
-        // 3. BÚSQUEDA MEDICAMENTOS (CONECTADA)
-        // ==========================================
-
-        // Hacemos la función global para poder llamarla desde el onclick del botón lupa si queremos
         window.buscarMedicamentos = function() {
             let q = $('#busqueda_medicamento').val().trim();
             let categoriaId = $('#filtro_categoria_id').val();
 
-            // Si NO hay texto escrito Y NO hay categoría seleccionada -> Limpiar
+            // Si está vacío y sin categoría, limpiar
             if (q.length === 0 && !categoriaId) {
-                $('#resultados-medicamentos').removeClass('active').empty();
+                cerrarResultados();
                 return;
             }
 
-            // AJAX al servidor
             $.ajax({
                 url: RUTA_LOOKUP_MEDICAMENTOS,
                 method: 'GET',
                 data: {
                     sucursal_id: sucursalId,
                     q: q,
-                    categoria_id: categoriaId // Enviamos el ID seleccionado
+                    categoria_id: categoriaId
                 },
                 success: function(data) {
                     renderResultadosMedicamentos(data);
@@ -133,162 +45,214 @@
         function renderResultadosMedicamentos(lista) {
             let contenedor = $('#resultados-medicamentos');
 
+            // Reiniciar índices de navegación teclado
+            selectedIndex = -1;
+            resultCount = lista.length;
+
             if (!lista.length) {
-                contenedor.html('<div class="list-group-item text-muted small py-2">Sin resultados</div>');
-                contenedor.addClass('active');
+                contenedor.html('<div class="list-group-item text-muted small py-2">Sin resultados</div>').addClass('active');
                 return;
             }
 
-            // Usamos un array para acumular el HTML (es más rápido que concatenar strings grandes)
-            let htmlAcumulado = [];
-
-            lista.forEach(function(m) {
-                let presentacion = m.presentacion ? m.presentacion : '';
-                // Usamos Template Literals
-                htmlAcumulado.push(`
-            <button type="button"
-                    class="list-group-item list-group-item-action resultado-medicamento py-1 px-2"
-                    data-medicamento-id="${m.medicamento_id}"
-                    data-nombre="${m.nombre}"
-                    data-codigo="${m.codigo ?? ''}"
-                    data-presentacion="${presentacion}"
-                    data-precio="${m.precio_venta}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                        <strong>${m.nombre}</strong> <span class="text-muted text-xs">(${presentacion})</span>
+            // Generar HTML
+            let html = lista.map(m => `
+                <button type="button"
+                        class="list-group-item list-group-item-action resultado-medicamento py-1 px-2"
+                        data-medicamento-id="${m.medicamento_id}"
+                        data-nombre="${m.nombre}"
+                        data-presentacion="${m.presentacion || ''}"
+                        data-precio="${m.precio_venta}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                            <strong>${m.nombre}</strong> <small class="text-muted">(${m.presentacion || ''})</small>
+                        </div>
+                        <div>
+                            <span class="badge badge-light border">S/ ${parseFloat(m.precio_venta).toFixed(2)}</span>
+                        </div>
                     </div>
-                    <div>
-                        <span class="badge badge-light border">S/ ${parseFloat(m.precio_venta).toFixed(2)}</span>
-                    </div>
-                </div>
-            </button>
-        `);
-            });
+                </button>
+            `).join('');
 
-            contenedor.html(htmlAcumulado.join(''));
-            contenedor.addClass('active');
+            contenedor.html(html).addClass('active');
         }
 
-        // Evento Input Medicamentos (Retardo para no saturar)
-        $('#busqueda_medicamento').on('input', function() {
-            clearTimeout(timeoutBusqueda);
-            timeoutBusqueda = setTimeout(function() {
-                buscarMedicamentos();
-            }, 250);
+        function cerrarResultados() {
+            $('#resultados-medicamentos').removeClass('active').empty();
+            selectedIndex = -1;
+            resultCount = 0;
+        }
+
+        // --- EVENTOS DE TECLADO (FLECHAS) ---
+        $('#busqueda_medicamento').on('keydown', function(e) {
+            let $resultados = $('#resultados-medicamentos');
+            if (!$resultados.hasClass('active') || resultCount === 0) return;
+
+            // ABAJO (40)
+            if (e.which === 40) {
+                e.preventDefault();
+                selectedIndex++;
+                if (selectedIndex >= resultCount) selectedIndex = 0;
+                highlightItem();
+            }
+            // ARRIBA (38)
+            else if (e.which === 38) {
+                e.preventDefault();
+                selectedIndex--;
+                if (selectedIndex < 0) selectedIndex = resultCount - 1;
+                highlightItem();
+            }
+            // ENTER (13)
+            else if (e.which === 13) {
+                e.preventDefault();
+                if (selectedIndex > -1) {
+                    $resultados.find('.resultado-medicamento').eq(selectedIndex).click();
+                }
+            }
         });
 
-        // ==========================================
-        // 4. MODAL LOTES Y CARRITO (TU CÓDIGO ANTERIOR)
-        // ==========================================
+        $('#busqueda_medicamento').on('input', function() {
+            clearTimeout(timeoutBusqueda);
+            timeoutBusqueda = setTimeout(() => buscarMedicamentos(), 250);
+        });
 
-        // Solo asegúrate de que estas funciones están aquí (abre modal, focus, enter, agregar carrito)
-        // ... (Pega aquí el bloque del modal lotes y carrito que ya tenías y funcionaba bien) ...
+        function highlightItem() {
+            let items = $('#resultados-medicamentos').find('.resultado-medicamento');
+            items.removeClass('active-key');
+            if (selectedIndex > -1) {
+                let activeItem = items.eq(selectedIndex);
+                activeItem.addClass('active-key');
+                activeItem[0].scrollIntoView({
+                    block: 'nearest'
+                });
+            }
+        }
 
-        // --- RESUMEN DE TU CÓDIGO DEL MODAL (LO MANTENEMOS) ---
+        // ==========================================
+        // 3. SELECCIÓN Y MODAL DE LOTES
+        // ==========================================
         $(document).on('click', '.resultado-medicamento', function() {
             let btn = $(this);
-            $('#resultados-medicamentos').removeClass('active');
-            // Opcional: Limpiar inputs tras seleccionar
-            // $('#busqueda_medicamento').val(''); 
+            cerrarResultados();
+            $('#busqueda_medicamento').val('');
 
             medicamentoSeleccionado = {
                 medicamento_id: btn.data('medicamento-id'),
                 nombre: btn.data('nombre'),
-                codigo: btn.data('codigo'),
                 presentacion: btn.data('presentacion'),
                 precio_venta: parseFloat(btn.data('precio'))
             };
+
             $('#modal-medicamento-nombre').text(medicamentoSeleccionado.nombre);
             $('#modal-medicamento-presentacion').text(medicamentoSeleccionado.presentacion);
+
             cargarLotesMedicamento(medicamentoSeleccionado.medicamento_id);
             $('#modalLotes').modal('show');
         });
 
         $('#modalLotes').on('shown.bs.modal', function() {
             let primerInput = $('#modal-lotes-tbody').find('.input-cant-lote').first();
-            if (primerInput.length) {
-                primerInput.focus();
-                primerInput.select();
-            }
+            if (primerInput.length) primerInput.focus().select();
         });
 
-        function cargarLotesMedicamento(medicamentoId) {
+        function cargarLotesMedicamento(id) {
             $.ajax({
                 url: RUTA_LOOKUP_LOTES,
                 method: 'GET',
                 data: {
-                    medicamento_id: medicamentoId,
+                    medicamento_id: id,
                     sucursal_id: sucursalId
                 },
                 async: false,
                 success: function(lotes) {
-                    let tbody = $('#modal-lotes-tbody');
-                    tbody.empty();
+                    let tbody = $('#modal-lotes-tbody').empty();
+
                     if (!lotes.length) {
-                        tbody.append('<tr><td colspan="6" class="text-center text-danger">Sin Stock</td></tr>');
+                        tbody.append('<tr><td colspan="6" class="text-center text-danger font-weight-bold">AGOTADO / SIN STOCK</td></tr>');
                         return;
                     }
-                    lotes.forEach(function(l) {
-                        // 1. PREPARAMOS LOS PRECIOS
-                        let precioNormal = l.precio_venta ? parseFloat(l.precio_venta) : 0;
+
+                    lotes.forEach(l => {
+                        // Precios
+                        let precioBase = parseFloat(l.precio_venta);
                         let precioOferta = l.precio_oferta ? parseFloat(l.precio_oferta) : null;
 
-                        // 2. LÓGICA: ¿Cuál precio vamos a cobrar?
-                        // Si existe oferta y es menor al normal (opcional), usamos la oferta.
-                        let precioFinal = precioNormal;
-                        let htmlPrecio = `S/ ${precioNormal.toFixed(2)}`;
+                        let htmlPrecio = precioOferta ?
+                            `<small style="text-decoration:line-through" class="text-muted">S/ ${precioBase.toFixed(2)}</small><br><span class="text-danger font-weight-bold">S/ ${precioOferta.toFixed(2)}</span>` :
+                            `S/ ${precioBase.toFixed(2)}`;
 
-                        // Si hay oferta, cambiamos el HTML y el precio final
-                        if (precioOferta !== null && precioOferta > 0) {
-                            precioFinal = precioOferta;
-                            htmlPrecio = `
-            <small class="text-muted" style="text-decoration: line-through;">S/ ${precioNormal.toFixed(2)}</small>
-            <br>
-            <span class="text-danger font-weight-bold" title="Precio de Oferta">
-                <i class="fas fa-tag"></i> S/ ${precioOferta.toFixed(2)}
-            </span>
-        `;
-                        }
-
-                        let stock = l.stock_actual;
-                        let fecha = l.fecha_vencimiento ? l.fecha_vencimiento : '-';
-
-                        // 3. RENDERIZAMOS LA FILA
-                        // Fíjate que en 'data-precio' guardamos el precioFinal (sea oferta o normal)
-                        // Así el botón "Agregar" jala el correcto automáticamente.
-
-                        let rowClass = (precioOferta !== null) ? 'table-warning' : ''; // Opcional: Pinta amarillo suave si tiene oferta
+                        // Precio final a cobrar (si hay oferta, se usa esa)
+                        let precioFinal = precioOferta || precioBase;
+                        let rowClass = precioOferta ? 'table-warning' : '';
 
                         tbody.append(`
-        <tr data-lote-id="${l.id}" class="${rowClass}">
-            <td class="text-xs align-middle">${l.codigo_lote}</td>
-            <td class="text-xs align-middle">${fecha}</td>
-            <td class="text-center font-weight-bold align-middle">${stock}</td>
-            
-            <td class="align-middle">
-                <input type="number" class="form-control form-control-sm input-cant-lote text-center" min="1" max="${stock}" value="1">
-            </td>
-            
-            <td class="align-middle text-right" style="line-height: 1.1;">
-                ${htmlPrecio}
-            </td>
-            
-            <td class="align-middle text-center">
-                <button type="button" class="btn btn-sm btn-success btn-agregar-lote">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </td>
+                            <tr data-lote-id="${l.id}" class="${rowClass}">
+                                <td class="align-middle small">${l.codigo_lote}</td>
+                                <td class="align-middle small">${l.fecha_vencimiento || '-'}</td>
+                                <td class="text-center font-weight-bold align-middle text-primary" style="font-size:1.1em">${l.stock_actual}</td>
+                                
+                                <td class="align-middle">
+                                    <input type="number" class="form-control form-control-sm input-cant-lote text-center font-weight-bold" 
+                                           min="1" max="${l.stock_actual}" value="1">
+                                </td>
+                                
+                                <td class="align-middle text-right" style="line-height:1.1">${htmlPrecio}</td>
+                                
+                                <td class="align-middle text-center">
+                                    <button type="button" class="btn btn-sm btn-success btn-agregar-lote" title="Agregar al carrito">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </td>
 
-            <td style="display:none;" class="data-precio">${precioFinal}</td> 
-            <td style="display:none;" class="data-codigo-lote">${l.codigo_lote}</td>
-        </tr>
-     `);
+                                {{-- Datos ocultos para JS --}}
+                                <td style="display:none;" class="data-precio">${precioFinal}</td>
+                                <td style="display:none;" class="data-codigo-lote">${l.codigo_lote}</td>
+                            </tr>
+                        `);
                     });
                 }
             });
         }
 
-        // Enter en input cantidad del modal
+        // ==========================================
+        // 4. LOGICA DEL CARRITO (CORE)
+        // ==========================================
+
+        // A. Agregar desde Modal (Botón Verde)
+        $(document).on('click', '.btn-agregar-lote', function() {
+            let fila = $(this).closest('tr');
+            let loteId = fila.data('lote-id');
+            let cant = parseInt(fila.find('.input-cant-lote').val()) || 0;
+            let stock = parseInt(fila.find('.input-cant-lote').attr('max'));
+            let precio = parseFloat(fila.find('.data-precio').text());
+
+            // Validación inicial
+            if (cant > stock) return toastr.error('La cantidad supera el stock disponible.');
+            if (cant <= 0) return toastr.error('Cantidad inválida.');
+
+            // Crear o Actualizar Item
+            if (carrito[loteId]) {
+                let nuevaCant = carrito[loteId].cantidad + cant;
+                if (nuevaCant > stock) return toastr.warning('Stock máximo alcanzado en el carrito.');
+                carrito[loteId].cantidad = nuevaCant;
+            } else {
+                let item = {
+                    lote_id: loteId,
+                    nombre: medicamentoSeleccionado.nombre,
+                    presentacion: medicamentoSeleccionado.presentacion,
+                    codigo_lote: fila.find('.data-codigo-lote').text(),
+                    cantidad: cant,
+                    precio_venta: precio,
+                    stock_max: stock // Guardamos el stock máximo para validaciones futuras
+                };
+                carrito[loteId] = item;
+            }
+
+            renderCarrito();
+            $('#modalLotes').modal('hide');
+            $('#busqueda_medicamento').focus(); // Volver al buscador
+        });
+
+        // Enter en el modal
         $(document).on('keydown', '.input-cant-lote', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -296,92 +260,45 @@
             }
         });
 
-        // Agregar al carrito (Click botón verde)
-        $(document).on('click', '.btn-agregar-lote', function() {
-            // ... (Tu lógica existente para agregar al objeto carrito y actualizar tabla) ...
-            // ...
-            let fila = $(this).closest('tr');
-            let loteId = fila.data('lote-id');
-            let cant = parseInt(fila.find('.input-cant-lote').val());
-            // (Validaciones...)
-
-            let item = {
-                lote_id: loteId,
-                medicamento_id: medicamentoSeleccionado.medicamento_id,
-                nombre: medicamentoSeleccionado.nombre,
-                codigo_lote: fila.find('.data-codigo-lote').text(),
-                cantidad: cant,
-                precio_venta: parseFloat(fila.find('.data-precio').text()),
-                presentacion: medicamentoSeleccionado.presentacion
-            };
-
-            agregarAlCarrito(item);
-            $('#modalLotes').modal('hide');
-        });
-
-        function agregarAlCarrito(item) {
-            if (carrito[item.lote_id]) {
-                carrito[item.lote_id].cantidad += item.cantidad;
-            } else {
-                carrito[item.lote_id] = item;
-            }
-            renderCarrito();
-        }
-
+        // B. Renderizar Tabla Carrito (Con Inputs Editables)
         function renderCarrito() {
-            let tbody = $('#carrito-tbody');
-            tbody.empty();
-
+            let tbody = $('#carrito-tbody').empty();
             let total = 0;
-            let itemsArray = Object.values(carrito);
+            let items = Object.values(carrito);
 
-            // 1. Si está vacío, mostrar mensaje bonito
-            if (itemsArray.length === 0) {
-                tbody.html(`
-                    <tr id="carrito-vacio">
-                        <td colspan="6" class="text-center text-muted py-5">
-                            <i class="fas fa-shopping-basket fa-3x mb-3 text-gray-300"></i><br>
-                            El carrito está vacío.<br>
-                            <small>Busque productos arriba para comenzar.</small>
-                        </td>
-                    </tr>
-                `);
-                $('#total-venta').text('0.00');
-                $('#input-items-json').val('[]');
+            if (items.length === 0) {
+                tbody.html('<tr id="carrito-vacio"><td colspan="5" class="text-center text-muted py-5"><div class="opacity-50"><i class="fas fa-shopping-basket fa-3x mb-3"></i><br>Carrito vacío</div></td></tr>');
+                actualizarTotalGlobal(0);
                 return;
             }
 
-            // 2. Si hay items, dibujar filas
-            itemsArray.forEach(item => {
-                let precio = parseFloat(item.precio_venta);
-                let subtotal = item.cantidad * precio;
+            items.forEach(i => {
+                let subtotal = i.cantidad * i.precio_venta;
                 total += subtotal;
 
-                // Ajuste de presentación (si es null, pon vacío)
-                let presentacion = item.presentacion ? item.presentacion : '';
-
-                // AQUI ESTÁ LA MAGIA VISUAL:
-                // - Usamos 'align-middle' para centrar verticalmente.
-                // - 'text-right' para dineros.
-                // - Agregamos data-lote-id al TR para que funcione el borrar.
                 tbody.append(`
-                    <tr data-lote-id="${item.lote_id}">
+                    <tr data-lote-id="${i.lote_id}">
                         <td class="align-middle">
-                            <span class="font-weight-bold text-dark">${item.nombre}</span><br>
-                            <small class="text-muted">${presentacion}</small>
+                            <span class="font-weight-bold text-dark">${i.nombre}</span><br>
+                            <small class="text-muted">${i.presentacion} | Lote: ${i.codigo_lote}</small>
+                        </td>
+                        
+                        <td class="align-middle">
+                            <input type="number" class="form-control form-control-sm text-center input-edit-cant font-weight-bold" 
+                                   value="${i.cantidad}" min="1" max="${i.stock_max}" style="width: 80px; margin:0 auto;">
                         </td>
 
-                        <td class="align-middle text-center">
-                            <span class="font-weight-bold" style="font-size: 1.1rem;">${item.cantidad}</span>
+                        <td class="align-middle">
+                            <input type="number" class="form-control form-control-sm text-center input-edit-precio" 
+                                   value="${i.precio_venta.toFixed(2)}" step="0.01" min="0" style="width: 100px; margin:0 auto;">
                         </td>
-                        <td class="align-middle text-right">
-                            S/ ${precio.toFixed(2)}
-                        </td>
-                        <td class="align-middle text-right font-weight-bold text-success">
+
+                        <td class="align-middle text-right font-weight-bold text-success td-subtotal">
                             S/ ${subtotal.toFixed(2)}
                         </td>
+
                         <td class="align-middle text-center">
-                            <button type="button" class="btn btn-xs btn-outline-danger btn-eliminar-item" title="Quitar del carrito">
+                            <button type="button" class="btn btn-xs btn-outline-danger btn-eliminar-item" title="Quitar">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </td>
@@ -389,75 +306,218 @@
                 `);
             });
 
-            // 3. Actualizar Totales
-            $('#total-venta').text(total.toFixed(2));
-            $('#input-items-json').val(JSON.stringify(itemsArray));
+            actualizarTotalGlobal(total);
         }
 
         // ==========================================
-        // ELIMINAR ITEM (BOTÓN ROJO)
+        // C. EVENTO: EDICIÓN EN LÍNEA (OPTIMIZADO)
         // ==========================================
-        $(document).on('click', '.btn-eliminar-item', function() {
-            // Buscamos el ID en el TR padre
-            let fila = $(this).closest('tr');
-            let loteId = fila.data('lote-id');
 
-            if (loteId) {
-                delete carrito[loteId]; // Borrar del objeto JS
-                renderCarrito(); // Re-dibujar la tabla
+        // Usamos 'input' en lugar de keyup para detectar el cambio inmediatamente al escribir
+        $(document).on('input', '.input-edit-cant', function() {
+            let input = $(this);
+            let row = input.closest('tr');
+            let loteId = row.data('lote-id');
+            let item = carrito[loteId];
+
+            let val = parseInt(input.val());
+
+            // 1. VALIDACIÓN ESTRICTA DE STOCK
+            // Si el valor es mayor al stock máximo, lo forzamos al máximo inmediatamente
+            if (val > item.stock_max) {
+                input.val(item.stock_max); // Sobreescribimos visualmente lo que el usuario intentó poner
+                val = item.stock_max; // Ajustamos la variable lógica
+
+                // Feedback visual (clase error de Bootstrap temporal)
+                input.addClass('is-invalid');
+                setTimeout(() => input.removeClass('is-invalid'), 1000);
+
+                // Mensaje (Opcional, a veces es molesto si sale muchas veces, descomenta si lo quieres)
+                // toastr.warning('El stock máximo es: ' + item.stock_max);
+            }
+
+            // 2. Validación de mínimos (evitar 0 o negativos, excepto si está borrando para escribir)
+            if (val < 1 && input.val() !== '') {
+                input.val(1);
+                val = 1;
+            }
+
+            // 3. Actualizar Lógica solo si es un número válido
+            if (!isNaN(val)) {
+                carrito[loteId].cantidad = val;
+
+                // Recalcular subtotal de la fila
+                let subtotal = val * item.precio_venta;
+                row.find('.td-subtotal').text('S/ ' + subtotal.toFixed(2));
+
+                // Recalcular total global
+                recalcularTotalDesdeMemoria();
             }
         });
 
-    });
+        // Evento Blur: Si el usuario deja el campo vacío y hace clic afuera, poner 1
+        $(document).on('blur', '.input-edit-cant', function() {
+            if ($(this).val() === '' || isNaN($(this).val())) {
+                $(this).val(1).trigger('input');
+            }
+        });
 
+        // Evento para el PRECIO (Separado para no mezclar lógicas)
+        $(document).on('input', '.input-edit-precio', function() {
+            let row = $(this).closest('tr');
+            let loteId = row.data('lote-id');
+            let val = parseFloat($(this).val()) || 0;
 
-    // ==========================================
-    // 1. LOGICA DE CLIENTE (SIMPLIFICADA)
-    // ==========================================
+            carrito[loteId].precio_venta = val;
 
-    // Ya no forzamos un valor por defecto al inicio.
-    // Dejamos los inputs limpios para que el usuario decida.
+            let cant = carrito[loteId].cantidad;
+            let subtotal = cant * val;
+            row.find('.td-subtotal').text('S/ ' + subtotal.toFixed(2));
 
-    $('#btn-buscar-cliente').on('click', function() {
-        let doc = $('#busqueda_cliente').val().trim();
+            recalcularTotalDesdeMemoria();
+        });
+        // Evento Blur: Si deja vacío, volver a 1
+        $(document).on('blur', '.input-edit-cant', function() {
+            if ($(this).val() === '' || isNaN($(this).val())) {
+                $(this).val(1).trigger('change');
+            }
+        });
 
-        if (doc.length < 8) {
-            alert("Ingrese un documento válido para buscar.");
-            return;
+        // D. Eliminar Item
+        $(document).on('click', '.btn-eliminar-item', function() {
+            delete carrito[$(this).closest('tr').data('lote-id')];
+            renderCarrito();
+        });
+
+        // E. Funciones de Totales
+        function recalcularTotalDesdeMemoria() {
+            let total = 0;
+            Object.values(carrito).forEach(i => total += (i.cantidad * i.precio_venta));
+            actualizarTotalGlobal(total);
         }
 
-        let btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        function actualizarTotalGlobal(total) {
+            $('#total-venta').text(total.toFixed(2));
+            $('#input-items-json').val(JSON.stringify(Object.values(carrito)));
 
-        $.ajax({
-            url: "{{ route('ventas.buscar_cliente') }}",
-            method: 'GET',
-            data: {
-                documento: doc
-            },
-            success: function(resp) {
-                if (resp.success) {
-                    // Cliente encontrado
-                    $('#cliente_id_hidden').val(resp.cliente.id);
-                    $('#nombre_cliente_display').val(resp.cliente.nombre_completo || resp.cliente.razon_social);
-                    $('#busqueda_cliente').val('');
-                } else {
-                    // Cliente no encontrado
-                    if (confirm('Cliente no existe. ¿Desea registrarlo ahora?')) {
-                        $('#modalNuevoCliente').modal('show');
-                    } else {
-                        // Si dice que no, limpiamos para que sea venta anónima
-                        $('#cliente_id_hidden').val('');
-                        $('#nombre_cliente_display').val('--- Venta sin Cliente ---');
-                    }
-                }
-            },
-            error: function() {
-                alert('Error al buscar cliente.');
-            },
-            complete: function() {
-                btn.prop('disabled', false).html('<i class="fas fa-search"></i>');
+            // Llamar a calculadora de vuelto (en create.blade.php)
+            if (window.calcularVuelto) window.calcularVuelto(total);
+        }
+
+        // ==========================================
+        // 5. CATEGORÍAS (Lógica Visual + Teclado)
+        // ==========================================
+        const categorias = window.listadoCategorias || [];
+
+        // Variables para navegación con teclado
+        let catSelectedIndex = -1;
+        let catResultCount = 0;
+
+        // A. EVENTO INPUT/FOCUS: Filtrar y Mostrar
+        $('#busqueda_categoria').on('input focus', function() {
+            let txt = $(this).val().toLowerCase();
+            let cont = $('#resultados-categorias').empty();
+
+            // Resetear navegación
+            catSelectedIndex = -1;
+
+            if (!categorias.length) return;
+
+            // Filtrar
+            let match = categorias.filter(c => c.nombre.toLowerCase().includes(txt));
+            catResultCount = match.length; // Guardamos cuántos hay
+
+            if (!match.length) {
+                cont.hide();
+                return;
             }
+
+            // Renderizar botones
+            match.forEach(c => {
+                cont.append(`
+                    <button type="button" 
+                            class="list-group-item list-group-item-action py-1 px-2 item-categoria" 
+                            data-id="${c.id}" 
+                            data-nombre="${c.nombre}">
+                        ${c.nombre}
+                    </button>
+                `);
+            });
+
+            cont.show();
+        });
+
+        // B. EVENTO TECLADO (FLECHAS Y ENTER)
+        $('#busqueda_categoria').on('keydown', function(e) {
+            let $lista = $('#resultados-categorias');
+            if (!$lista.is(':visible') || catResultCount === 0) return;
+
+            // FLECHA ABAJO (40)
+            if (e.which === 40) {
+                e.preventDefault();
+                catSelectedIndex++;
+                if (catSelectedIndex >= catResultCount) catSelectedIndex = 0; // Vuelve al inicio
+                highlightCategoria();
+            }
+            // FLECHA ARRIBA (38)
+            else if (e.which === 38) {
+                e.preventDefault();
+                catSelectedIndex--;
+                if (catSelectedIndex < 0) catSelectedIndex = catResultCount - 1; // Vuelve al final
+                highlightCategoria();
+            }
+            // ENTER (13)
+            else if (e.which === 13) {
+                e.preventDefault();
+                if (catSelectedIndex > -1) {
+                    // Simular clic en el elemento seleccionado
+                    $lista.find('.item-categoria').eq(catSelectedIndex).click();
+                }
+            }
+        });
+
+        // Función para resaltar visualmente
+        function highlightCategoria() {
+            let items = $('#resultados-categorias').find('.item-categoria');
+            items.removeClass('active-key'); // Quitamos color a todos
+
+            if (catSelectedIndex > -1) {
+                let actual = items.eq(catSelectedIndex);
+                actual.addClass('active-key'); // Ponemos color al actual
+
+                // Scroll automático si la lista es larga
+                actual[0].scrollIntoView({
+                    block: 'nearest'
+                });
+            }
+        }
+
+        // C. SELECCIÓN (CLICK O ENTER)
+        $(document).on('click', '.item-categoria', function() {
+            $('#filtro_categoria_id').val($(this).data('id'));
+            $('#busqueda_categoria').val($(this).data('nombre'));
+
+            $('#resultados-categorias').hide();
+            $('#btn-limpiar-cat').show();
+
+            // Foco al buscador de medicamentos para seguir vendiendo rápido
+            $('#busqueda_medicamento').focus();
+
+            buscarMedicamentos();
+        });
+
+        // D. BOTÓN LIMPIAR
+        $('#btn-limpiar-cat').click(function() {
+            $('#filtro_categoria_id').val('');
+            $('#busqueda_categoria').val('').focus(); // Volver foco al input
+            $(this).hide();
+            buscarMedicamentos();
+        });
+
+        // E. CERRAR AL CLIC FUERA
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.search-container').length) cerrarResultados();
+            if (!$(e.target).closest('.search-container-cat').length) $('#resultados-categorias').hide();
         });
     });
 </script>
