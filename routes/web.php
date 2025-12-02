@@ -141,4 +141,6 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('sucursales', SucursalController::class)
             ->parameters(['sucursales' => 'sucursal']);
     });
+
+    Route::post('/configuracion/update', [ClienteController::class, 'updateConfig'])->name('configuracion.update');
 });

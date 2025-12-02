@@ -111,6 +111,58 @@
         margin-top: 10px;
         border: 1px dashed #e0e0e0;
     }
+
+
+    .dark-mode #modalCliente .modal-content {
+        background-color: #343a40;
+        color: #ffffff;
+    }
+
+    .dark-mode #modalCliente .modal-header {
+        background-color: #343a40;
+        /* Quita el blanco del header */
+        border-bottom: 1px solid #4b545c;
+    }
+
+    .dark-mode #modalCliente .title-future {
+        color: #ffffff;
+        /* Título en blanco */
+    }
+
+    .dark-mode #modalCliente .close {
+        color: #ffffff;
+        opacity: 1;
+    }
+
+    /* Inputs Futuristas en Modo Oscuro */
+    .dark-mode .input-future {
+        color: #ffffff;
+        /* Texto blanco al escribir */
+        border-bottom: 2px solid #6c757d;
+        /* Línea gris visible */
+    }
+
+    .dark-mode .input-future:focus {
+        border-bottom-color: #00d2d3;
+        /* Línea cyan al seleccionar */
+    }
+
+    /* Labels flotantes */
+    .dark-mode .label-future {
+        color: #adb5bd;
+    }
+
+    /* Panel de "Ver Completo" */
+    .dark-mode #extra-fields {
+        background-color: #3f474e;
+        border: 1px dashed #6c757d;
+    }
+
+    /* Corrección para Selects (DNI/RUC) */
+    .dark-mode select.input-future option {
+        background-color: #343a40;
+        color: white;
+    }
 </style>
 
 <div class="modal fade modal-future" id="modalCliente" tabindex="-1" role="dialog" aria-hidden="true">

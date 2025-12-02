@@ -302,44 +302,64 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-4 mb-2">
+
+        <div class="col-lg-3 col-6 mb-2">
             <div class="filter-card active" onclick="setFilter('all', this)">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-layer-group filter-icon mr-3"></i>
                     <div>
                         <div class="filter-title">Total Clientes</div>
-                        <small class="text-muted d-block">Base de datos completa</small>
+                        <span class="filter-count">{{ $total ?? 0 }}</span>
                     </div>
                 </div>
-                <span class="filter-count">{{ $total ?? 0 }}</span>
             </div>
         </div>
 
-        <div class="col-md-4 mb-2">
+        <div class="col-lg-3 col-6 mb-2">
             <div class="filter-card" onclick="setFilter('persona', this)">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-user-injured filter-icon mr-3"></i>
                     <div>
                         <div class="filter-title">Personas</div>
-                        <small class="text-muted d-block">Pacientes con DNI</small>
+                        <span class="filter-count">{{ $personas ?? 0 }}</span>
                     </div>
                 </div>
-                <span class="filter-count">{{ $personas ?? 0 }}</span>
             </div>
         </div>
 
-        <div class="col-md-4 mb-2">
+        <div class="col-lg-3 col-6 mb-2">
             <div class="filter-card" onclick="setFilter('RUC', this)">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-building filter-icon mr-3"></i>
                     <div>
                         <div class="filter-title">Empresas</div>
-                        <small class="text-muted d-block">Facturación RUC</small>
+                        <span class="filter-count">{{ $empresas ?? 0 }}</span>
                     </div>
                 </div>
-                <span class="filter-count">{{ $empresas ?? 0 }}</span>
             </div>
         </div>
+
+        <div class="col-lg-3 col-6 mb-2">
+            <div class="filter-card bonus-card position-relative" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white; border:none;">
+
+                <button class="btn btn-sm btn-light position-absolute"
+                    onclick="openConfigModal()"
+                    style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px; padding: 0; color: #6c5ce7;">
+                    <i class="fas fa-pencil-alt" style="font-size: 0.8rem;"></i>
+                </button>
+
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-coins mr-3" style="font-size: 2rem; opacity: 0.8;"></i>
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; opacity: 0.9;">Regla de Canje</div>
+                        <div class="font-weight-bold" style="font-size: 1.1rem;">
+                            <span id="lbl_puntos">100</span> Pts = <span id="lbl_moneda">S/ 2.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="row justify-content-center mb-4">
@@ -369,6 +389,78 @@
         </div>
     </div>
 
+</div>
+
+<div class="modal fade modal-future" id="modalConfigPuntos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <h6 class="modal-title font-weight-bold text-dark">
+                    <i class="fas fa-cog text-primary mr-1"></i> Configurar Sistema
+                </h6>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <form id="formConfig">
+                @csrf
+                <div class="modal-body">
+
+                    <div class="group-future mb-4">
+                        <label class="d-block small text-muted font-weight-bold mb-2">Regla de Acumulación</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text border-0 bg-light">S/ 1.00 Venta =</span>
+                            </div>
+                            <input type="number"
+                                step="1"
+                                min="0"
+                                name="puntos_por_moneda"
+                                class="form-control font-weight-bold text-center border-0 bg-light h-auto py-2"
+                                value="{{ $config->puntos_por_moneda ?? 1 }}"
+                                oninput="if(this.value < 0) this.value = 0;">
+                            <div class="input-group-append">
+                                <span class="input-group-text border-0 bg-light">Puntos</span>
+                            </div>
+                        </div>
+                        <small class="text-info mt-1 d-block">
+                            <i class="fas fa-plus-circle"></i> Puntos ganados por cada moneda (Mínimo 0).
+                        </small>
+                    </div>
+
+                    <hr>
+
+                    <div class="group-future mb-4">
+                        <label class="d-block small text-muted font-weight-bold mb-2">Valor del Canje (Descuento)</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text border-0 bg-light">1 Punto =</span>
+                            </div>
+                            <input type="number"
+                                step="0.0001"
+                                min="0"
+                                name="valor_punto_canje"
+                                id="conf_valor"
+                                class="form-control font-weight-bold text-center border-0 bg-light h-auto py-2"
+                                value="{{ $config->valor_punto_canje ?? 0.02 }}"
+                                oninput="if(this.value < 0) this.value = 0;">
+                            <div class="input-group-append">
+                                <span class="input-group-text border-0 bg-light">Soles</span>
+                            </div>
+                        </div>
+                        <small class="text-info mt-1 d-block">
+                            <i class="fas fa-money-bill-wave"></i> Dinero que vale cada punto (No puede ser negativo).
+                        </small>
+                    </div>
+
+                </div>
+                <div class="modal-footer p-2 bg-light justify-content-center">
+                    <button type="submit" class="btn btn-primary btn-block rounded-pill font-weight-bold">
+                        Actualizar Reglas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @include('ventas.clientes.modal-create-edit')
@@ -641,64 +733,57 @@
         });
     });
 
-    /* ==========================================================================
-       5. MODAL SHOW (VISUALIZAR)
-       ========================================================================== */
-    function openShowModal(id) {
-        $('#show_avatar').html('<i class="fas fa-spinner fa-spin"></i>');
-        $('#show_nombre').text('Cargando...');
+    $('.close, [data-dismiss="modal"]').on('click', () => $('.modal').modal('hide'));
 
-        $.get(`/clientes/${id}`, function(res) {
-            if (!res.success) return alert('Error al cargar.');
-            const c = res.data;
-            const isRUC = (c.tipo_documento === 'RUC');
+    // ==========================================
+    // 1. CONFIGURACIÓN Y MODAL DE PUNTOS
+    // ==========================================
 
-            // Header Identidad
-            const nombre = isRUC ? c.razon_social : `${c.nombre} ${c.apellidos}`;
-            if (isRUC) {
-                $('#show_avatar').css({
-                    background: '#fff3e0',
-                    color: '#ff9800'
-                }).html('<i class="fas fa-building"></i>');
-                $('#block-sexo').addClass('d-none');
-            } else {
-                $('#show_avatar').css({
-                    background: '#e0f7fa',
-                    color: '#00bcd4'
-                }).text((nombre || '?').charAt(0));
-                $('#block-sexo').removeClass('d-none');
-                $('#show_sexo').text(c.sexo === 'M' ? 'Masculino' : 'Femenino');
-            }
+    // Inicializar valores al cargar la página
+    $(document).ready(function() {
+        // CORRECCIÓN AQUÍ: Usamos comillas para evitar errores de sintaxis
+        let valorPunto = parseFloat("{{ $config->valor_punto_canje ?? 0.02 }}");
 
-            $('#show_nombre').text(nombre || 'SIN DATOS');
-            $('#show_tipo_doc').text(`${c.tipo_documento}: ${c.documento}`);
-            $('#show_puntos').text(c.puntos || 0);
-            $('#show_registro').text(new Date(c.created_at).toLocaleDateString('es-PE'));
+        // Actualizamos la tarjeta visualmente
+        $('#lbl_puntos').text('100');
+        $('#lbl_moneda').text('S/ ' + (100 * valorPunto).toFixed(2));
+    });
 
-            // Datos Opcionales (Helper interno)
-            const showIfData = (sel, val) => {
-                const row = $(sel).closest('div[class^="col"]');
-                (val && val !== '--') ? $(sel).text(val) && row.show(): row.hide();
-            };
-            showIfData('#show_email', c.email);
-            showIfData('#show_telefono', c.telefono);
-            showIfData('#show_direccion', c.direccion);
-
-            // Historial Ventas
-            const rows = (c.ventas || []).map(v => `
-                <tr><td>${new Date(v.created_at).toLocaleDateString('es-PE')}</td>
-                <td class="font-weight-bold">S/ ${parseFloat(v.total).toFixed(2)}</td>
-                <td><span class="badge badge-success">Completo</span></td></tr>`).join('');
-
-            const tableHtml = rows ?
-                `<div class="table-responsive"><table class="table table-hover table-sm text-center mb-0"><thead class="bg-light text-muted"><tr><th>FECHA</th><th>TOTAL</th><th>ESTADO</th></tr></thead><tbody>${rows}</tbody></table></div>` :
-                `<div class="empty-state text-center py-5"><i class="fas fa-shopping-basket fa-3x text-muted mb-3 opacity-25"></i><p class="text-muted font-weight-bold">Sin historial</p></div>`;
-
-            $('#history-container').html(tableHtml);
-            $('#modalShowCliente').modal('show');
-        });
+    // Función para abrir el modal
+    function openConfigModal() {
+        $('#modalConfigPuntos').modal('show');
     }
 
-    $('.close, [data-dismiss="modal"]').on('click', () => $('.modal').modal('hide'));
+    // Guardar cambios del modal sin recargar
+    $('#formConfig').submit(function(e) {
+        e.preventDefault();
+
+        let btn = $(this).find('button[type="submit"]');
+        let originalText = btn.html();
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: "{{ route('configuracion.update') }}",
+            method: "POST",
+            data: $(this).serialize(),
+            success: function(res) {
+                let nuevoValor = parseFloat($('#conf_valor').val());
+                let ejemploPuntos = 100;
+                let ejemploDinero = (ejemploPuntos * nuevoValor).toFixed(2);
+
+                // Actualizar textos en la tarjeta
+                $('#lbl_puntos').text(ejemploPuntos);
+                $('#lbl_moneda').text('S/ ' + ejemploDinero);
+
+                $('#modalConfigPuntos').modal('hide');
+            },
+            error: function() {
+                alert('Error al guardar la configuración');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
 </script>
 @endsection

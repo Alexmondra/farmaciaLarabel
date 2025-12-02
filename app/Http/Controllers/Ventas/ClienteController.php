@@ -8,6 +8,7 @@ use App\Repositories\ClienteRepository;
 use App\Http\Requests\Ventas\StoreClienteRequest;
 use App\Http\Requests\Ventas\UpdateClienteRequest;
 use Illuminate\Http\Request;
+use App\Models\Configuracion;
 
 class ClienteController extends Controller
 {
@@ -29,8 +30,15 @@ class ClienteController extends Controller
     {
         $stats = $this->clienteRepo->getStats();
         $clientes = $this->clienteRepo->search([]);
+        $config = Configuracion::first();
 
-        return view('ventas.clientes.index', array_merge(['clientes' => $clientes], $stats));
+        return view('ventas.clientes.index', array_merge(
+            [
+                'clientes' => $clientes,
+                'config' => $config     // <--- AQUÍ ESTÁ LA CLAVE
+            ],
+            $stats
+        ));
     }
 
     public function search(Request $request)
@@ -56,13 +64,20 @@ class ClienteController extends Controller
 
     public function show($id)
     {
-        $cliente = Cliente::with(['ventas' => function ($q) {
-            $q->latest()->take(5);
-        }])->findOrFail($id);
+        $cliente = Cliente::with('ventas')->find($id);
+
+        if (!$cliente) {
+            return response()->json(['success' => false, 'message' => 'Cliente no encontrado']);
+        }
+
+        $config = Configuracion::first();
 
         return response()->json([
             'success' => true,
-            'data' => $cliente
+            'data' => $cliente,
+            'config' => [
+                'valor_punto' => $config->valor_punto_canje ?? 0.02
+            ]
         ]);
     }
 
@@ -97,5 +112,20 @@ class ClienteController extends Controller
         $cliente->update(['activo' => false]);
 
         return response()->json(['success' => true, 'message' => 'Cliente eliminado (desactivado).']);
+    }
+
+
+
+
+    public function updateConfig(Request $request)
+    {
+        $conf = Configuracion::first(); // Asegúrate de llamar al modelo correcto
+
+        $conf->update([
+            'puntos_por_moneda' => $request->puntos_por_moneda,
+            'valor_punto_canje' => $request->valor_punto_canje,
+        ]);
+
+        return response()->json(['success' => true]);
     }
 }
