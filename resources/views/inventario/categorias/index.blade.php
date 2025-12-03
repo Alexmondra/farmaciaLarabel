@@ -7,9 +7,11 @@
 
 @section('content')
 
-{{-- 1. IMPORTAMOS LOS ESTILOS (Responsive & Modernos) --}}
+{{-- ESTILOS --}}
 @include('inventario.categorias.partials.styles')
 
+{{-- VERIFICACIÓN DE PERMISO PRINCIPAL --}}
+@can('categorias.ver')
 <div class="container-fluid pt-4">
     <div class="card card-modern">
 
@@ -27,9 +29,11 @@
                     <input type="text" id="searchInput" placeholder="Buscar..." autocomplete="off">
                 </div>
 
+                @can('categorias.crear')
                 <button class="btn btn-add-modern" onclick="openCreateModal()">
                     <i class="fas fa-plus mr-2"></i> Nuevo
                 </button>
+                @endcan
             </div>
         </div>
 
@@ -56,31 +60,32 @@
     </div>
 </div>
 
-{{-- 2. IMPORTAMOS LOS MODALES --}}
+{{-- PREPARAMOS DATOS PARA JS --}}
+@php
+$permisosJS = [
+'canEdit' => auth()->user()->can('categorias.editar'),
+'canDelete' => auth()->user()->can('categorias.eliminar'),
+];
+@endphp
+
+{{-- MODALES --}}
 @include('inventario.categorias.partials.form_modal')
 @include('inventario.categorias.partials.modal_delete')
+
+@else
+{{-- MENSAJE DE ACCESO DENEGADO --}}
+<div class="container-fluid pt-4">
+    <div class="alert alert-danger shadow-sm">
+        <i class="fas fa-ban mr-2"></i> No tienes permisos para ver este módulo.
+    </div>
+</div>
+@endcan
 
 @stop
 
 @section('js')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // DATOS
-        const allData = @json($categorias);
-        const rutas = {
-            store: "{{ route('inventario.categorias.store') }}",
-            update: "{{ route('inventario.categorias.update', 'ID_PH') }}",
-            destroy: "{{ route('inventario.categorias.destroy', 'ID_PH') }}"
-        };
-
-        // ESTADO
-        let state = {
-            data: [...allData],
-            currentPage: 1,
-            itemsPerPage: 10
-        };
-
-        // DOM
         const els = {
             tbody: document.getElementById('tableBody'),
             search: document.getElementById('searchInput'),
@@ -98,7 +103,27 @@
             errorList: document.getElementById('errorList')
         };
 
-        // RENDER
+        // Si no hay tabla (usuario sin permisos), detenemos el script
+        if (!els.tbody) return;
+
+        // 2. DATOS DESDE BLADE (SIN ERROR DE SINTAXIS)
+        const allData = JSON.parse('@json($categorias)');
+        const userPermissions = JSON.parse('@json($permisosJS)');
+
+        const rutas = {
+            store: "{{ route('inventario.categorias.store') }}",
+            update: "{{ route('inventario.categorias.update', 'ID_PH') }}",
+            destroy: "{{ route('inventario.categorias.destroy', 'ID_PH') }}"
+        };
+
+        // 3. ESTADO
+        let state = {
+            data: [...allData],
+            currentPage: 1,
+            itemsPerPage: 10
+        };
+
+        // 4. RENDERIZADO
         const renderTable = () => {
             const total = state.data.length;
             const pages = Math.ceil(total / state.itemsPerPage) || 1;
@@ -112,11 +137,24 @@
                 els.info.textContent = '0 registros';
             } else {
                 els.tbody.innerHTML = chunk.map(cat => {
+                    // Escapar comillas para evitar romper el JSON en el HTML
                     const catStr = JSON.stringify(cat).replace(/"/g, '&quot;');
                     const delUrl = rutas.destroy.replace('ID_PH', cat.id);
+
                     const badge = cat.activo ?
                         `<span class="badge px-3 py-2 rounded-pill" style="background:#e0f2f1; color:#00695c;">Activo</span>` :
                         `<span class="badge px-3 py-2 rounded-pill bg-light text-muted border">Inactivo</span>`;
+
+                    // --- BOTONES SEGÚN PERMISOS ---
+                    let actionButtons = '';
+
+                    if (userPermissions.canEdit) {
+                        actionButtons += `<button class="btn-icon text-info mr-1" onclick="openEditModal(${catStr})"><i class="fas fa-pen fa-xs"></i></button>`;
+                    }
+
+                    if (userPermissions.canDelete) {
+                        actionButtons += `<button class="btn-icon text-danger" data-toggle="modal" data-target="#confirmDeleteModal" data-action="${delUrl}" data-name="${cat.nombre}"><i class="fas fa-trash fa-xs"></i></button>`;
+                    }
 
                     return `
                         <tr class="item-row">
@@ -130,10 +168,7 @@
                             </td>
                             <td class="text-muted small col-desc">${cat.descripcion || ''}</td>
                             <td class="text-center">${badge}</td>
-                            <td class="text-right">
-                                <button class="btn-icon text-info mr-1" onclick="openEditModal(${catStr})"><i class="fas fa-pen fa-xs"></i></button>
-                                <button class="btn-icon text-danger" data-toggle="modal" data-target="#confirmDeleteModal" data-action="${delUrl}" data-name="${cat.nombre}"><i class="fas fa-trash fa-xs"></i></button>
-                            </td>
+                            <td class="text-right">${actionButtons}</td>
                         </tr>
                     `;
                 }).join('');
@@ -155,7 +190,7 @@
             els.pag.innerHTML = html;
         };
 
-        // MODAL LOGIC
+        // 5. FUNCIONES GLOBALES
         window.openCreateModal = () => {
             els.form.reset();
             els.errorAlert.classList.add('d-none');
@@ -180,31 +215,37 @@
             els.modal.modal('show');
         };
 
-        // EVENTOS
-        els.search.addEventListener('input', (e) => {
-            const t = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            state.data = allData.filter(i => ((i.nombre || '') + ' ' + (i.descripcion || '')).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(t));
-            state.currentPage = 1;
-            renderTable();
-        });
-        els.pag.addEventListener('click', (e) => {
-            e.preventDefault();
-            const p = e.target.closest('.page-link');
-            if (p) {
-                state.currentPage = +p.dataset.page;
+        // 6. EVENTOS
+        if (els.search) {
+            els.search.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                state.data = allData.filter(i =>
+                    ((i.nombre || '') + ' ' + (i.descripcion || '')).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(term)
+                );
+                state.currentPage = 1;
                 renderTable();
-            }
-        });
+            });
+        }
+
+        if (els.pag) {
+            els.pag.addEventListener('click', (e) => {
+                e.preventDefault();
+                const p = e.target.closest('.page-link');
+                if (p) {
+                    state.currentPage = +p.dataset.page;
+                    renderTable();
+                }
+            });
+        }
+
         $('#confirmDeleteModal').on('show.bs.modal', function(e) {
             const b = $(e.relatedTarget);
             $('#deleteForm').attr('action', b.data('action'));
             $('#deleteName').text(b.data('name'));
         });
 
-
+        // INICIAR
         renderTable();
     });
 </script>
-
-
 @stop

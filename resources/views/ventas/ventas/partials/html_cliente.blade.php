@@ -24,8 +24,35 @@
                 </div>
             </div>
         </div>
+
         <div class="form-group mb-0 mt-2">
             <input type="text" id="nombre_cliente_display" class="form-control display-nombre-cliente text-center" readonly placeholder="--- Cliente General ---">
+        </div>
+
+        <div id="panel-canje-puntos" class="mt-2" style="display:none;">
+            <div class="input-group input-group-sm">
+
+                <div class="input-group-prepend" title="Puntos Disponibles">
+                    <span class="input-group-text bg-warning text-white font-weight-bold px-2 border-warning">
+                        <i class="fas fa-star mr-1"></i> <span id="lbl-puntos-total">0</span>
+                    </span>
+                </div>
+
+                <input type="number" id="input-puntos-usar" class="form-control text-center font-weight-bold text-primary" placeholder="Pts a usar..." min="0">
+
+                <div class="input-group-append">
+                    <span class="input-group-text bg-white text-success font-weight-bold border-info" style="border-right: 0;">
+                        S/ <span id="lbl-equivalencia-dinero">0.00</span>
+                    </span>
+                </div>
+
+                <div class="input-group-append">
+                    <button class="btn btn-outline-info font-weight-bold" type="button" id="btn-aplicar-puntos" title="Aplicar Descuento">
+                        Aplicar
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" id="descuento-aplicado-soles" value="0">
         </div>
     </div>
 </div>

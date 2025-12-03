@@ -59,9 +59,11 @@
                     <button class="btn btn-outline-secondary btn-sm rounded-circle mr-1" onclick="openShowModal({{ $cliente->id }})" title="Ver Expediente">
                         <i class="fas fa-eye"></i>
                     </button>
+                    @can('clientes.editar')
                     <button class="btn btn-outline-info btn-sm rounded-circle mr-1" onclick="openEditModal({{ $cliente }})" title="Editar">
                         <i class="fas fa-pen"></i>
                     </button>
+                    @endcan
                 </td>
             </tr>
             @empty

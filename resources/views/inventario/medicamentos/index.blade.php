@@ -8,19 +8,24 @@
         <i class="fas fa-pills mr-2 text-primary"></i>Inventario
     </h1>
 
+    {{-- PERMISO: CREAR MEDICAMENTO --}}
+    @can('medicamentos.crear')
+    <a href="{{ route('inventario.medicamentos.create') }}" class="btn btn-primary shadow-sm">
+        <i class="fas fa-plus mr-2"></i> Nuevo Medicamento
+    </a>
+    @endcan
 </div>
 @endsection
 
 @section('content')
 
-{{-- BARRA DE BÚSQUEDA Y FILTROS (CENTRADA) --}}
+{{-- BARRA DE BÚSQUEDA Y FILTROS --}}
 <div class="row justify-content-center mb-4">
     <div class="col-lg-10">
         <div class="card shadow-sm border-0">
             <div class="card-body py-3" style="background-color: #f8f9fa;">
                 <form id="filterForm">
                     <div class="row align-items-center">
-                        {{-- 1. BUSCADOR PRINCIPAL (Grande) --}}
                         <div class="col-md-6 mb-2 mb-md-0">
                             <div class="input-group">
                                 <div class="input-group-prepend">
@@ -34,18 +39,14 @@
                             </div>
                         </div>
 
-                        {{-- 2. FILTRO DE PRECIOS (Rango) --}}
                         <div class="col-md-6">
                             <div class="d-flex align-items-center justify-content-end">
                                 <span class="text-muted mr-2 font-weight-bold small text-uppercase">Precio:</span>
-
                                 <div class="input-group input-group-sm mr-2" style="width: 100px;">
                                     <div class="input-group-prepend"><span class="input-group-text">Min</span></div>
                                     <input type="number" id="minPrice" class="form-control" placeholder="0">
                                 </div>
-
                                 <span class="text-muted mr-2">-</span>
-
                                 <div class="input-group input-group-sm" style="width: 100px;">
                                     <div class="input-group-prepend"><span class="input-group-text">Max</span></div>
                                     <input type="number" id="maxPrice" class="form-control" placeholder="Inf">
@@ -59,14 +60,16 @@
     </div>
 </div>
 
-{{-- CONTENEDOR TABLA --}}
+{{-- CONTENEDOR TABLA (CARGA VÍA AJAX) --}}
 <div class="card shadow border-0">
     <div class="card-body p-0" id="tabla-contenedor">
         @include('inventario.medicamentos._index_tabla')
     </div>
 </div>
 
-{{-- MODAL PRECIO (IGUAL QUE ANTES) --}}
+{{-- MODAL PRECIO --}}
+{{-- Solo renderizamos el HTML del modal si tiene permiso de editar, por seguridad --}}
+@can('medicamentos.editar')
 <div class="modal fade" id="modalPrecio" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
@@ -92,7 +95,18 @@
         </div>
     </div>
 </div>
+@endcan
+
+{{-- PREPARACIÓN DE DATOS PARA JS --}}
+@php
+$permisosJS = [
+'canEdit' => auth()->user()->can('medicamentos.editar'),
+'canDelete' => auth()->user()->can('medicamentos.eliminar'),
+];
+@endphp
+
 @endsection
+
 @section('js')
 <script>
     // 1. CONFIGURACIÓN TOAST
@@ -108,44 +122,31 @@
         timerProgressBar: true
     });
 
-    // 2. BUSCADOR OPTIMIZADO (State Check)
+    // 2. PERMISOS (Sin errores visuales en editor)
+    const userPermissions = JSON.parse('@json($permisosJS)');
+
+    // 3. BUSCADOR OPTIMIZADO
     let timeout = null;
-    let ultimaBusqueda = ""; // <--- AQUÍ GUARDAMOS EL "RSTRO" ANTERIOR
+    let ultimaBusqueda = "";
 
     function aplicarFiltros() {
-        let q = $('#searchInput').val().trim(); // .trim() quita espacios al inicio/final
+        let q = $('#searchInput').val().trim();
         let min = $('#minPrice').val();
         let max = $('#maxPrice').val();
 
-        // CREAMOS LA HUELLA DIGITAL DE LA BÚSQUEDA ACTUAL
-        // Esto crea un string único: "q=amox&min=10&max="
         let params = new URLSearchParams({
             q: q,
             min: min,
             max: max
         }).toString();
 
-        // === REGLA 1: NO REPETIR BÚSQUEDA ===
-        // Si lo que vas a buscar es IDÉNTICO a lo último que buscaste, DETENTE.
-        // Esto evita que busque si presionas Shift, Ctrl, o flechas sin cambiar texto.
-        if (params === ultimaBusqueda) {
-            return;
-        }
+        if (params === ultimaBusqueda) return;
 
-        // === REGLA 2: RESET INTELIGENTE ===
-        // Si todo está vacío, volvemos a la URL base (Reset)
-        // Pero si ya estábamos en la base, la Regla 1 nos detendrá antes.
         let url = "{{ route('inventario.medicamentos.index') }}";
+        if (params) url += "?" + params;
 
-        // Solo agregamos parámetros si existen
-        if (params) {
-            url += "?" + params;
-        }
-
-        // Guardamos esta búsqueda como la "última realizada"
         ultimaBusqueda = params;
 
-        // EJECUTAMOS AJAX
         $('#tabla-contenedor').css('opacity', '0.5');
 
         $.ajax({
@@ -156,7 +157,6 @@
                 $('#tabla-contenedor').css('opacity', '1');
             },
             error: function() {
-                // Si falla, permitimos buscar de nuevo borrando el rastro
                 ultimaBusqueda = "";
                 ToastCentro.fire({
                     icon: 'error',
@@ -167,24 +167,15 @@
         });
     }
 
-    // LISTENER MEJORADO
     $('#searchInput, #minPrice, #maxPrice').on('keyup change', function(e) {
-        // Ignorar teclas que no escriben (Shift, Ctrl, Alt, CapsLock, Flechas)
-        // Códigos: 16, 17, 18, 20, 37-40
         if ([16, 17, 18, 20, 37, 38, 39, 40].includes(e.keyCode)) return;
-
         clearTimeout(timeout);
-
-        // Esperamos 500ms a que termines de escribir
         timeout = setTimeout(aplicarFiltros, 500);
     });
 
-    // PAGINACIÓN (Se mantiene igual)
     $(document).on('click', '.pagination a', function(e) {
         e.preventDefault();
         let url = $(this).attr('href');
-
-        // MANTENER FILTROS AL PAGINAR
         let q = $('#searchInput').val().trim();
         let min = $('#minPrice').val();
         let max = $('#maxPrice').val();
@@ -200,14 +191,21 @@
             success: function(data) {
                 $('#tabla-contenedor').html(data);
                 $('#tabla-contenedor').css('opacity', '1');
-                // Actualizamos el rastro para que la paginación no rompa la lógica
-                // (Opcional, pero recomendable)
             }
         });
     });
 
-    // 3. LÓGICA PRECIO (IGUAL)
+    // 4. LÓGICA PRECIO CON PERMISOS
     function abrirModalPrecio(id, nombre, precioActual) {
+        // Bloqueo de seguridad JS
+        if (!userPermissions.canEdit) {
+            ToastCentro.fire({
+                icon: 'error',
+                title: 'No tienes permiso para editar precios.'
+            });
+            return;
+        }
+
         $('#medIdHidden').val(id);
         $('#lblNombreMedicamento').text(nombre);
         $('#inputNuevoPrecio').val(precioActual);
@@ -219,6 +217,10 @@
 
     function guardarPrecio(e) {
         e.preventDefault();
+
+        // Doble verificación
+        if (!userPermissions.canEdit) return;
+
         let medId = $('#medIdHidden').val();
         let nuevoPrecio = $('#inputNuevoPrecio').val();
         let sucursalId = "{{ $sucursalSeleccionada ? $sucursalSeleccionada->id : '' }}";

@@ -9,59 +9,57 @@
 @section('content')
 <div class="row">
 
-    {{-- Columna izquierda: lista de roles + crear/eliminar --}}
-    {{-- Columna izquierda: lista de roles + crear --}}
+    {{-- ========================================================== --}}
+    {{-- COLUMNA IZQUIERDA: LISTA DE ROLES --}}
+    {{-- ========================================================== --}}
     <div class="col-md-4">
         <div class="card card-primary card-outline">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-user-tag mr-2"></i> Roles del Sistema</h3>
             </div>
             <div class="card-body p-0">
-                @can('roles.ver')
                 <ul class="list-group list-group-flush">
                     @forelse($roles as $r)
                     <li class="list-group-item d-flex justify-content-between align-items-center {{ $selectedRole && $selectedRole->id === $r->id ? 'bg-light font-weight-bold' : '' }}">
 
-                        {{-- Enlace para seleccionar el rol --}}
-                        <a href="{{ route('seguridad.roles.index', ['role' => $r->id]) }}" class="text-dark" style="text-decoration: none; width: 80%;">
+                        {{-- Solo mostramos enlace si tiene permiso de ver --}}
+                        <a href="{{ route('seguridad.roles.index', ['role' => $r->id]) }}" class="text-dark" style="text-decoration: none; width: 70%;">
                             <i class="fas fa-user-shield mr-2 text-primary"></i> {{ $r->name }}
                         </a>
 
-                        {{-- Botón de Eliminar (Protegido para NO borrar al Admin) --}}
-                        @if($r->name !== 'Administrador')
-                        <form method="POST" action="{{ route('seguridad.roles.destroy', $r) }}"
-                            onsubmit="return confirm('⚠️ ¿Estás seguro de ELIMINAR el rol {{ $r->name }}?\n\n- Se quitará a todos los usuarios que lo tengan.\n- Esta acción es irreversible.');"
-                            style="display: inline;">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm text-danger p-0" title="Eliminar este rol">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </form>
-                        @else
-                        {{-- Candado para el Admin --}}
-                        <span class="text-muted" title="Rol de Sistema (No se puede borrar)">
-                            <i class="fas fa-lock"></i>
-                        </span>
-                        @endif
+                        <div class="d-flex align-items-center">
+                            @if($r->name !== 'Administrador')
+                            @can('roles.eliminar')
+                            <form method="POST" action="{{ route('seguridad.roles.destroy', $r) }}"
+                                onsubmit="return confirm('⚠️ ¿Estás seguro de ELIMINAR el rol {{ $r->name }}?');"
+                                style="display: inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm text-danger" title="Eliminar Rol">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                            @endcan
+                            @else
+                            <span class="badge badge-secondary" title="Rol protegido"><i class="fas fa-lock"></i> Sistema</span>
+                            @endif
+                        </div>
                     </li>
                     @empty
                     <li class="list-group-item text-muted text-center py-4">
-                        <i class="fas fa-ghost mb-2 d-block" style="font-size: 20px;"></i>
                         No hay roles registrados.
                     </li>
                     @endforelse
                 </ul>
-                @endcan
             </div>
 
-            {{-- Formulario para CREAR ROL (Esto sí lo dejamos) --}}
+            {{-- Formulario CREAR ROL --}}
+            @can('roles.crear')
             <div class="card-footer bg-light">
-                @can('roles.crear')
                 <form method="POST" action="{{ route('seguridad.roles.store') }}">
                     @csrf
                     <div class="input-group">
-                        <input type="text" name="name" class="form-control" placeholder="Nombre del nuevo rol..." required>
+                        <input type="text" name="name" class="form-control" placeholder="Nuevo rol..." required>
                         <span class="input-group-append">
                             <button class="btn btn-primary">
                                 <i class="fas fa-plus"></i>
@@ -69,91 +67,104 @@
                         </span>
                     </div>
                 </form>
-                @endcan
             </div>
+            @endcan
         </div>
-
     </div>
 
-    {{-- Columna derecha: permisos del rol seleccionado --}}
-
+    {{-- ========================================================== --}}
+    {{-- COLUMNA DERECHA: GESTIÓN DE PERMISOS --}}
+    {{-- ========================================================== --}}
+    @can('permisos.ver')
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header bg-white">
                 @if($selectedRole)
-                Permisos del rol: <strong>{{ $selectedRole->name }}</strong>
+                <h3 class="card-title mt-1">
+                    Permisos para: <span class="text-primary font-weight-bold">{{ $selectedRole->name }}</span>
+                </h3>
                 @else
-                Selecciona un rol
+                <span class="text-muted">Selecciona un rol a la izquierda</span>
                 @endif
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width: 200px;">
+                        <input type="text" id="permissionSearchInput" class="form-control" placeholder="Buscar permiso..." {{ !$selectedRole ? 'disabled' : '' }}>
+                        <div class="input-group-append">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body border-bottom py-2">
-                <input type="text" id="permissionSearchInput" class="form-control form-control-sm" placeholder="Buscar permiso..." {{ !$selectedRole ? 'disabled' : '' }}>
-            </div>
-            {{-- resources/views/seguridad/roles/index.blade.php --}}
 
             @if($selectedRole)
             @php
-            // Agrupar permisos por prefijo antes del punto
+            // Agrupar permisos por prefijo (ej: users.crear -> users)
             $grouped = $permisos->groupBy(function($p){
             return explode('.', $p->name)[0] ?? 'otros';
             });
-
-            // Coleccionamos a quiénes les haremos forms DELETE fuera del form principal
             $revokeTargets = [];
+
+            $canAsignar = auth()->user()->can('permisos.asignar');
+            $canRevocar = auth()->user()->can('permisos.revocar');
             @endphp
 
-            {{-- FORM PRINCIPAL: Sincronizar permisos del rol (POST) --}}
+            {{-- FORMULARIO DE SINCRONIZACIÓN (ASIGNAR) --}}
             <form method="POST" action="{{ route('seguridad.roles.permisos.sync', $selectedRole->id) }}">
                 @csrf
-
-                <div class="card-body" id="permissionsContainer">
+                <div class="card-body p-3" id="permissionsContainer" style="max-height: 70vh; overflow-y: auto;">
                     <div class="row">
                         @foreach($grouped as $grupo => $lista)
                         <div class="col-md-6">
-                            <div class="card card-outline card-info mb-3">
-                                <div class="card-header py-2">
-                                    <strong class="text-uppercase">{{ $grupo }}</strong>
+                            <div class="card card-outline card-secondary mb-3 shadow-none border">
+                                <div class="card-header py-1 px-3 bg-light">
+                                    <strong class="text-uppercase text-xs text-muted">{{ $grupo }}</strong>
                                 </div>
 
-                                <div class="card-body">
+                                <div class="card-body p-2">
                                     @foreach($lista as $perm)
                                     @php
-                                    $checked = in_array($perm->name, $selectedRolePermissions);
-                                    if ($checked) {
-                                    // Guardamos destino para pintar su form DELETE luego (fuera del form principal)
+                                    $isChecked = in_array($perm->name, $selectedRolePermissions);
+
+                                    // Si está marcado, lo guardamos para generar el form de revocar individual abajo
+                                    if ($isChecked) {
                                     $revokeTargets[] = [
                                     'role_id' => $selectedRole->id,
-                                    'role_name' => $selectedRole->name,
                                     'perm_id' => $perm->id,
-                                    'perm_name' => $perm->name,
+                                    'perm_name' => $perm->name
                                     ];
                                     }
                                     @endphp
 
-                                    <div class="custom-control custom-checkbox mb-1 d-flex align-items-center">
-                                        <input
-                                            type="checkbox"
-                                            class="custom-control-input"
-                                            id="perm_{{ $perm->id }}"
-                                            name="permisos[]"
-                                            value="{{ $perm->name }}"
-                                            {{ $checked ? 'checked' : '' }}>
-                                        <label class="custom-control-label" for="perm_{{ $perm->id }}">
-                                            {{ $perm->name }}
-                                        </label>
+                                    <div class="d-flex justify-content-between align-items-center mb-1 px-1 rounded hover-bg">
+                                        {{-- CHECKBOX (ASIGNAR) --}}
+                                        <div class="custom-control custom-checkbox">
+                                            <input
+                                                type="checkbox"
+                                                class="custom-control-input"
+                                                id="perm_{{ $perm->id }}"
+                                                name="permisos[]"
+                                                value="{{ $perm->name }}"
+                                                {{ $isChecked ? 'checked' : '' }}
+                                                {{-- Si NO tiene permiso de asignar, deshabilitamos el input --}}
+                                                {{ !$canAsignar ? 'disabled' : '' }}>
 
-                                        {{-- Botón "Quitar" individual: envía el form oculto por ID con method=DELETE --}}
-                                        @if($checked)
-                                        @php
-                                        $formId = "revoke-{$selectedRole->id}-{$perm->id}";
-                                        @endphp
+                                            <label class="custom-control-label font-weight-normal {{ $isChecked ? 'text-dark' : 'text-secondary' }}"
+                                                for="perm_{{ $perm->id }}"
+                                                style="font-size: 0.9rem; cursor: pointer;">
+                                                {{ $perm->name }}
+                                            </label>
+                                        </div>
+
+                                        {{-- BOTÓN REVOCAR (SOLO SI ESTÁ ASIGNADO Y TIENE PERMISO) --}}
+                                        @if($isChecked && $canRevocar)
+                                        @php $formId = "revoke-{$selectedRole->id}-{$perm->id}"; @endphp
                                         <button
                                             type="submit"
                                             form="{{ $formId }}"
-                                            class="btn btn-xs btn-outline-danger ml-2"
-                                            title="Quitar este permiso del rol"
-                                            onclick="return confirm('Quitar {{ $perm->name }} del rol {{ $selectedRole->name }}?')">
-                                            <i class="fas fa-times"></i>
+                                            class="btn btn-xs btn-default text-danger border-0"
+                                            title="Revocar permiso"
+                                            onclick="return confirm('¿Quitar {{ $perm->name }} de {{ $selectedRole->name }}?')">
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                         @endif
                                     </div>
@@ -162,39 +173,39 @@
                             </div>
                         </div>
                         @endforeach
-                    </div> {{-- .row --}}
-                </div> {{-- .card-body --}}
+                    </div>
+                </div>
 
-                <div class="card-footer">
+                {{-- FOOTER CON BOTÓN GUARDAR (SOLO SI PUEDE ASIGNAR) --}}
+                @if($canAsignar)
+                <div class="card-footer bg-light text-right">
                     <button class="btn btn-primary">
-                        <i class="fas fa-save"></i> Guardar permisos del rol
+                        <i class="fas fa-save mr-1"></i> Guardar Cambios
                     </button>
                 </div>
+                @endif
             </form>
 
-            {{-- FORMS OCULTOS (FUERA DEL FORM PRINCIPAL): uno por cada "Quitar" --}}
+            {{-- FORMS OCULTOS PARA REVOCAR INDIVIDUALMENTE --}}
             @foreach($revokeTargets as $t)
-            @php
-            $formId = "revoke-{$t['role_id']}-{$t['perm_id']}";
-            @endphp
-            <form id="{{ $formId }}"
+            <form id="revoke-{{ $t['role_id'] }}-{{ $t['perm_id'] }}"
                 class="d-none"
                 method="POST"
                 action="{{ route('seguridad.roles.permisos.revoke', ['role' => $t['role_id'], 'permission' => $t['perm_id']]) }}">
                 @csrf
                 @method('DELETE')
-                {{-- No inputs extra: solo spoofing DELETE + CSRF --}}
             </form>
             @endforeach
 
             @else
-            <div class="card-body">
-                <p>Elige un rol en la columna izquierda para gestionar sus permisos.</p>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center text-muted" style="height: 300px;">
+                <i class="fas fa-user-tag fa-3x mb-3"></i>
+                <h5>Selecciona un rol para gestionar sus permisos</h5>
             </div>
             @endif
-
         </div>
     </div>
+    @endcan
 
 </div>
 @stop
@@ -202,34 +213,44 @@
 @section('js')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-
-        // --- BUSCADOR DE PERMISOS ---
         const permissionSearchInput = document.getElementById('permissionSearchInput');
         const permissionsContainer = document.getElementById('permissionsContainer');
 
         if (permissionSearchInput && permissionsContainer) {
-            const permissionGroups = permissionsContainer.querySelectorAll('.card.card-outline');
+            const permissionCards = permissionsContainer.querySelectorAll('.card'); // Tarjetas de grupos
 
             permissionSearchInput.addEventListener('keyup', function(event) {
                 const searchTerm = event.target.value.toLowerCase();
 
-                permissionGroups.forEach(group => {
-                    const permissionCheckboxes = group.querySelectorAll('.custom-control.custom-checkbox');
-                    let groupHasVisiblePermission = false;
+                permissionCards.forEach(card => {
+                    const checkboxes = card.querySelectorAll('.d-flex'); // Contenedores de cada permiso
+                    let hasVisible = false;
 
-                    permissionCheckboxes.forEach(checkboxDiv => {
-                        const label = checkboxDiv.querySelector('label').textContent.toLowerCase();
+                    checkboxes.forEach(box => {
+                        const label = box.querySelector('label').textContent.toLowerCase();
                         if (label.includes(searchTerm)) {
-                            checkboxDiv.style.display = '';
-                            groupHasVisiblePermission = true;
+                            box.style.display = 'flex'; // Usamos flex para mantener alineación
+                            box.classList.remove('d-none');
+                            hasVisible = true;
                         } else {
-                            checkboxDiv.style.display = 'none';
+                            box.style.display = 'none';
+                            box.classList.add('d-none');
                         }
                     });
-                    group.style.display = groupHasVisiblePermission ? '' : 'none';
+
+                    if (hasVisible) {
+                        card.parentElement.style.display = '';
+                    } else {
+                        card.parentElement.style.display = 'none';
+                    }
                 });
             });
         }
     });
 </script>
+<style>
+    .hover-bg:hover {
+        background-color: #f4f6f9;
+    }
+</style>
 @stop

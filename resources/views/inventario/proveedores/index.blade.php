@@ -12,22 +12,24 @@
     <div class="card-header bg-white">
         <div class="d-flex align-items-center flex-wrap w-100">
 
-            {{-- Buscador (adaptado a tu controller) --}}
+            {{-- BUSCADOR --}}
             <form method="GET" action="{{ route('inventario.proveedores.index') }}" class="input-group" style="max-width: 420px;">
                 <div class="input-group-prepend">
                     <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
                 </div>
                 <input
                     type="text"
-                    name="buscar" {{-- <- Coincide con tu controller --}}
+                    name="buscar"
                     class="form-control"
                     placeholder="Buscar por Razón Social o RUC..."
-                    value="{{ $busqueda }}" {{-- <- Coincide con tu controller --}}
+                    value="{{ $busqueda ?? '' }}"
                     autocomplete="off">
                 <div class="input-group-append">
-                    <a href="{{ route('inventario.proveedores.index') }}" class="btn btn-outline-secondary {{ $busqueda ? '' : 'd-none' }}" title="Limpiar">
+                    @if(!empty($busqueda))
+                    <a href="{{ route('inventario.proveedores.index') }}" class="btn btn-outline-secondary" title="Limpiar">
                         <i class="fas fa-times-circle"></i>
                     </a>
+                    @endif
                     <button class="btn btn-primary" type="submit">
                         Buscar
                     </button>
@@ -35,6 +37,7 @@
             </form>
 
             <div class="ml-auto mt-2 mt-md-0">
+                {{-- PERMISO: CREAR --}}
                 @can('proveedores.crear')
                 <a href="{{ route('inventario.proveedores.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus mr-1"></i> Nuevo Proveedor
@@ -85,6 +88,7 @@
                             </a>
                             @endcan
 
+                            {{-- PERMISO: ELIMINAR --}}
                             @can('proveedores.eliminar')
                             <button
                                 type="button"
@@ -121,15 +125,15 @@
     @endif
 </div>
 
-{{-- ========== INICIO: MODAL DE BORRADO ========== --}}
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+{{-- MODAL DE BORRADO --}}
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <form id="deleteForm" method="POST" class="modal-content">
             @csrf
             @method('DELETE')
             <div class="modal-header">
-                <h5 class="modal-title" id="confirmDeleteLabel">
-                    <i class="fas fa-exclamation-triangle text-danger mr-2"></i> Confirmar eliminación
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> Confirmar eliminación
                 </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
@@ -139,21 +143,15 @@
                 ¿Seguro que deseas eliminar el proveedor <strong id="deleteName">—</strong>?
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i> Cancelar
-                </button>
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash mr-1"></i> Eliminar
-                </button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger">Eliminar</button>
             </div>
         </form>
     </div>
 </div>
-{{-- ========== FIN: MODAL DE BORRADO ========== --}}
 
 @stop
 
-{{-- CSS para el Toast --}}
 @section('css')
 <style>
     .toast-center {
@@ -165,14 +163,10 @@
 </style>
 @stop
 
-{{-- JS para el Modal y el Toast --}}
 @section('js')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Tooltips (AdminLTE/Bootstrap)
         $('[data-toggle="tooltip"]').tooltip();
-
-        // 2. Modal de borrado: set action + nombre
         $('#confirmDeleteModal').on('show.bs.modal', function(event) {
             const button = $(event.relatedTarget);
             const action = button.data('action');
@@ -180,9 +174,6 @@
             $('#deleteForm').attr('action', action);
             $('#deleteName').text(name);
         });
-
-        // 3. Inicializa el toast de Bootstrap (si existe)
-        $('.toast').toast('show');
     });
 </script>
 @stop

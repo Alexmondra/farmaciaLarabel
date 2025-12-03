@@ -59,13 +59,14 @@
                             <small class="text-muted mr-2" id="price-display-{{ $m->id }}">Sin precio</small>
                             @endif
 
-                            {{-- Botón Lápiz (Llama a la función JS del padre) --}}
+                            @can('medicamentos.editar')
                             <button type="button"
                                 class="btn btn-xs btn-outline-secondary rounded-circle"
                                 onclick="abrirModalPrecio({{ $m->id }}, '{{ addslashes($m->nombre) }}', '{{ $m->precio_v ?? 0 }}')"
-                                title="Cambiar Precio">
+                                title="Cambiar Precio Rápido">
                                 <i class="fas fa-pencil-alt" style="font-size: 0.7rem;"></i>
                             </button>
+                            @endcan
                         </div>
                     </div>
                     @else
@@ -93,15 +94,18 @@
                         <a href="{{ route('inventario.medicamentos.show', $m->id) }}" class="btn btn-sm btn-outline-info" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </a>
-
+                        {{-- PERMISO ELIMINAR --}}
                         @if($sucursalSeleccionada)
+                        @can('medicamentos.eliminar')
                         <button type="button" class="btn btn-sm btn-outline-danger"
+                            title="Quitar de esta sucursal"
                             onclick="if(confirm('¿Quitar de {{ $sucursalSeleccionada->nombre }}?')) document.getElementById('delete-form-{{ $m->id }}').submit();">
                             <i class="fas fa-trash"></i>
                         </button>
                         <form id="delete-form-{{ $m->id }}" action="{{ route('inventario.medicamento_sucursal.destroy', ['medicamento' => $m->id, 'sucursal' => $sucursalSeleccionada->id]) }}" method="POST" style="display: none;">
                             @csrf @method('DELETE')
                         </form>
+                        @endcan
                         @endif
                     </div>
                 </td>
@@ -124,6 +128,6 @@
 {{-- PAGINACIÓN --}}
 @if ($medicamentos->hasPages())
 <div class="card-footer bg-white border-top-0 d-flex justify-content-center">
-    {{ $medicamentos->appends(['q' => $q])->links() }}
+    {{ $medicamentos->appends(['q' => $q ?? ''])->links() }}
 </div>
 @endif

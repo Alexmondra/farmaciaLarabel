@@ -6,9 +6,11 @@
 <div class="d-flex justify-content-between align-items-center">
     <h1>Compras</h1>
 
+    @can('compras.crear')
     <a href="{{ route('compras.create') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Nueva compra
     </a>
+    @endcan
 </div>
 @endsection
 
@@ -88,28 +90,38 @@
 
                     {{-- ACCIONES --}}
                     <td class="text-end">
-                        <a href="{{ route('compras.show', $c->id) }}"
-                            class="btn btn-sm btn-info">
+                        <a href="{{ route('compras.show', $c->id) }}" class="btn btn-sm btn-info">
                             <i class="fas fa-eye"></i> Ver
                         </a>
 
-                        <a href="{{ route('compras.edit', $c->id) }}"
-                            class="btn btn-sm btn-warning">
+                        @can('compras.editar')
+                        {{-- Solo se puede editar si NO está anulada --}}
+                        @if($c->estado !== 'anulada')
+                        <a href="{{ route('compras.edit', $c->id) }}" class="btn btn-sm btn-warning">
                             <i class="fas fa-edit"></i> Editar
                         </a>
+                        @endif
+                        @endcan
 
-                        @if($c->estado != 2)
+                        {{-- PROTECCIÓN CON PERMISO --}}
+                        @can('compras.eliminar')
+                        @if($c->estado !== 'anulada')
                         <form method="POST"
                             action="{{ route('compras.destroy', $c->id) }}"
                             class="d-inline"
-                            onsubmit="return confirm('¿Anular esta compra?');">
+                            onsubmit="return confirm('⚠️ ¿Estás seguro? Al anular, se descontará el stock de los productos.');">
                             @csrf
                             @method('DELETE')
-                            <button class="btn btn-sm btn-danger">
+                            <button class="btn btn-sm btn-danger" title="Anular Compra">
                                 <i class="fas fa-ban"></i> Anular
                             </button>
                         </form>
+                        @else
+                        <button class="btn btn-sm btn-secondary" disabled>
+                            <i class="fas fa-ban"></i> Anulada
+                        </button>
                         @endif
+                        @endcan
                     </td>
                 </tr>
                 @empty

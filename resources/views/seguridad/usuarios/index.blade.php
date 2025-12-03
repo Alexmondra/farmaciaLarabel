@@ -101,7 +101,7 @@
               </a>
               @endcan
 
-              @can('usuarios.borrar')
+              @can('usuarios.eliminar')
               <form action="{{ route('seguridad.usuarios.destroy', $u) }}" method="POST" class="d-inline"
                 onsubmit="return confirm('¿Eliminar permanentemente a {{ $u->name }}?');">
                 @csrf @method('DELETE')

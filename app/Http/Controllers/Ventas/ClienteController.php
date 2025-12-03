@@ -55,10 +55,13 @@ class ClienteController extends Controller
     public function checkDocumento(Request $request)
     {
         $cliente = $this->clienteRepo->checkDocumento($request->doc, $request->except_id);
-
+        $config = Configuracion::first();
         return response()->json([
             'exists' => !!$cliente,
-            'data'   => $cliente
+            'data'   => $cliente,
+            'config' => [
+                'valor_punto' => $config->valor_punto_canje ?? 0.02
+            ]
         ]);
     }
 

@@ -6,8 +6,12 @@
         // ==========================================
         const RUTA_LOOKUP_MEDICAMENTOS = "{{ route('ventas.lookup_medicamentos') }}";
         const RUTA_LOOKUP_LOTES = "{{ route('ventas.lookup_lotes') }}";
-        const RUTA_CHECK_CLIENTE = "{{ route('clientes.check') }}";
+        const RUTA_CHECK_CLIENTE = "{{ route('clientes.check') }}"; // O checkDocumento, revisa tu ruta
         const sucursalId = $('#sucursal_id').val();
+
+        // --- NUEVO: VALOR DEL PUNTO DESDE CONFIGURACIÓN ---
+        // Si no existe la variable, usamos 0.02 por defecto
+        let valorPuntoActual = parseFloat("{{ $config->valor_punto_canje ?? 0.02 }}");
 
         // Variables de estado
         let selectedIndex = -1;
@@ -51,10 +55,10 @@
             }
 
             let html = lista.map(m => `
-                <button type="button" class="list-group-item list-group-item-action resultado-medicamento py-1 px-2"
-                        data-medicamento-id="${m.medicamento_id}"
-                        data-nombre="${m.nombre}"
-                        data-presentacion="${m.presentacion || ''}"
+                <button type="button" class="list-group-item list-group-item-action resultado-medicamento py-1 px-2" 
+                        data-medicamento-id="${m.medicamento_id}" 
+                        data-nombre="${m.nombre}" 
+                        data-presentacion="${m.presentacion || ''}" 
                         data-precio="${m.precio_venta}">
                     <div class="d-flex justify-content-between align-items-center">
                         <div style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
@@ -76,17 +80,17 @@
         $('#busqueda_medicamento').on('keydown', function(e) {
             let $resultados = $('#resultados-medicamentos');
             if (!$resultados.hasClass('active') || resultCount === 0) return;
-            if (e.which === 40) {
+            if (e.which === 40) { // Abajo
                 e.preventDefault();
                 selectedIndex++;
                 if (selectedIndex >= resultCount) selectedIndex = 0;
                 highlightItem();
-            } else if (e.which === 38) {
+            } else if (e.which === 38) { // Arriba
                 e.preventDefault();
                 selectedIndex--;
                 if (selectedIndex < 0) selectedIndex = resultCount - 1;
                 highlightItem();
-            } else if (e.which === 13) {
+            } else if (e.which === 13) { // Enter
                 e.preventDefault();
                 if (selectedIndex > -1) {
                     $resultados.find('.resultado-medicamento').eq(selectedIndex).click();
@@ -288,14 +292,40 @@
             actualizarTotalGlobal(total);
         }
 
+        // ==========================================
+        // 2.5 CALCULO TOTAL CON PUNTOS (MODIFICADO)
+        // ==========================================
         function actualizarTotalGlobal(total) {
-            $('#total-venta').text(total.toFixed(2));
+            // 1. Obtener descuento activo (si hay)
+            let descuento = parseFloat($('#descuento-aplicado-soles').val()) || 0;
+
+            // Seguridad: Si el descuento es mayor al total, lo ajustamos
+            if (descuento > total) {
+                descuento = total;
+            }
+
+            let totalFinal = total - descuento;
+
+            // 2. Pintar en el cuadro verde
+            if (descuento > 0 && total > 0) {
+                // Modo con descuento: Tachamos el original y mostramos el nuevo
+                $('#total-venta').html(`
+                    <span style="font-size: 0.6em; text-decoration: line-through; opacity: 0.7; color: #fff;">S/ ${total.toFixed(2)}</span><br>
+                    ${totalFinal.toFixed(2)}
+                `);
+            } else {
+                // Modo normal
+                $('#total-venta').text(total.toFixed(2));
+            }
+
             $('#input-items-json').val(JSON.stringify(Object.values(carrito)));
-            if (window.calcularVuelto) window.calcularVuelto(total);
+
+            // Recalcular vuelto con el NUEVO total
+            if (window.calcularVuelto) window.calcularVuelto(totalFinal);
         }
 
         // ==========================================
-        // 3. LOGICA BUSCADOR CLIENTES (Panel)
+        // 3. LOGICA BUSCADOR CLIENTES (MODIFICADO)
         // ==========================================
         const $tipo = $('#tipo_comprobante');
         const $input = $('#busqueda_cliente');
@@ -328,8 +358,16 @@
                     doc: doc
                 })
                 .done(res => {
-                    if (res.exists) selectCliente(res.data);
-                    else showCreateOption();
+                    // Tu controlador devuelve { exists: true/false, data: { ... puntos: X } }
+                    if (res.exists) {
+                        if (res.config && res.config.valor_punto) {
+                            valorPuntoActual = parseFloat(res.config.valor_punto);
+                        }
+
+                        selectCliente(res.data);
+                    } else {
+                        showCreateOption();
+                    }
                 })
                 .always(() => {
                     $('#loader-cliente').addClass('d-none');
@@ -343,6 +381,24 @@
             $display.val(nombre).removeClass('text-danger').addClass('text-primary font-weight-bold');
             $('#btn-crear-cliente').addClass('d-none');
             $('#btn-ver-cliente').removeClass('d-none');
+
+            // --- LÓGICA DE PUNTOS (NUEVA) ---
+            // Verifica si el objeto 'data' trae puntos y si son mayores a 0
+            if (data.puntos && data.puntos > 0) {
+                $('#panel-canje-puntos').slideDown();
+                $('#lbl-puntos-total').text(data.puntos);
+
+                // Configurar input
+                $('#input-puntos-usar').val(0).attr('max', data.puntos);
+                $('#lbl-equivalencia-dinero').text('0.00');
+
+                // Resetear estado del botón
+                $('#descuento-aplicado-soles').val(0);
+                $('#btn-aplicar-puntos').removeClass('btn-info').addClass('btn-outline-info').html('<i class="fas fa-tag mr-1"></i> APLICAR DESCUENTO');
+            } else {
+                $('#panel-canje-puntos').slideUp();
+            }
+            recalcularTotalDesdeMemoria();
         }
 
         function showCreateOption() {
@@ -355,12 +411,16 @@
             $hidden.val('');
             $display.val('--- Cliente General ---').removeClass('text-primary text-danger font-weight-bold');
             $('#btn-crear-cliente, #btn-ver-cliente').addClass('d-none');
+
+            // --- OCULTAR PANEL PUNTOS ---
+            $('#panel-canje-puntos').slideUp();
+            $('#descuento-aplicado-soles').val(0);
+            recalcularTotalDesdeMemoria();
         }
 
         $('#btn-crear-cliente').click(function() {
             if (window.openCreateModal) {
                 window.openCreateModal();
-                // Pre-llenar datos en el modal
                 setTimeout(() => {
                     let doc = $input.val();
                     let tipo = $tipo.val() === 'FACTURA' ? 'RUC' : 'DNI';
@@ -385,6 +445,51 @@
         $tipo.trigger('change');
 
         // ==========================================
+        // 3.5 CALCULADORA DE PUNTOS (NUEVO)
+        // ==========================================
+
+        // A. Al escribir puntos, calcular dinero automáticamente
+        $('#input-puntos-usar').on('input', function() {
+            let max = parseInt($(this).attr('max'));
+            let val = parseInt($(this).val());
+
+            if (isNaN(val) || val < 0) val = 0;
+
+            if (val > max) {
+                val = max;
+                $(this).val(max);
+            }
+
+            // USAMOS LA VARIABLE DINÁMICA 'valorPuntoActual'
+            let dinero = (val * valorPuntoActual).toFixed(2);
+
+            $('#lbl-equivalencia-dinero').text(dinero);
+        });
+
+        // B. Botón "Aplicar Descuento"
+        $('#btn-aplicar-puntos').click(function() {
+            let dinero = parseFloat($('#lbl-equivalencia-dinero').text());
+            let puntos = $('#input-puntos-usar').val();
+
+            if (dinero > 0) {
+                // Guardamos el descuento en el input oculto
+                $('#descuento-aplicado-soles').val(dinero);
+
+                // Efecto visual botón
+                $(this).removeClass('btn-outline-info').addClass('btn-info').html(`<i class="fas fa-check mr-1"></i> DESCUENTO DE S/ ${dinero} APLICADO`);
+
+                if (typeof toastr !== 'undefined') toastr.success(`Descuento de S/ ${dinero} aplicado.`);
+            } else {
+                $('#descuento-aplicado-soles').val(0);
+                $(this).removeClass('btn-info').addClass('btn-outline-info').html('<i class="fas fa-tag mr-1"></i> APLICAR DESCUENTO');
+            }
+
+            // Recalculamos el total global para que se tache el precio
+            recalcularTotalDesdeMemoria();
+        });
+
+
+        // ==========================================
         // 4. LOGICA COBRO
         // ==========================================
         $('#medio_pago').change(function() {
@@ -400,9 +505,17 @@
         });
 
         $('#input-paga-con').on('input', function() {
-            let totalTexto = $('#total-venta').text();
-            let total = parseFloat(totalTexto) || 0;
-            calcularVuelto(total);
+            // Ahora leemos el texto directamente (que puede ser el precio con descuento)
+            // Nota: Si hay descuento, el HTML es complejo. Mejor tomamos el total calculado en memoria.
+            // Para simplificar, volveremos a calcular el total desde el carrito - descuento.
+
+            let totalCarrito = 0;
+            Object.values(carrito).forEach(i => totalCarrito += (i.cantidad * i.precio_venta));
+            let descuento = parseFloat($('#descuento-aplicado-soles').val()) || 0;
+            if (descuento > totalCarrito) descuento = totalCarrito;
+            let totalFinal = totalCarrito - descuento;
+
+            calcularVuelto(totalFinal);
         });
 
         window.calcularVuelto = function(totalVenta) {
@@ -410,7 +523,7 @@
             let pagaCon = parseFloat($('#input-paga-con').val()) || 0;
             let vuelto = pagaCon - totalVenta;
             let elVuelto = $('#txt-vuelto');
-            if (vuelto < 0) {
+            if (vuelto < -0.01) { // Pequeña tolerancia flotante
                 elVuelto.text('Falta dinero');
                 elVuelto.parent().removeClass('text-success').addClass('text-danger');
             } else {
@@ -433,15 +546,34 @@
                 toastr.error('Falta RUC para Factura.');
                 return;
             }
+
+            // Validar pago efectivo
+            let totalCarrito = 0;
+            Object.values(carrito).forEach(i => totalCarrito += (i.cantidad * i.precio_venta));
+            let descuento = parseFloat($('#descuento-aplicado-soles').val()) || 0;
+            if (descuento > totalCarrito) descuento = totalCarrito;
+            let totalFinal = totalCarrito - descuento;
+
             if ($('#medio_pago').val() === 'EFECTIVO') {
-                let total = parseFloat($('#total-venta').text());
                 let pagaCon = parseFloat($('#input-paga-con').val()) || 0;
-                if ($('#input-paga-con').val().length > 0 && pagaCon < total) {
+                if ($('#input-paga-con').val().length > 0 && pagaCon < totalFinal) {
                     e.preventDefault();
                     toastr.error('El monto de pago es insuficiente.');
                     $('#input-paga-con').focus().addClass('is-invalid');
                     return;
                 }
+            }
+
+            // --- INYECTAR PUNTOS Y DESCUENTO AL FORMULARIO ---
+            // Eliminamos inputs previos si existieran para no duplicar
+            $(this).find('input[name="puntos_usados"]').remove();
+            $(this).find('input[name="descuento_puntos"]').remove();
+
+            let puntosUsados = $('#input-puntos-usar').val();
+            // Solo enviamos si realmente se aplicó un descuento > 0
+            if (descuento > 0 && puntosUsados > 0) {
+                $(this).append(`<input type="hidden" name="puntos_usados" value="${puntosUsados}">`);
+                $(this).append(`<input type="hidden" name="descuento_puntos" value="${descuento.toFixed(2)}">`);
             }
         });
 
@@ -524,10 +656,10 @@
         });
 
         // =======================================================
-        // 6. FUNCIONES DE MODALES (AQUÍ ESTABA EL FALTANTE)
+        // 6. FUNCIONES DE MODALES (INCLUIDAS)
         // =======================================================
 
-        // --- A. MODAL CREAR CLIENTE ---
+        // Modal Crear Cliente
         window.openCreateModal = function() {
             $('#formCliente')[0].reset();
             resetFormState();
@@ -602,7 +734,6 @@
             }
         };
 
-        // Listeners internos del Modal Create
         $('#tipo_documento').change(function() {
             $('#documento').val('');
             let isRUC = $(this).val() === 'RUC';
@@ -623,7 +754,7 @@
 
         $('.toggle-details').click(() => toggleDetailsPanel($('#extra-fields').is(':hidden')));
 
-        // SUBMIT DEL MODAL
+        // Submit Crear Cliente
         $('#formCliente').submit(function(e) {
             e.preventDefault();
             const btn = $('#btnGuardar');
@@ -652,7 +783,6 @@
             });
         });
 
-        // Close helpers
         $('.close, [data-dismiss="modal"]').on('click', () => $('.modal').modal('hide'));
     });
 </script>

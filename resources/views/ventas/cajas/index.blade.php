@@ -4,25 +4,12 @@
 @section('title', 'Sesiones de Caja')
 
 @section('content_header')
-{{-- ... (Tu header con el botón de "Abrir Nueva Caja") ... --}}
 <div class="d-flex justify-content-between">
     <h1>Sesiones de Caja</h1>
     <button class="btn btn-primary" data-toggle="modal" data-target="#modalAbrirCaja">
         <i class="fas fa-plus"></i> Abrir Nueva Caja
     </button>
 </div>
-
-{{-- ... (Tus alertas de sucursal y errores) ... --}}
-@if($errors->any())
-<div class="alert alert-danger mt-2">
-    <strong>Error al procesar la solicitud:</strong>
-    <ul>
-        @foreach ($errors->all() as $error)
-        <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-</div>
-@endif
 
 @stop
 
@@ -118,20 +105,9 @@
             $('#modalAbrirCaja').modal('show');
         }
 
-        // --- Lógica para el MODAL DE CIERRE (para reabrir si falla) ---
         var abrirCierre = $('#js-page-data').data('abrir-modal-cierre');
-        if (abrirCierre === 'true' || abrirCierre === true) {
-            // Si hay un error de cierre, necesitamos encontrar a qué
-            // caja se refería, lo cual es difícil. 
-            // Por ahora, solo mostramos el modal si hay error.
-            // Para que funcione 100% (y sepa qué action poner)
-            // necesitaríamos guardar el ID en la sesión, es más complejo.
-            // Por ahora, el usuario tendría que re-abrirlo manualmente.
-            // Vamos a simplificarlo:
-        }
+        if (abrirCierre === 'true' || abrirCierre === true) {}
 
-        // --- Lógica para ABRIR el modal de cierre (al hacer clic) ---
-        // Esto se dispara CADA VEZ que haces clic en un botón "Cerrar"
         $('#modalCerrarCaja').on('show.bs.modal', function(event) {
 
             // 1. Obtener el botón que disparó el modal

@@ -30,16 +30,23 @@ class RolesPermisosSeeder extends Seeder
 
             // 2. INVENTARIO (Medicamentos)
             'medicamentos.ver',     // Ver lista y stock
-            'medicamentos.crear',   // Agregar nuevos productos
+            'medicamentos.crear',   // Agregar nuevos productos 
             'medicamentos.editar',  // Editar precios/datos
             'medicamentos.eliminar', // Borrar productos
             'categorias.ver',       // Gestionar categorías
-            'lotes.ver',            // Ver vencimientos y lotes
-            'stock.ajustar',        // Hacer ajustes manuales de stock (pérdidas, etc)
+            'categorias.crear',
+            'categorias.editar',
+            'categorias.eliminar',
+            'lotes.ver',            // Ver vencimientos y lotes no usa
+            'stock.ajustar',        // Hacer ajustes manuales de stock (pérdidas, etc) no usa
+            'vencimiento.ver',
+
 
             // 3. COMPRAS (Proveedores)
             'compras.ver',          // Ver historial de compras
             'compras.crear',        // Registrar ingreso de mercadería
+            'compras.editar',        // editar ingreso de mercadería
+            'compras.anular',
             'proveedores.ver',      // Ver proveedores
             'proveedores.crear',    // Gestionar proveedores
             'proveedores.editar',
@@ -53,17 +60,21 @@ class RolesPermisosSeeder extends Seeder
             'roles.crear',          // Crear nuevos roles
             'roles.editar',         // Asignar permisos a roles
             'roles.eliminar',
-
+            'permisos.ver',
+            'permisos.asignar',
+            'permisos.revocar',
             // 5. REPORTES Y CONFIGURACIÓN
+
             'reportes.ver',         // Acceso general a reportes
             'config.ver',           // Ver configuración del sistema
             'config.editar',        // Editar datos de la empresa/impresora
 
-            // 3. COMPRAS (Proveedores)
+            // 6. COMPRAS (sucursales)
             'sucursales.ver',
             'sucursales.crear',
             'sucursales.editar',
             'sucursales.eliminar',
+
         ];
 
         foreach ($permisos as $p) {

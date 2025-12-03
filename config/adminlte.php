@@ -130,7 +130,7 @@ return [
     'classes_content_wrapper' => '',
     'classes_content_header' => '',
     'classes_content' => '',
-    'classes_sidebar' => 'sidebar-dark-teal elevation-4', // Sidebar oscura con hover teal
+    'classes_sidebar' => 'sidebar-dark-primary elevation-1', // Sidebar oscura con hover teal
     'classes_sidebar_nav' => '',
     'classes_topnav' => 'navbar-white navbar-light',
     'classes_topnav_nav' => 'navbar-expand',
@@ -194,214 +194,168 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Menu Items
+    | Menu Items (OPTIMIZADO)
     |--------------------------------------------------------------------------
     */
 
     'menu' => [
-        // Navbar items:
-        [
-            'type' => 'navbar-search',
-            'text' => 'Buscar medicamento, lote o venta...',
-            'topnav_right' => true,
-        ],
         [
             'type' => 'fullscreen-widget',
             'topnav_right' => true,
         ],
-
         [
             'type' => 'darkmode-widget',
-            'topnav_right' => true, // Para que salga a la derecha
+            'topnav_right' => true,
             'icon_enabled' => 'fas fa-moon',
             'icon_disabled' => 'far fa-moon',
         ],
 
-        // Sidebar items:
-        [
-            'type' => 'sidebar-menu-search',
-            'text' => 'Buscar módulo...',
-        ],
+        // --- INICIO DEL MENÚ LATERAL ---
 
-        ['header' => 'PRINCIPAL'],
+        // 1. DASHBOARD (Limpio, sin etiquetas de colores)
         [
             'text' => 'Dashboard',
-            'url'  => 'dashboard', // Asumiendo que tienes una ruta home
+            'url'  => 'dashboard',
             'icon' => 'fas fa-tachometer-alt',
-            'label'       => 'Resumen',
-            'label_color' => 'success',
         ],
 
-        // =============================================
-        // MÓDULO DE CAJA Y MOSTRADOR (Lo más usado)
-        // =============================================
-        ['header' => 'MOSTRADOR Y CAJA'],
+        ['header' => 'OPERACIONES COMERCIALES'],
 
+        // 2. PUNTO DE VENTA (Destacado por icono, no por etiquetas)
         [
             'text'    => 'Punto de Venta (POS)',
-            'url'     => '#', // Futura ruta
+            'url'     => 'pos',
+            'can'  => 'ventas.crear',
             'icon'    => 'fas fa-cash-register',
             'icon_color' => 'cyan',
             'active'  => ['pos*'],
         ],
+
+        // 3. VENTAS Y CAJA (Agrupado para ahorrar espacio vertical)
         [
-            'text' => 'Operaciones de Caja',
-            'icon' => 'fas fa-wallet',
+            'text' => 'Ventas y Caja',
+            'icon' => 'fas fa-coins',
             'submenu' => [
                 [
-                    'text' => 'Apertura / Cierre',
+                    'text' => 'Caja Actual',
                     'url'  => 'cajas',
-                    'icon' => 'fas fa-door-open',
+                    'can'  => 'cajas.ver',
+                    'icon' => 'fas fa-wallet',
                     'active' => ['cajas*'],
                 ],
                 [
-                    'text' => 'Movimientos de Efectivo',
-                    'url'  => '#',
-                    'icon' => 'fas fa-money-bill-wave',
+                    'text' => 'Historial Ventas',
+                    'url'  => 'ventas',
+                    'can'  => 'ventas.ver',
+                    'icon' => 'fas fa-file-invoice-dollar',
+                    'can'  => 'ventas.ver',
+                ],
+                [
+                    'text' => 'Directorio de Clientes',
+                    'url'  => 'clientes',
+                    'can'  => 'clientes.ver',
+                    'icon' => 'fas fa-users',
                 ],
             ],
         ],
-        [
-            'text'    => 'Historial de Ventas',
-            'url'     => 'ventas',
-            'icon'    => 'fas fa-receipt',
-            'can'     => 'ventas.ver',
-        ],
 
-        // =============================================
-        // MÓDULO FARMACÉUTICO (El corazón del negocio)
-        // =============================================
-        ['header' => 'GESTIÓN FARMACÉUTICA'],
-
+        // 4. INVENTARIO FARMACÉUTICO (Todo lo de productos aquí)
         [
-            'text' => 'Catálogo Productos',
-            'icon' => 'fas fa-prescription-bottle-alt',
+            'text' => 'Inventario',
+            'icon' => 'fas fa-boxes',
             'submenu' => [
                 [
                     'text' => 'Medicamentos',
                     'url'  => 'inventario/medicamentos',
-                    'icon' => 'fas fa-pills',
                     'can'  => 'medicamentos.ver',
+                    'icon' => 'fas fa-pills',
                 ],
                 [
-                    'text' => 'Categorías / Familias',
+                    'text' => 'Categorías',
                     'url'  => 'inventario/categorias',
-                    'icon' => 'fas fa-tags',
                     'can'  => 'categorias.ver',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Control de Stock',
-            'icon' => 'fas fa-cubes',
-            'submenu' => [
-                [
-                    'text' => 'Kardex Físico',
-                    'url'  => '#',
-                    'icon' => 'fas fa-clipboard-list',
+                    'icon' => 'fas fa-tags',
                 ],
                 [
                     'text' => 'Lotes y Vencimientos',
-                    'url'  => '#',
-                    'icon' => 'fas fa-calendar-times',
-                    'label'       => 'Alerta',
-                    'label_color' => 'danger', // Esto llama la atención visualmente
+                    'url'  => 'inventario/lotes',
+                    'can'  => 'vencimiento.ver',
+                    'icon' => 'fas fa-calendar-alt',
                 ],
                 [
-                    'text' => 'Ajustes de Inventario',
-                    'url'  => '#',
+                    'text' => 'Ajustes de Stock',
+                    'url'  => 'inventario/ajustes',
+                    'can'  => 'stock.ajustar',
                     'icon' => 'fas fa-sliders-h',
                 ],
             ],
         ],
 
-        // =============================================
-        // MÓDULO DE COMPRAS
-        // =============================================
-        ['header' => 'ABASTECIMIENTO'],
+        ['header' => 'ADMINISTRACIÓN Y GESTIÓN'],
 
+        // 5. LOGÍSTICA (Compras y Proveedores juntos)
         [
-            'text' => 'Gestión de Compras',
-            'icon' => 'fas fa-shopping-cart',
+            'text' => 'Logística / Compras',
+            'icon' => 'fas fa-truck-loading',
             'submenu' => [
                 [
                     'text' => 'Nueva Compra',
                     'url'  => 'compras/create',
-                    'icon' => 'fas fa-plus-circle',
+                    'can'  => 'compras.crear',
+                    'icon' => 'fas fa-plus',
                 ],
                 [
                     'text' => 'Historial Compras',
                     'url'  => 'compras',
+                    'can'  => 'compras.ver',
                     'icon' => 'fas fa-history',
                 ],
                 [
                     'text' => 'Proveedores',
                     'url'  => 'proveedores',
-                    'icon' => 'fas fa-truck',
+                    'can'  => 'proveedores.ver',
+                    'icon' => 'fas fa-people-carry',
                 ],
             ],
         ],
 
-        // =============================================
-        // REPORTES E INTELIGENCIA
-        // =============================================
-        ['header' => 'REPORTES'],
-
+        // 6. REPORTES (Limpio en un solo bloque)
         [
-            'text' => 'Reportes Gerenciales',
-            'icon' => 'fas fa-chart-pie',
+            'text' => 'Reportes',
+            'icon' => 'fas fa-chart-bar',
             'submenu' => [
-                ['text' => 'Reporte del Día', 'url' => '#', 'icon' => 'far fa-circle'],
-                ['text' => 'Productos más vendidos', 'url' => '#', 'icon' => 'far fa-circle'],
-                ['text' => 'Utilidad / Ganancia', 'url' => '#', 'icon' => 'far fa-circle'],
+                ['text' => 'Ventas del Día', 'url' => '#', 'icon' => 'far fa-circle'],
+                ['text' => 'Productos Top', 'url' => '#', 'icon' => 'far fa-circle'],
+                ['text' => 'Rentabilidad', 'url' => '#', 'icon' => 'far fa-circle'],
             ],
         ],
 
-        // =============================================
-        // ADMINISTRACIÓN
-        // =============================================
-        ['header' => 'CONFIGURACIÓN'],
-
+        // 7. CONFIGURACIÓN (Seguridad y Parámetros juntos)
         [
-            'text' => 'Acceso y Seguridad',
-            'icon' => 'fas fa-lock',
-            'can'  => 'usuarios.ver',
-            'submenu' => [
-                [
-                    'text' => 'Usuarios del Sistema',
-                    'url'  => 'seguridad/usuarios',
-                    'icon' => 'fas fa-users',
-                    'can'  => 'usuarios.ver',
-                ],
-                [
-                    'text' => 'Roles y Permisos',
-                    'url'  => 'seguridad/roles',
-                    'icon' => 'fas fa-user-shield',
-                    'can'  => 'roles.ver',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Parametros Generales',
+            'text' => 'Configuración',
             'icon' => 'fas fa-cogs',
             'submenu' => [
                 [
-                    'text' => 'Datos de Farmacia',
-                    'url'  => 'configuracion/sucursales',
-                    'icon' => 'fas fa-clinic-medical',
-                    'can'  => 'sucursales.ver',
+                    'text' => 'Usuarios y Roles',
+                    'url'  => 'seguridad/usuarios',
+                    'can'  => 'usuarios.ver',
+                    'icon' => 'fas fa-users-cog',
                 ],
-                ['text' => 'Impresoras / Tickets', 'url' => '#', 'icon' => 'fas fa-print'],
+                [
+                    'text' => 'Roles y permisos',
+                    'url'  => 'seguridad/roles',
+                    'can'  => 'roles.ver',
+                    'icon' => 'fas fa-user-lock',
+                ],
+                [
+                    'text' => 'Datos de Empresa',
+                    'url'  => 'configuracion/sucursales',
+                    'can'  => 'sucursales.ver',
+                    'icon' => 'fas fa-building',
+                ],
             ],
         ],
 
-        ['header' => 'SOPORTE'],
-        [
-            'text' => 'Blog / Novedades',
-            'url'  => 'admin/blog',
-            'icon' => 'fas fa-info-circle',
-            'can'  => 'manage-blog',
-        ],
     ],
     /*
     |--------------------------------------------------------------------------

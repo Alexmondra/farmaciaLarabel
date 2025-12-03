@@ -10,7 +10,7 @@ use App\Services\SucursalResolver;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\CajaSesion;
 use App\Models\Ventas\Cliente;      // <-- Nuevo
-use App\Models\Inventario\Lote;     // <-- Nuevo
+use App\Models\Inventario\Lote;     // <-- Nuevo 
 use App\Models\Sucursal;
 use App\Models\Inventario\MedicamentoSucursal;
 use App\Models\Inventario\Categoria;
