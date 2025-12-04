@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;     // <--- ¡ERROR 1! FALTABA ESTO
 use App\Services\SucursalResolver;
 use App\Models\Ventas\CajaSesion;
 use App\Models\Sucursal;                 // <--- También necesitas esto
+use App\Models\User;
 
 class CajaSesionController extends Controller
 {
@@ -19,48 +20,64 @@ class CajaSesionController extends Controller
         $this->sucursalResolver = $sucursalResolver;
     }
 
+    // En CajaSesionController.php
+
     public function index(Request $request)
     {
         $user = Auth::user();
-        // 1. Obtenemos el contexto
         $ctx = $this->sucursalResolver->resolverPara($user);
 
-        // 2. Consulta de Cajas (con la lógica que preferiste)
-        $query = CajaSesion::query()->with(['sucursal', 'usuario']);
+        // 1. Verificar caja abierta (para bloquear botón)
+        $tieneCajaAbierta = CajaSesion::where('user_id', $user->id)
+            ->where('estado', 'ABIERTO')->exists();
 
+        // 2. Query Base con Suma Automática
+        $query = CajaSesion::query()
+            ->with(['sucursal', 'usuario'])
+            ->withSum('ventas', 'total_neto')
+            ->orderBy('fecha_apertura', 'desc');
+
+        // 3. Filtros Inteligentes
         if (!$ctx['es_admin']) {
-            // Si NO es admin, filtra por su ID
             $query->where('user_id', $user->id);
         }
-
-        // 4. Filtro de sucursal
-        if ($ctx['ids_filtro'] !== null) {
+        if ($ctx['ids_filtro']) {
             $query->whereIn('sucursal_id', $ctx['ids_filtro']);
         }
+        if ($request->filled('q')) { // Buscador de Nombre
+            $query->whereHas('usuario', fn($q) => $q->where('name', 'LIKE', "%{$request->q}%"));
+        }
+        if ($request->filled('filtro_fecha')) {
+            $query->whereDate('fecha_apertura', $request->filtro_fecha);
+        }
+        if ($request->filled('filtro_user_id')) {
+            $query->where('user_id', $request->filtro_user_id);
+        }
 
-        $cajas = $query->orderBy('fecha_apertura', 'desc')->paginate(20);
+        // Filtro de Cuadre (Faltante/Sobrante)
+        if ($request->filled('filtro_cuadre')) {
+            $fc = $request->filtro_cuadre;
+            $query->where('estado', 'CERRADO');
+            if ($fc === 'faltante') $query->where('diferencia', '<', 0);
+            if ($fc === 'sobrante') $query->where('diferencia', '>', 0);
+            if ($fc === 'exacto')   $query->where('diferencia', '=', 0);
+        }
 
-        // 5. [CORRECCIÓN 1] Definir $sucursalesParaApertura
-        // (Esto faltaba en el código que pegaste)
+        // 4. Datos Auxiliares (SOLUCIÓN ERROR)
+        $usuariosFiltro = $ctx['es_admin'] ? User::orderBy('name')->get() : collect();
+
         $sucursalesParaApertura = $ctx['es_admin']
             ? Sucursal::orderBy('nombre')->get()
-            : $user->sucursales()->select('sucursales.*')->orderBy('sucursales.nombre')->get();
+            : $user->sucursales()->orderBy('nombre')->get();
 
-        // 6. Devolver la vista
         return view('ventas.cajas.index', [
-            'cajas'                => $cajas,
-            'esAdmin'              => $ctx['es_admin'],
-
-            // [CORRECCIÓN 2] Arregla el error de la imagen
-            // La vista espera 'sucursalSeleccionada' (camelCase)
-            // El resolver entrega 'sucursal_seleccionada' (snake_case)
-            'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
-
-            'idsFiltroSucursales'  => $ctx['ids_filtro'],
-            'sucursalesParaApertura' => $sucursalesParaApertura, // Ahora sí está definida
+            'cajas'                  => $query->paginate(20),
+            'esAdmin'                => $ctx['es_admin'],
+            'tieneCajaAbierta'       => $tieneCajaAbierta,
+            'usuariosFiltro'         => $usuariosFiltro, // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+            'sucursalesParaApertura' => $sucursalesParaApertura,
         ]);
     }
-
     public function show($id)
     {
         $user = Auth::user();
@@ -170,57 +187,58 @@ class CajaSesionController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validación: Solo necesitamos el saldo real
+        // 1. Validamos el saldo y la observación (opcional)
         $data = $request->validate([
-            'saldo_real' => ['required', 'numeric', 'min:0'],
+            'saldo_real'    => ['required', 'numeric', 'min:0'],
+            'observaciones' => ['nullable', 'string', 'max:500'], // Validamos el texto
         ]);
 
-        // 2. Usar una transacción es CRUCIAL aquí
         try {
-            DB::transaction(function () use ($data, $user, $id) {
+            \DB::transaction(function () use ($data, $user, $id) {
 
-                // 3. Buscar la caja
                 $caja = CajaSesion::findOrFail($id);
 
-                // 4. Seguridad: O eres admin, o eres el dueño
+                // ... (Tus validaciones de seguridad de siempre) ...
                 if (!$user->hasRole('Administrador') && $caja->user_id != $user->id) {
                     throw new \Exception('No tienes permiso para cerrar esta caja.');
                 }
-
-                // 5. Lógica: No puedes cerrar una caja ya cerrada
                 if ($caja->estado === 'CERRADO') {
                     throw new \Exception('Esta caja ya ha sido cerrada.');
                 }
 
-                // 6. *** LÓGICA DE CIERRE ***
+                // Cálculos
                 $saldo_real = (float)$data['saldo_real'];
-
-                // 7. Calcular Saldo Teórico: Inicial + Suma de Ventas
-                // (Usamos la relación 'ventas' del modelo)
                 $total_ventas = $caja->ventas()->sum('total_neto');
                 $saldo_teorico = $caja->saldo_inicial + $total_ventas;
-
-                // 8. Calcular Diferencia
                 $diferencia = $saldo_real - $saldo_teorico;
 
-                // 9. Actualizar el registro
+                // --- LÓGICA DE OBSERVACIONES ---
+                // Si el usuario escribió algo al cerrar:
+                $textoFinal = $caja->observaciones; // Recuperamos lo que escribió al abrir
+
+                if (!empty($data['observaciones'])) {
+                    // Si ya había texto, le agregamos un separador. Si no, lo ponemos directo.
+                    if ($textoFinal) {
+                        $textoFinal .= " | CIERRE: " . $data['observaciones'];
+                    } else {
+                        $textoFinal = "CIERRE: " . $data['observaciones'];
+                    }
+                }
+
+                // Guardamos
                 $caja->update([
                     'fecha_cierre'  => now(),
-                    'estado'        => 'CERRADO', // Coincide con tu migración
+                    'estado'        => 'CERRADO',
                     'saldo_real'    => $saldo_real,
                     'saldo_teorico' => $saldo_teorico,
                     'diferencia'    => $diferencia,
+                    'observaciones' => $textoFinal, // Guardamos el texto unido
                 ]);
             });
         } catch (\Exception $e) {
-            // Si algo falla, volver atrás con el error real
-            return back()->withErrors([
-                'general_cierre' => $e->getMessage()
-            ])->withInput();
+            return back()->withErrors(['general_cierre' => $e->getMessage()])->withInput();
         }
 
-        // 10. Redirigir
-        return redirect()->route('cajas.index')
-            ->with('success', '¡Caja cerrada exitosamente!');
+        return redirect()->route('cajas.index')->with('success', '¡Caja cerrada exitosamente!');
     }
 }
