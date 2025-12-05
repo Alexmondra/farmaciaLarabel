@@ -23,7 +23,14 @@ class Medicamento extends Model
         'imagen_path',
         'categoria_id',
         'user_id',
-        'activo'
+        'activo',
+        // --- NUEVO CAMPO IMPORTANTE ---
+        'afecto_igv', // true = Paga IGV (Normal), false = Exonerado (Cáncer, etc.)
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean',
+        'afecto_igv' => 'boolean', // <--- ¡Importante para que funcione tu if()!
     ];
 
     public function categoria()
@@ -40,7 +47,7 @@ class Medicamento extends Model
     {
         return $this->belongsToMany(\App\Models\Sucursal::class, 'medicamento_sucursal')
             ->withPivot('precio_venta', 'deleted_at')
-            ->wherePivot('deleted_at', null) // y otros campos si tienes
+            ->wherePivot('deleted_at', null)
             ->withTimestamps();
     }
 
@@ -48,7 +55,6 @@ class Medicamento extends Model
     {
         return $this->hasMany(Lote::class);
     }
-
 
     public function movimientos()
     {

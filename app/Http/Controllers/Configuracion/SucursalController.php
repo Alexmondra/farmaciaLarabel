@@ -13,8 +13,14 @@ class SucursalController extends Controller
     public function index(Request $request)
     {
         $sucursales = Sucursal::orderBy('nombre')->get();
+        $siguienteId = Sucursal::max('id') + 1;
+        $numeroSerie = str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
 
-        return view('configuracion.sucursales.index', compact('sucursales'));
+        $sugerenciaBoleta  = 'B' . $numeroSerie; // Ej: B004
+        $sugerenciaFactura = 'F' . $numeroSerie; // Ej: F004
+        $sugerenciaTiket = 'T' . $numeroSerie;
+
+        return view('configuracion.sucursales.index', compact('sucursales', 'sugerenciaBoleta', 'sugerenciaFactura', 'sugerenciaTiket'));
     }
 
     public function create()
@@ -24,24 +30,27 @@ class SucursalController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Quitamos 'codigo' de la validación inicial porque el usuario ya no lo envía
         $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:120'],
-            'direccion' => ['nullable', 'string', 'max:200'],
-            'telefono' => ['nullable', 'string', 'max:30'],
+            'nombre'              => ['required', 'string', 'max:120'],
+            'direccion'           => ['nullable', 'string', 'max:200'],
+            'telefono'            => ['nullable', 'string', 'max:30'],
             'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
             'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
-            'activo' => ['sometimes', 'boolean'],
+
+            // --- NUEVOS CAMPOS ---
+            'serie_boleta'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_boleta'],
+            'serie_factura'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_factura'],
+            'serie_ticket'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket'],
+
+            // ---------------------
+
+            'activo'              => ['sometimes', 'boolean'],
         ]);
 
-
+        // Generar Código Interno (SUC-001)
         $ultimoId = Sucursal::max('id');
         $nuevoNumero = $ultimoId + 1;
-
-        // Generamos: 'SUC-001', 'SUC-002'... (Rellena con ceros a la izquierda)
         $data['codigo'] = 'SUC-' . str_pad($nuevoNumero, 3, '0', STR_PAD_LEFT);
-
-        // ----------------------------------------------------
 
         $data['activo'] = $request->boolean('activo');
 
@@ -52,7 +61,7 @@ class SucursalController extends Controller
         Sucursal::create($data);
 
         return redirect()->route('configuracion.sucursales.index')
-            ->with('success', 'Sucursal registrada con código: ' . $data['codigo']);
+            ->with('success', 'Sucursal registrada correctamente.');
     }
 
     public function edit(Sucursal $sucursal)
@@ -63,31 +72,30 @@ class SucursalController extends Controller
     public function update(Request $request, Sucursal $sucursal)
     {
         $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:120'],
-            'direccion' => ['nullable', 'string', 'max:200'],
-            'telefono' => ['nullable', 'string', 'max:30'],
-
-            // --- VALIDACIONES NUEVAS ---
+            'nombre'              => ['required', 'string', 'max:120'],
+            'direccion'           => ['nullable', 'string', 'max:200'],
+            'telefono'            => ['nullable', 'string', 'max:30'],
             'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
             'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
-            // ---------------------------
 
-            'activo' => ['sometimes', 'boolean'],
+            // --- VALIDAR SERIES (Ignorando el actual para no dar error de unique) ---
+            'serie_boleta'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_boleta,' . $sucursal->id],
+            'serie_factura'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_factura,' . $sucursal->id],
+            'serie_ticket'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket,' . $sucursal->id],
+
+            // -----------------------------------------------------------------------
+
+            'activo'              => ['sometimes', 'boolean'],
         ]);
 
         $data['activo'] = $request->boolean('activo');
 
-        // --- LÓGICA DE REEMPLAZO DE IMAGEN ---
         if ($request->hasFile('imagen_sucursal')) {
-            // 1. Si ya tenía una imagen antes, la borramos del disco para ahorrar espacio
             if ($sucursal->imagen_sucursal) {
                 Storage::disk('public')->delete($sucursal->imagen_sucursal);
             }
-
-            // 2. Guardamos la nueva
             $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
         }
-        // -------------------------------------
 
         $sucursal->update($data);
 

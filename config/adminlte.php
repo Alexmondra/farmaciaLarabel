@@ -224,7 +224,7 @@ return [
         // 2. PUNTO DE VENTA (Destacado por icono, no por etiquetas)
         [
             'text'    => 'Punto de Venta (POS)',
-            'url'     => 'pos',
+            'url'     => 'ventas/create',
             'can'  => 'ventas.crear',
             'icon'    => 'fas fa-cash-register',
             'icon_color' => 'cyan',

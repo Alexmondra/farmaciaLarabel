@@ -1,143 +1,167 @@
 @extends('adminlte::page')
 
-@section('title', 'Ventas de la Sesión')
+@section('title', 'Historial de Ventas')
 
 @section('content_header')
-    <div class="d-flex justify-content-between">
-        <h1>Ventas de la Sesión</h1>
-        
+<div class="d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="text-dark">Historial de Ventas</h1>
+    </div>
+
+    <div class="d-flex">
         @if($cajaAbierta)
-            {{-- Si la caja está abierta, mostramos botón "Nueva Venta" --}}
-            <a href="{{ route('ventas.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Nueva Venta
-            </a>
+        {{-- CASO 1: CAJA ESTÁ ABIERTA --}}
+
+        {{-- Botón A: Ir a la gestión de Caja (Para Cerrarla) --}}
+        <a href="{{ route('cajas.show', $cajaAbierta->id) }}" class="btn btn-outline-danger mr-2 shadow-sm" title="Ir a arqueo y cierre">
+            <i class="fas fa-cash-register mr-1"></i> Cerrar Caja
+        </a>
+
+        {{-- Botón B: Nueva Venta (Acción Principal Rápida) --}}
+        <a href="{{ route('ventas.create') }}" class="btn btn-success shadow-sm">
+            <i class="fas fa-plus-circle mr-1"></i> Nueva Venta
+        </a>
+
         @else
-            {{-- Si no hay caja, mostramos botón "Abrir Caja" --}}
-            <button class="btn btn-success" data-toggle="modal" data-target="#modalAbrirCaja">
-                <i class="fas fa-play"></i> Abrir Caja
-            </button>
+        {{-- CASO 2: CAJA ESTÁ CERRADA --}}
+
+        {{-- Botón único: Abrir Caja --}}
+        <button class="btn btn-primary shadow-sm font-weight-bold" data-toggle="modal" data-target="#modalAbrirCaja">
+            <i class="fas fa-unlock-alt mr-1"></i> ABRIR CAJA
+        </button>
         @endif
     </div>
+</div>
 @stop
 
 @section('content')
 
-    {{-- Alertas de éxito o error (para el modal) --}}
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <strong>Error:</strong> Por favor, revise los campos del formulario.
+{{-- BARRA DE BÚSQUEDA Y FILTROS --}}
+<div class="card card-outline card-primary shadow-sm">
+    <div class="card-header">
+        <h3 class="card-title text-muted"><i class="fas fa-filter mr-1"></i> Filtros de Búsqueda</h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
         </div>
-    @endif
-
-
-    {{-- ESTA ES LA LÓGICA PRINCIPAL DE LA VISTA --}}
-    @if($cajaAbierta)
-        
-        {{-- ESTADO 1: CAJA ABIERTA --}}
-        
-        <div class="alert alert-success">
-            <i class="fas fa-check-circle"></i> 
-            Estás operando en la <strong>Caja #{{ $cajaAbierta->id }}</strong> 
-            (Sucursal: <strong>{{ $cajaAbierta->sucursal->nombre ?? 'N/A' }}</strong>).
-            Abierta con S/ {{ number_format($cajaAbierta->saldo_inicial, 2) }}.
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Ventas Registradas en esta Sesión</h3>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>Comprobante</th>
-                            <th>Número</th>
-                            <th>Fecha</th>
-                            <th>Cliente</th>
-                            <th>Vendedor</th>
-                            <th>Medio Pago</th>
-                            <th style="text-align: right;">Total</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($ventas as $venta)
-                            <tr>
-                                <td>{{ $venta->tipo_comprobante }}</td>
-                                <td>{{ $venta->serie }}-{{ $venta->numero }}</td>
-                                <td>{{ $venta->fecha_emision->format('d/m/Y H:i') }}</td>
-                                <td>{{ $venta->cliente->nombre ?? 'Varios' }} {{ $venta->cliente->apellidos ?? '' }}</td>
-                                <td>{{ $venta->usuario->name ?? 'N/A' }}</td>
-                                <td>{{ $venta->medio_pago }}</td>
-                                <td style="text-align: right;">S/ {{ number_format($venta->total_neto, 2) }}</td>
-                                <td>
-                                    <a href="{{ route('ventas.show', $venta->id) }}" class="btn btn-sm btn-info" title="Ver Detalle">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-4">
-                                    Aún no se han registrado ventas en esta sesión de caja.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if($ventas->hasPages())
-                <div class="card-footer">
-                    {{ $ventas->links() }}
+    </div>
+    <div class="card-body py-2">
+        <form action="{{ route('ventas.index') }}" method="GET">
+            <div class="row align-items-end">
+                {{-- 1. Buscador Texto (Prioridad) --}}
+                <div class="col-md-4 mb-2">
+                    <label class="small font-weight-bold">Buscar Ticket / Cliente</label>
+                    <div class="input-group">
+                        <input type="text" name="search_q" class="form-control"
+                            placeholder="N° Boleta o Nombre..."
+                            value="{{ request('search_q') }}">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">Si escribes aquí, se ignoran las fechas.</small>
                 </div>
-            @endif
-        </div>
 
-    @else
+                {{-- 2. Fechas (Secundario) --}}
+                <div class="col-md-3 mb-2">
+                    <label class="small font-weight-bold">Desde</label>
+                    <input type="date" name="fecha_desde" class="form-control"
+                        value="{{ request('fecha_desde', now()->format('Y-m-d')) }}">
+                </div>
 
-        {{-- ESTADO 2: CAJA CERRADA O NO EXISTE --}}
-        
-        <div class="callout callout-warning">
-            <h5><i class="fas fa-exclamation-triangle"></i> No hay una caja abierta</h5>
-            <p>
-                Para registrar o ver las ventas del día, primero necesitas 
-                abrir una sesión de caja en la sucursal seleccionada.
-            </p>
-            <button class="btn btn-success" data-toggle="modal" data-target="#modalAbrirCaja">
-                <i class="fas fa-play"></i> Abrir Caja Ahora
-            </button>
-        </div>
+                <div class="col-md-3 mb-2">
+                    <label class="small font-weight-bold">Hasta</label>
+                    <input type="date" name="fecha_hasta" class="form-control"
+                        value="{{ request('fecha_hasta', now()->format('Y-m-d')) }}">
+                </div>
 
+                <div class="col-md-2 mb-2">
+                    <button type="submit" class="btn btn-default btn-block border">
+                        <i class="fas fa-sync-alt mr-1"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- TABLA DE RESULTADOS --}}
+<div class="card shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="pl-3">Emisión</th>
+                    <th>Comprobante</th>
+                    <th>Cliente</th>
+                    <th>Vendedor</th>
+                    <th>Pago</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-right pr-3">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($ventas as $venta)
+                <tr>
+                    <td class="pl-3 align-middle">{{ $venta->fecha_emision->format('d/m/Y H:i') }}</td>
+                    <td class="align-middle">
+                        <span class="font-weight-bold text-primary">
+                            {{ $venta->tipo_comprobante }}
+                        </span>
+                        <br>
+                        <small class="text-muted">{{ $venta->serie }}-{{ $venta->numero }}</small>
+                    </td>
+                    <td class="align-middle">{{ Str::limit($venta->cliente->nombre ?? 'Público', 25) }}</td>
+                    <td class="align-middle small">{{ $venta->usuario->name ?? 'N/A' }}</td>
+                    <td class="align-middle"><span class="badge badge-light border">{{ $venta->medio_pago }}</span></td>
+                    <td class="align-middle text-right font-weight-bold">
+                        S/ {{ number_format($venta->total_neto, 2) }}
+                    </td>
+                    <td class="align-middle text-center">
+                        @if($venta->estado == 'ANULADO')
+                        <span class="badge badge-danger">ANULADO</span>
+                        @else
+                        <span class="badge badge-success">EMITIDA</span>
+                        @endif
+                    </td>
+                    <td class="align-middle text-right pr-3">
+                        <a href="{{ route('ventas.show', $venta->id) }}" class="btn btn-sm btn-info shadow-sm" title="Ver Detalle">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i><br>
+                        No se encontraron ventas con los filtros seleccionados.<br>
+                        <small>Intenta cambiar las fechas o borrar la búsqueda.</small>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    @if($ventas->hasPages())
+    <div class="card-footer bg-white py-3">
+        {{ $ventas->appends(request()->input())->links() }}
+    </div>
     @endif
+</div>
 
-
-    {{-- 
-      INCLUIMOS EL MODAL DE APERTURA
-      (Siempre debe estar, por si el usuario necesita abrirla)
-    --}}
-    @include('ventas.cajas._modal_apertura', [
-        'sucursalesParaApertura' => $sucursalesParaApertura
-    ])
-
-    {{-- El 'div' para la lógica de JS (a prueba de formateadores) --}}
-    <div id="js-page-data" data-abrir-modal="{{ $errors->any() ? 'true' : 'false' }}"></div>
+{{-- MODAL DE APERTURA (Requerido si la caja está cerrada) --}}
+@include('ventas.cajas._modal_apertura', ['sucursalesParaApertura' => $sucursalesParaApertura])
 
 @stop
 
-@push('js')
-<script>
-    $(document).ready(function() {
-        
-        // Lógica para reabrir el modal de APERTURA si falla la validación
-        var abrir = $('#js-page-data').data('abrir-modal');
-        if (abrir === 'true' || abrir === true) {
-            $('#modalAbrirCaja').modal('show');
-        }
-
-    });
-</script>
+@push('css')
+<style>
+    .pagination {
+        justify-content: center;
+        margin-bottom: 0;
+    }
+</style>
 @endpush

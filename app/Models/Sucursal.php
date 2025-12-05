@@ -11,6 +11,9 @@ class Sucursal extends Model
     protected $fillable = [
         'codigo',
         'nombre',
+        'serie_boleta',
+        'serie_factura',
+        'serie_ticket',
         'direccion',
         'telefono',
         'imagen_sucursal',
@@ -20,7 +23,7 @@ class Sucursal extends Model
 
     protected $casts = [
         'activo' => 'boolean',
-        'impuesto_porcentaje' => 'decimal:2', // Asegura que siempre devuelva 18.00 y no "18.00" (string)
+        'impuesto_porcentaje' => 'decimal:2',
     ];
 
     public function usuarios()

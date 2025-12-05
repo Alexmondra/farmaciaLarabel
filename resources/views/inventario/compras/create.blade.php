@@ -80,84 +80,127 @@
     </div>
 </div>
 
-{{-- 3. MODAL VER MEDICAMENTO (ACTUALIZADO CON CÓDIGO BARRAS) --}}
+{{-- 3. MODAL VER / EDITAR MEDICAMENTO (¡CAMBIADO!) --}}
 <div class="modal fade" id="modalVerMedicamento" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-info text-white py-2">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-info-circle mr-2"></i> Ficha del Producto</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row">
-                    {{-- FOTO DEL PRODUCTO --}}
-                    <div class="col-md-4 mb-3 mb-md-0">
-                        <img id="img_med_foto" src="" class="img-fluid rounded shadow-sm border w-100" style="height: 200px; object-fit: cover; display: none;">
-                        <div id="div_med_placeholder" class="img-placeholder-box">
-                            <i class="fas fa-camera fa-3x mb-2 text-secondary opacity-50"></i>
-                            <span class="small font-weight-bold text-muted d-block">Sin Imagen</span>
-                        </div>
-                    </div>
+            {{-- FORMULARIO PARA ACTUALIZAR --}}
+            <form id="formEditarMedicamento">
+                @csrf
+                <input type="hidden" name="id" id="edit_med_id">
 
-                    {{-- DATOS TEXTO --}}
-                    <div class="col-md-8">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h4 class="font-weight-bold mb-0 text-dark" id="lbl_med_nombre">--</h4>
-                                <span class="badge bg-info text-white mt-1" id="lbl_med_lab">--</span>
-                            </div>
-                            <div class="text-end bg-light p-2 rounded border">
-                                <small class="text-muted d-block font-weight-bold">PRECIO VENTA</small>
-                                <span class="h4 font-weight-bold text-success mb-0" id="lbl_med_precio">--</span>
-                            </div>
-                        </div>
-                        <hr class="my-3">
+                <div class="modal-header bg-info text-white py-2">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-edit mr-2"></i> Editar Producto</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                </div>
 
-                        {{-- NUEVO: FILA CON CÓDIGO BARRAS --}}
-                        <div class="row g-2 mb-3">
-                            <div class="col-4">
-                                <small class="text-muted font-weight-bold">CÓDIGO INTERNO</small>
-                                <div class="text-dark font-weight-bold small" id="lbl_med_codigo">--</div>
+                <div class="modal-body p-4">
+                    <div class="row">
+                        {{-- COLUMNA IZQUIERDA: FOTO --}}
+                        <div class="col-md-4 mb-3 mb-md-0 text-center">
+                            <img id="img_med_foto_edit" src="" class="img-fluid rounded shadow-sm border w-100 mb-2" style="height: 180px; object-fit: cover; display: none;">
+                            <div id="div_med_placeholder_edit" class="img-placeholder-box mb-2">
+                                <i class="fas fa-camera fa-3x mb-2 text-secondary opacity-50"></i>
+                                <span class="small font-weight-bold text-muted d-block">Sin Imagen</span>
                             </div>
-                            <div class="col-4">
-                                <small class="text-muted font-weight-bold">CÓDIGO BARRAS</small>
-                                <div class="text-dark font-weight-bold small" id="lbl_med_barra">--</div>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted font-weight-bold">REGISTRO SANITARIO</small>
-                                <div class="text-dark font-weight-bold small" id="lbl_med_reg">--</div>
-                            </div>
+
+                            {{-- Input File Oculto para cambiar imagen --}}
+                            <label class="btn btn-outline-info btn-sm btn-block">
+                                <i class="fas fa-camera"></i> Cambiar Imagen
+                                <input type="file" name="imagen" class="d-none" accept="image/*" onchange="previewImage(this, '#img_med_foto_edit', '#div_med_placeholder_edit')">
+                            </label>
                         </div>
 
-                        <div class="row g-0 mb-3 bg-light border rounded overflow-hidden">
-                            <div class="col-4 border-end p-2">
-                                <small class="text-muted font-weight-bold d-block">CATEGORÍA</small>
-                                <span class="text-primary font-weight-bold small" id="lbl_med_cat">--</span>
+                        {{-- COLUMNA DERECHA: CAMPOS EDITABLES --}}
+                        <div class="col-md-8">
+                            <div class="form-group mb-2">
+                                <label class="small font-weight-bold text-muted">NOMBRE COMERCIAL</label>
+                                <input type="text" name="nombre" id="edit_med_nombre" class="form-control form-control-sm font-weight-bold text-dark" required>
                             </div>
-                            <div class="col-4 border-end p-2 text-center">
-                                <small class="text-muted font-weight-bold d-block">PRESENTACIÓN</small>
-                                <span class="text-dark font-weight-bold small" id="lbl_med_pres">--</span>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-muted">CÓDIGO INT.</label>
+                                    <input type="text" name="codigo" id="edit_med_codigo" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-muted">CÓDIGO BARRAS</label>
+                                    <input type="text" name="codigo_barra" id="edit_med_barra" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-muted">REG. SANITARIO</label>
+                                    <input type="text" name="registro_sanitario" id="edit_med_reg" class="form-control form-control-sm">
+                                </div>
                             </div>
-                            <div class="col-4 p-2 text-center bg-white">
-                                <small class="text-primary font-weight-bold d-block">CONTENIDO</small>
-                                <span class="badge bg-warning text-dark border border-warning" id="lbl_med_unidades">1</span>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="small font-weight-bold text-muted">CATEGORÍA</label>
+                                    <select name="categoria_id" id="edit_med_cat" class="form-control form-control-sm">
+                                        <option value="">-- Sin Categoría --</option>
+                                        @foreach($categorias ?? [] as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="small font-weight-bold text-muted">LABORATORIO</label>
+                                    <input type="text" name="laboratorio" id="edit_med_lab" class="form-control form-control-sm">
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <small class="text-muted font-weight-bold">DESCRIPCIÓN:</small>
-                            <p class="small text-secondary p-2 rounded border bg-light mb-0" id="lbl_med_desc">--</p>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-muted">PRESENTACIÓN</label>
+                                    <input type="text" name="presentacion" id="edit_med_pres" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-muted">CONCENTRACIÓN</label>
+                                    <input type="text" name="concentracion" id="edit_med_conc" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-primary">CONTENIDO</label>
+                                    <input type="number" name="unidades_por_envase" id="edit_med_unidades" class="form-control form-control-sm text-center fw-bold" required min="1">
+                                </div>
+                            </div>
+
+                            {{-- SWITCH DE IGV Y DESCRIPCIÓN --}}
+                            <div class="row align-items-center mb-2">
+                                <div class="col-md-6">
+                                    <div class="custom-control custom-switch pt-2">
+                                        <input type="checkbox" class="custom-control-input" id="edit_med_igv" name="afecto_igv" value="1">
+                                        <label class="custom-control-label font-weight-bold text-dark" for="edit_med_igv">¿Afecto a IGV (18%)?</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-right">
+                                    <span class="badge bg-light text-dark border p-2">
+                                        Precio Venta Actual: <strong class="text-success h6" id="view_med_precio_display">S/ 0.00</strong>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-0">
+                                <textarea name="descripcion" id="edit_med_desc" class="form-control form-control-sm" rows="2" placeholder="Descripción opcional..."></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer py-2 bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar Ficha</button>
-            </div>
+
+                <div class="modal-footer py-2 bg-light justify-content-between">
+                    <small class="text-muted font-italic">* Modificar aquí actualiza el catálogo global.</small>
+                    <div>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-info btn-sm shadow-sm font-weight-bold">
+                            <i class="fas fa-sync-alt mr-1"></i> Actualizar Medicamento
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-{{-- 4. MODAL CREAR MEDICAMENTO (ACTUALIZADO CON IMAGEN) --}}
+{{-- 4. MODAL CREAR MEDICAMENTO (ACTUALIZADO CON IGV) --}}
 <div class="modal fade" id="modalCrearMedicamento" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -209,7 +252,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="label-mini">PRESENTACIÓN</label>
-                            <input type="text" name="presentacion" class="form-control input-enhanced" placeholder="Ej: Caja, Frasco">
+                            <input type="text" name="presentacion" class="form-control input-enhanced" placeholder="Ej: Caja">
                         </div>
                         <div class="col-md-3">
                             <label class="label-mini">CONCENTRACIÓN</label>
@@ -221,20 +264,23 @@
                         </div>
                     </div>
 
-                    {{-- FILA 4: DESCRIPCIÓN E IMAGEN --}}
+                    {{-- FILA 4: IGV, FOTO y DESC --}}
                     <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{-- SWITCH IGV --}}
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="crear_med_igv" name="afecto_igv" value="1" checked>
+                                <label class="custom-control-label font-weight-bold" for="crear_med_igv">¿Producto Afecto a IGV (18%)?</label>
+                            </div>
+                        </div>
+
                         <div class="col-md-6 mb-2">
                             <label class="label-mini">DESCRIPCIÓN</label>
-                            <textarea name="descripcion" class="form-control input-enhanced" rows="3"></textarea>
+                            <textarea name="descripcion" class="form-control input-enhanced" rows="2"></textarea>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label class="label-mini text-primary"><i class="fas fa-camera mr-1"></i> FOTO DEL PRODUCTO</label>
-                            <div class="input-group">
-                                <input type="file" name="imagen" class="form-control input-enhanced" accept="image/*">
-                            </div>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
-                                Formatos: JPG, PNG. Máximo 2MB.
-                            </small>
+                            <label class="label-mini text-primary"><i class="fas fa-camera mr-1"></i> FOTO</label>
+                            <input type="file" name="imagen" class="form-control input-enhanced" accept="image/*">
                         </div>
                     </div>
 

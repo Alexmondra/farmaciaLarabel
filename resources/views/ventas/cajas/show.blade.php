@@ -362,7 +362,6 @@ $obsCierre = $partesObs[1] ?? null;
                     var precioUnit = parseFloat(item.precio_unitario).toFixed(2);
                     var total = parseFloat(item.subtotal_neto).toFixed(2);
 
-                    // 3. Generar el HTML con las 4 COLUMNAS correctas
                     var fila = `
                 <tr>
                     <td class="pl-3 align-middle">${nombre}</td>

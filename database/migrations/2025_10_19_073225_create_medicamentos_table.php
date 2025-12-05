@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->string('codigo_barra', 50)->nullable();
             $table->text('descripcion')->nullable();
             $table->integer('unidades_por_envase')->default(1);
+            $table->boolean('afecto_igv')->default(true);
             $table->string('imagen_path')->nullable();
             $table->foreignId('categoria_id')->nullable()->constrained('categorias')->nullOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();

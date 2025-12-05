@@ -15,8 +15,17 @@ class DetalleVenta extends Model
         'lote_id',
         'medicamento_id',
         'cantidad',
+
+        // Precios Cliente
         'precio_unitario',
         'descuento_unitario',
+
+        // --- NUEVO: DATOS INTERNOS SUNAT ---
+        'valor_unitario',   // Precio BASE (Sin impuestos)
+        'igv',              // Monto del impuesto
+        'tipo_afectacion',  // Código '10', '20', etc.
+
+        // Subtotales
         'subtotal_bruto',
         'subtotal_descuento',
         'subtotal_neto',
@@ -24,8 +33,11 @@ class DetalleVenta extends Model
 
     protected $casts = [
         'cantidad'           => 'integer',
-        'precio_unitario'    => 'decimal:4',
+        'precio_unitario'    => 'decimal:4', // A veces conviene 4 decimales para precisión
         'descuento_unitario' => 'decimal:4',
+        'valor_unitario'     => 'decimal:4', // Nuevo
+        'igv'                => 'decimal:4', // Nuevo
+
         'subtotal_bruto'     => 'decimal:2',
         'subtotal_descuento' => 'decimal:2',
         'subtotal_neto'      => 'decimal:2',
@@ -43,7 +55,7 @@ class DetalleVenta extends Model
         return $this->belongsTo(Lote::class, 'lote_id');
     }
 
-    /** Medicamento vendido (para reportes y joins directos) */
+    /** Medicamento vendido */
     public function medicamento()
     {
         return $this->belongsTo(Medicamento::class, 'medicamento_id');

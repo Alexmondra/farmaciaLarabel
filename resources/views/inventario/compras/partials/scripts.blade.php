@@ -101,48 +101,109 @@
 
         // E. Botón Acción Medicamento (Ojo / Más)
         $(document).on('click', '.btn-accion-med', function() {
+            // [IMPORTANTE] Guardamos referencia al botón que se clickeó para actualizarlo luego
+            window.btnAccionActivo = $(this);
+
             let info = $(this).data('info');
 
             if (info) {
-                // === MODO VER DETALLE ===
+                // === MODO EDITAR ===
+                $('#edit_med_id').val(info.id);
+                $('#edit_med_nombre').val(info.nombre);
+                $('#edit_med_codigo').val(info.codigo);
+                $('#edit_med_barra').val(info.codigo_barra);
+                $('#edit_med_reg').val(info.registro_sanitario);
+                $('#edit_med_lab').val(info.laboratorio);
+                $('#edit_med_pres').val(info.presentacion);
+                $('#edit_med_conc').val(info.concentracion);
+                $('#edit_med_unidades').val(info.unidades_por_envase);
+                $('#edit_med_desc').val(info.descripcion);
 
-                // 1. Campos de Texto (Mapeo Manual ID vs Dato)
-                $('#lbl_med_nombre').text(info.nombre || '--');
-                $('#lbl_med_lab').text(info.laboratorio || '--'); // Corregido
-                $('#lbl_med_codigo').text(info.codigo || '--');
-                $('#lbl_med_cat').text(info.categoria || 'Sin Categoría'); // Corregido
-                $('#lbl_med_desc').text(info.descripcion || '--');
-                $('#lbl_med_pres').text(info.presentacion || '--'); // Corregido
-                $('#lbl_med_conc').text(info.concentracion || '--'); // Corregido
-                $('#lbl_med_reg').text(info.registro_sanitario || '--');
+                // Selects
+                $('#edit_med_cat').val(info.categoria_id).trigger('change');
 
-                // 2. Campos Especiales
-                $('#lbl_med_barra').text(info.codigo_barra || 'Sin Código');
-                $('#lbl_med_unidades').text(info.unidades_por_envase || 1);
-                $('#lbl_med_stock').text(info.stock_actual);
-                $('#lbl_med_precio').text('S/ ' + parseFloat(info.precio_venta || 0).toFixed(2));
+                // Checkbox IGV (Convierte true/1 a checked)
+                // Esto asegura que al abrir veas el estado real
+                let isAfecto = (info.afecto_igv == 1 || info.afecto_igv === true);
+                $('#edit_med_igv').prop('checked', isAfecto);
 
-                // 3. Imagen
+                $('#view_med_precio_display').text('S/ ' + parseFloat(info.precio_venta || 0).toFixed(2));
+
+                // Imagen
                 let img = info.imagen_url;
                 if (img) {
-                    $('#img_med_foto').attr('src', img).show();
-                    $('#div_med_placeholder').hide();
+                    $('#img_med_foto_edit').attr('src', img).show();
+                    $('#div_med_placeholder_edit').hide();
                 } else {
-                    $('#img_med_foto').hide();
-                    $('#div_med_placeholder').show();
+                    $('#img_med_foto_edit').hide();
+                    $('#div_med_placeholder_edit').show();
                 }
 
                 $('#modalVerMedicamento').modal('show');
 
             } else {
-                // === MODO CREAR NUEVO ===
+                // === MODO CREAR ===
+                // (Para crear nuevo, limpiamos la referencia porque no estamos editando un botón existente)
+                window.btnAccionActivo = null;
+
                 let group = $(this).closest('.input-group');
                 window.inputSearchActivo = group.find('.input-medicamento-search');
                 window.inputIdActivo = group.find('.input-medicamento-id');
 
                 $('#formNuevoMedicamentoRapid')[0].reset();
+                $('#crear_med_igv').prop('checked', true);
                 $('#modalCrearMedicamento').modal('show');
             }
+        });
+
+        // B. AL GUARDAR LA EDICIÓN (MODIFICADO)
+        $('#formEditarMedicamento').on('submit', function(e) {
+            e.preventDefault();
+            let id = $('#edit_med_id').val();
+            let btn = $(this).find('button[type="submit"]');
+
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+
+            let formData = new FormData(this);
+            formData.append('_method', 'PUT');
+
+            $.ajax({
+                url: "/inventario/medicamentos/" + id + "/update-rapido",
+                method: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    $('#modalVerMedicamento').modal('hide');
+
+                    // [IMPORTANTE] Actualizamos los datos del botón en la tabla sin recargar
+                    if (window.btnAccionActivo && res.data) {
+                        // 1. Actualizamos la memoria del botón (data-info) con lo nuevo que llegó del servidor
+                        window.btnAccionActivo.data('info', res.data);
+
+                        // 2. Opcional: Actualizar el nombre en el input visible si cambió
+                        let row = window.btnAccionActivo.closest('tr');
+                        row.find('.input-medicamento-search').val(res.data.nombre);
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Actualizado',
+                        text: 'Los datos se han refrescado correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                },
+                error: function(xhr) {
+                    let errs = xhr.responseJSON.errors;
+                    let msg = 'Error al actualizar';
+                    if (errs) {
+                        msg = Object.values(errs).flat().join('\n');
+                    }
+                    Swal.fire('Error', msg, 'error');
+                },
+                complete: () => btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Actualizar Medicamento')
+            });
         });
 
         // 3. GUARDAR MEDICAMENTO RÁPIDO
@@ -195,6 +256,19 @@
                 complete: () => btn.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar')
             });
         });
+
+        // Función global para previsualizar imagen
+        window.previewImage = function(input, imgSelector, placeholderSelector) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $(imgSelector).attr('src', e.target.result).show();
+                    $(placeholderSelector).hide();
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
 
         // 4. ENVÍO DE FORMULARIO COMPRA (Validación)
         $('#form-compra').on('submit', function(e) {

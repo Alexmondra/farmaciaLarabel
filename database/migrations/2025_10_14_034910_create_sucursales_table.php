@@ -11,10 +11,14 @@ return new class extends Migration {
             $table->id();
             $table->string('codigo', 20)->unique();
             $table->string('nombre', 120);
+            $table->string('serie_boleta', 4)->nullable();
+            $table->string('serie_factura', 4)->nullable();
+            $table->string('serie_ticket', 4)->nullable();
             $table->string('direccion', 200)->nullable();
             $table->string('telefono', 30)->nullable();
             $table->string('imagen_sucursal', 255)->nullable();
             $table->decimal('impuesto_porcentaje', 5, 2)->default(18.00);
+
             $table->boolean('activo')->default(true);
             $table->timestamps();
         });

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;  // <-- ¡Importante!
 use App\Services\SucursalResolver;
+use App\Services\VentaService;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\CajaSesion;
 use App\Models\Ventas\Cliente;      // <-- Nuevo
@@ -19,10 +20,11 @@ use App\Models\Inventario\Categoria;
 class VentaController extends Controller
 {
     protected SucursalResolver $sucursalResolver;
-
-    public function __construct(SucursalResolver $sucursalResolver)
+    protected VentaService $ventaService;
+    public function __construct(SucursalResolver $sucursalResolver, VentaService $ventaService)
     {
         $this->sucursalResolver = $sucursalResolver;
+        $this->ventaService     = $ventaService;
     }
 
     /**
@@ -34,54 +36,175 @@ class VentaController extends Controller
         $user = Auth::user();
         $ctx = $this->sucursalResolver->resolverPara($user);
 
-        // 1. *** LÓGICA CLAVE ***
-        // Buscar la sesión de caja ABIERTA del usuario
-        // que coincida con el contexto de sucursal actual.
+        // 1. Query Base
+        $query = Venta::with(['cliente', 'usuario', 'sucursal'])
+            ->orderBy('fecha_emision', 'desc');
 
-        $cajaAbiertaQuery = CajaSesion::where('user_id', $user->id)
-            ->where('estado', 'ABIERTO');
-
-        // Aplicamos el filtro de sucursal del resolver
-        if ($ctx['ids_filtro'] !== null) {
-            $cajaAbiertaQuery->whereIn('sucursal_id', $ctx['ids_filtro']);
+        // 2. Filtro de Sucursal (Contexto)
+        if ($ctx['ids_filtro']) {
+            $query->whereIn('sucursal_id', $ctx['ids_filtro']);
         }
 
-        // Buscamos la caja (solo puede ser una o ninguna)
-        $cajaAbierta = $cajaAbiertaQuery->with('sucursal')->first();
+        // 3. Lógica de Búsqueda Inteligente
+        if ($request->filled('search_q')) {
+            // A. Si el usuario escribe algo (Ticket o Cliente), buscamos en TODO el historial
+            $busqueda = $request->search_q;
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('numero', 'LIKE', "%$busqueda%")
+                    ->orWhere(DB::raw("CONCAT(serie, '-', numero)"), 'LIKE', "%$busqueda%")
+                    ->orWhereHas('cliente', fn($c) => $c->where('nombre', 'LIKE', "%$busqueda%"));
+            });
+        } else {
+            // B. Si NO busca nada específico, filtramos por FECHA (Por defecto: HOY)
+            $desde = $request->get('fecha_desde', now()->format('Y-m-d'));
+            $hasta = $request->get('fecha_hasta', now()->format('Y-m-d'));
 
-        // 2. Obtener Ventas (solo si la caja existe)
-        $ventas = [];
-        if ($cajaAbierta) {
-            $ventas = Venta::where('caja_sesion_id', $cajaAbierta->id)
-                ->with(['cliente', 'usuario']) // Cargamos relaciones
-                ->orderBy('fecha_emision', 'desc')
-                ->paginate(20);
+            $query->whereBetween('fecha_emision', [
+                $desde . ' 00:00:00',
+                $hasta . ' 23:59:59'
+            ]);
         }
 
-        // 3. Cargar sucursales PARA EL MODAL DE APERTURA
-        // Esto se hace SIEMPRE, por si necesita abrir caja.
+        // 4. Paginación
+        $ventas = $query->paginate(20);
+
+        $cajaAbierta = CajaSesion::where('user_id', $user->id)
+            ->where('estado', 'ABIERTO')
+            ->first();
+
+        // 6. Sucursales (Para el modal de abrir caja si fuera necesario)
         $sucursalesParaApertura = $ctx['es_admin']
             ? Sucursal::orderBy('nombre')->get()
-            : $user->sucursales()->select('sucursales.*')->orderBy('sucursales.nombre')->get();
+            : $user->sucursales()->orderBy('nombre')->get();
 
-        // 4. Mandar a la vista
         return view('ventas.ventas.index', [
-            'cajaAbierta'            => $cajaAbierta, // La vista sabe si mostrar o no
-            'ventas'                 => $ventas,      // Lista de ventas (o array vacío)
+            'ventas'                 => $ventas,
+            'cajaAbierta'            => $cajaAbierta,
             'sucursalesParaApertura' => $sucursalesParaApertura,
             'esAdmin'                => $ctx['es_admin'],
-            'sucursalSeleccionada'   => $ctx['sucursal_seleccionada'],
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+
+        // 1. VALIDACIÓN HTTP (Lo básico)
+        $data = $request->validate([
+            'caja_sesion_id'   => ['required', 'integer', 'exists:caja_sesiones,id'],
+            'cliente_id'       => ['nullable', 'integer', 'exists:clientes,id'],
+            'tipo_comprobante' => ['required', 'string', 'in:BOLETA,FACTURA,TICKET'],
+            'medio_pago'       => ['required', 'string', 'in:EFECTIVO,TARJETA,YAPE,PLIN'],
+            'items'            => ['required', 'string'],
+            'puntos_usados'    => ['nullable', 'integer', 'min:0'],
+            'descuento_puntos' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        // Ajuste de datos básicos
+        if (empty($data['cliente_id'])) {
+            $data['cliente_id'] = 1;
+        }
+
+        if (json_decode($data['items']) == null) {
+            return back()->withErrors('El carrito está vacío o es inválido.');
+        }
+
+        // 2. DELEGAR AL SERVICIO
+        try {
+            // Toda la magia ocurre aquí dentro
+            $venta = $this->ventaService->registrarVenta($user, $data);
+
+            return redirect()->route('ventas.show', $venta->id)
+                ->with('success', 'Venta registrada correctamente.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['general' => $e->getMessage()])->withInput();
+        }
     }
 
     public function show($id)
     {
-        // Cargamos la venta con todos sus detalles y relaciones
-        $venta = Venta::with(['detalles.lote.medicamento', 'cliente', 'usuario', 'sucursal'])
+        $user = Auth::user();
+
+        $venta = Venta::with(['detalles.medicamento', 'cliente', 'usuario', 'sucursal'])
             ->findOrFail($id);
 
-        return view('ventas.ventas.show', compact('venta'));
+        if (!$user->hasRole('Administrador')) {
+            if ($venta->sucursal_id !== $user->sucursal_id) {
+                abort(403, 'No tienes permiso para ver esta venta.');
+            }
+        }
+
+        // --- Generar QR ---
+        $rucEmisor = $venta->sucursal->ruc ?? '20123456789';
+        $tipoDoc   = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
+        $fecha     = $venta->fecha_emision->format('Y-m-d');
+        $clienteDocType = strlen($venta->cliente->documento) == 11 ? '6' : '1';
+
+        $qrString = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|";
+
+        // --- Convertir a Letras (Sin NumberFormatter) ---
+        $montoLetras = $this->convertirNumeroALetras($venta->total_neto);
+
+        return view('ventas.ventas.show', compact('venta', 'qrString', 'montoLetras'));
     }
+
+    // --- FUNCIÓN AUXILIAR PARA NÚMERO A LETRAS (SIMPLE) ---
+    private function convertirNumeroALetras($monto)
+    {
+        $monto = str_replace(',', '', $monto); // Quitamos comas por si acaso
+        $entero = floor($monto);
+        $decimal = round(($monto - $entero) * 100);
+
+        // Función básica para enteros hasta 9999 (Suficiente para farmacia común)
+        // Si necesitas millones, avísame para ampliarla, pero esto saca del apuro.
+        $texto = $this->enteroALetras($entero);
+
+        return "SON: " . strtoupper($texto) . " CON $decimal/100 SOLES";
+    }
+
+    private function enteroALetras($n)
+    {
+        $n = (int)$n;
+        if ($n == 0) return 'CERO';
+
+        $unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+        $decenas  = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+        $centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+        if ($n < 10) return $unidades[$n];
+
+        if ($n < 20) {
+            $especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
+            return $especiales[$n - 10];
+        }
+
+        if ($n < 100) {
+            $d = floor($n / 10);
+            $u = $n % 10;
+            if ($u == 0) return $decenas[$d];
+            if ($d == 2) return 'VEINTI' . $unidades[$u]; // Veintiuno, Veintidos...
+            return $decenas[$d] . ' Y ' . $unidades[$u];
+        }
+
+        if ($n < 1000) {
+            $c = floor($n / 100);
+            $r = $n % 100;
+            if ($n == 100) return 'CIEN';
+            return $centenas[$c] . ($r > 0 ? ' ' . $this->enteroALetras($r) : '');
+        }
+
+        if ($n < 1000000) {
+            $mil = floor($n / 1000);
+            $r = $n % 1000;
+            $txt = ($mil == 1) ? 'MIL' : $this->enteroALetras($mil) . ' MIL';
+            return $txt . ($r > 0 ? ' ' . $this->enteroALetras($r) : '');
+        }
+
+        return 'MONTO MUY ALTO';
+    }
+
+
+
 
     public function create(Request $request)
     {
@@ -110,163 +233,6 @@ class VentaController extends Controller
             'cajaAbierta' => $cajaAbierta,
             'categorias'    => $categorias,
         ]);
-    }
-
-
-    /**
-     * Guarda la Venta, Detalles y descuenta Stock de Lotes.
-     * NUEVO MÉTODO
-     */
-    /**
-     * Guarda la Venta, Detalles y descuenta Stock de Lotes.
-     * OPTIMIZADO: Con validación previa "Fail Fast".
-     */
-    public function store(Request $request)
-    {
-        $user = Auth::user();
-
-        // 1. VALIDACIÓN: Hacemos cliente_id 'nullable' (opcional)
-        $data = $request->validate([
-            'caja_sesion_id'   => ['required', 'integer', 'exists:caja_sesiones,id'],
-            'cliente_id'       => ['nullable', 'integer', 'exists:clientes,id'], // <--- CAMBIO AQUÍ
-            'tipo_comprobante' => ['required', 'string', 'in:BOLETA,FACTURA,TICKET'],
-            'medio_pago'       => ['required', 'string', 'in:EFECTIVO,TARJETA,YAPE,PLIN'],
-            'items'            => ['required', 'string'],
-        ]);
-
-        if (empty($data['cliente_id'])) {
-            $data['cliente_id'] = 1;
-        }
-
-        $items = json_decode($data['items'], true);
-
-        if (empty($items)) {
-            return back()->withErrors('No se puede registrar una venta sin productos.');
-        }
-
-        // =========================================================================
-        // 2. OPTIMIZACIÓN: PRE-CHEQUEO "FAIL FAST" (Sin bloqueo)
-        // =========================================================================
-        // Consultamos el stock actual sin bloquear la fila.
-        // Si un usuario pide 10 y hay 2, rechazamos aquí y ahorramos abrir la transacción.
-        foreach ($items as $item) {
-            // Usamos DB::table o select() ligero para no hidratar el modelo completo
-            $loteInfo = DB::table('lotes')
-                ->select('stock_actual', 'codigo_lote')
-                ->where('id', $item['lote_id'])
-                ->first();
-
-            if (!$loteInfo) {
-                return back()->withErrors("El lote seleccionado ya no existe (Item: {$item['nombre']}).");
-            }
-
-            if ($loteInfo->stock_actual < $item['cantidad']) {
-                return back()->withErrors(
-                    "Stock insuficiente (Pre-validación) para: {$item['nombre']}. " .
-                        "Lote: {$loteInfo->codigo_lote}. Disponible: {$loteInfo->stock_actual}"
-                )->withInput();
-            }
-        }
-        // =========================================================================
-
-
-        try {
-            // 3. INICIO DE LA TRANSACCIÓN REAL (Aquí sí bloqueamos)
-            $venta = DB::transaction(function () use ($data, $items, $user) {
-
-                // A. Buscar la caja y bloquearla (lockForUpdate)
-                // Validamos que siga abierta y pertenezca al usuario
-                $caja = CajaSesion::where('id', $data['caja_sesion_id'])
-                    ->where('user_id', $user->id)
-                    ->where('estado', 'ABIERTO')
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                $totalBruto = 0;
-                $totalNeto  = 0; // Asumimos descuento 0 por ahora
-                $detallesParaGuardar = [];
-
-                // B. Recorrer items y procesar (Esta vez con seguridad atómica)
-                foreach ($items as $item) {
-                    $cantidadVenta = (int)$item['cantidad'];
-
-                    // Buscamos el lote y lo BLOQUEAMOS para que nadie más lo toque
-                    $lote = Lote::where('id', $item['lote_id'])
-                        ->where('sucursal_id', $caja->sucursal_id)
-                        ->lockForUpdate() // <--- CLAVE
-                        ->firstOrFail();
-
-                    // C. Re-validar Stock (La validación definitiva)
-                    // Aunque validamos arriba, el stock pudo cambiar en esos milisegundos.
-                    // Esta validación es la que manda.
-                    if ($lote->stock_actual < $cantidadVenta) {
-                        throw new \Exception(
-                            "Stock insuficiente durante transacción para: " . $item['nombre'] .
-                                " (Lote: {$lote->codigo_lote}). Quedan: {$lote->stock_actual}"
-                        );
-                    }
-
-                    // D. Descontar Stock
-                    $lote->decrement('stock_actual', $cantidadVenta);
-                    // Opcional: Si llega a 0, podrías cambiar estado del lote, etc.
-
-                    // E. Cálculos monetarios
-                    $precio = (float)$item['precio_venta'];
-                    $subtotal = $cantidadVenta * $precio;
-
-                    // Preparar objeto Detalle (sin guardarlo todavía para optimizar queries)
-                    $detallesParaGuardar[] = new \App\Models\Ventas\DetalleVenta([
-                        'lote_id'         => $lote->id,
-                        'medicamento_id'  => $lote->medicamento_id,
-                        'cantidad'        => $cantidadVenta,
-                        'precio_unitario' => $precio,
-                        'subtotal_bruto'  => $subtotal,
-                        'subtotal_neto'   => $subtotal, // Ajustar si manejas descuentos por ítem
-                    ]);
-
-                    $totalNeto += $subtotal;
-                }
-
-                // F. Crear la Cabecera de Venta
-                // Nota: Para el número correlativo, idealmente usa una tabla separada de series
-                // Aquí usamos una lógica simple (max + 1) que funciona dentro del lock de transacción.
-                $ultimoNumero = Venta::where('tipo_comprobante', $data['tipo_comprobante'])
-                    ->max('numero') ?? 0;
-
-                $nuevaVenta = Venta::create([
-                    'caja_sesion_id'   => $caja->id,
-                    'sucursal_id'      => $caja->sucursal_id,
-                    'cliente_id'       => $data['cliente_id'],
-                    'user_id'          => $user->id,
-                    'tipo_comprobante' => $data['tipo_comprobante'],
-                    'serie'            => 'B001', // Deberías dinamizar esto según la caja/sucursal
-                    'numero'           => $ultimoNumero + 1,
-                    'fecha_emision'    => now(),
-                    'total_bruto'      => $totalNeto,
-                    'total_descuento'  => 0,
-                    'total_neto'       => $totalNeto,
-                    'medio_pago'       => $data['medio_pago'],
-                    'estado'           => 'EMITIDA',
-                ]);
-
-                // G. Guardar todos los detalles de golpe
-                $nuevaVenta->detalles()->saveMany($detallesParaGuardar);
-
-                return $nuevaVenta;
-            });
-            // --- FIN TRANSACCIÓN ---
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Error específico si no encuentra la caja o un lote al bloquear
-            return back()->withErrors(['general' => 'Error de sincronización: Un lote o la caja ya no está disponible.'])->withInput();
-        } catch (\Exception $e) {
-            // Cualquier otro error (Stock insuficiente dentro del lock, etc.)
-            return back()->withErrors(['general' => $e->getMessage()])->withInput();
-        }
-
-        // 4. Éxito
-        return redirect()->route('ventas.show', $venta->id)
-            ->with('success', 'Venta registrada correctamente.');
     }
 
     /**

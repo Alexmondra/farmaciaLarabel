@@ -83,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
         Route::controller(MedicamentoController::class)->group(function () {
             Route::get('medicamentos/buscar', 'lookup')->name('medicamentos.lookup');
             Route::post('medicamentos/store-rapido', 'storeRapido')->name('medicamentos.storeRapido');
+            Route::put('medicamentos/{id}/update-rapido', 'updateRapido')->name('medicamentos.updateRapido');
         });
 
         // Medicamentos: Sucursales

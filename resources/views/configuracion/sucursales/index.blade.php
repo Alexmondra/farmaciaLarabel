@@ -113,6 +113,16 @@
     const modalTitulo = $('#modalTitulo');
     const methodField = $('#methodField');
 
+    // CORRECCIÓN 1: Aseguramos que los IDs coincidan con el _form.blade.php
+    const inputSerieBoleta = $('#inputSerieBoleta');
+    const inputSerieFactura = $('#inputSerieFactura');
+    const inputSerieTicket = $('#inputSerieTicket'); // Corregido (tenía Tiket)
+
+    // 2. VARIABLES DE SUGERENCIA
+    const sugerenciaB = @json($sugerenciaBoleta ?? 'B001');
+    const sugerenciaF = @json($sugerenciaFactura ?? 'F001');
+    const sugerenciaT = @json($sugerenciaTiket ?? 'T001');
+
     // Referencias a Inputs
     const inputNombre = $('#inputNombre');
     const inputDireccion = $('#inputDireccion');
@@ -134,17 +144,12 @@
       var visibleRows = 0;
 
       $("#tablaSucursales tr").filter(function() {
-        // Ignorar la fila de mensaje "No results"
         if ($(this).attr('id') === 'noResultsFound') return;
-
-        // Buscar texto en la fila
         var match = $(this).text().toLowerCase().indexOf(value) > -1;
         $(this).toggle(match);
-
         if (match) visibleRows++;
       });
 
-      // Mostrar u ocultar mensaje de vacío
       if (visibleRows === 0) {
         $('#noResultsFound').show();
       } else {
@@ -188,6 +193,18 @@
       previewImg.attr('src', 'https://ui-avatars.com/api/?name=Nueva&background=cccccc&color=fff&size=128');
       checkActivo.prop('checked', true).trigger('change');
 
+      // --- AQUÍ LA MAGIA: Pre-llenamos con la sugerencia ---
+      inputSerieBoleta.val(sugerenciaB);
+      inputSerieFactura.val(sugerenciaF);
+
+      // CORRECCIÓN 2: Variable bien escrita (sugerenciaT) y objeto correcto (inputSerieTicket)
+      inputSerieTicket.val(sugerenciaT);
+
+      // Estilos visuales
+      inputSerieBoleta.addClass('bg-light');
+      inputSerieFactura.addClass('bg-light');
+      inputSerieTicket.addClass('bg-light');
+
       modal.modal('show');
     }
 
@@ -205,20 +222,31 @@
 
       modalTitulo.html('<i class="fas fa-edit mr-2"></i> Editar: ' + data.nombre);
 
-      // Llenar datos
-      inputCodigo.val(data.codigo);
-      inputNombre.val(data.nombre);
-      inputDireccion.val(data.direccion);
-      inputTelefono.val(data.telefono);
-      inputImpuesto.val(data.impuesto_porcentaje);
+      // Llenar datos existentes
+      $('#inputNombre').val(data.nombre);
+      $('#inputDireccion').val(data.direccion);
+      $('#inputTelefono').val(data.telefono);
+      $('#inputImpuesto').val(data.impuesto_porcentaje);
+      $('input[name="codigo"]').val(data.codigo);
+
+      // --- LLENAR SERIES ---
+      inputSerieBoleta.val(data.serie_boleta);
+      inputSerieFactura.val(data.serie_factura);
+
+      inputSerieTicket.val(data.serie_ticket);
+
+      // Quitamos el estilo de sugerencia
+      inputSerieBoleta.removeClass('bg-light');
+      inputSerieFactura.removeClass('bg-light');
+      inputSerieTicket.removeClass('bg-light');
+
       checkActivo.prop('checked', data.activo == 1).trigger('change');
 
-      // Imagen
       if (data.imagen_sucursal) {
-        previewImg.attr('src', "/storage/" + data.imagen_sucursal);
+        $('#previewImagen').attr('src', "/storage/" + data.imagen_sucursal);
       } else {
         let nombreClean = encodeURIComponent(data.nombre);
-        previewImg.attr('src', 'https://ui-avatars.com/api/?name=' + nombreClean + '&background=20c997&color=fff&size=128');
+        $('#previewImagen').attr('src', 'https://ui-avatars.com/api/?name=' + nombreClean + '&background=20c997&color=fff&size=128');
       }
 
       modal.modal('show');

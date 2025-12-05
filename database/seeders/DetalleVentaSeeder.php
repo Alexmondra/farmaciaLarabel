@@ -28,68 +28,91 @@ class DetalleVentaSeeder extends Seeder
             for ($i = 0; $i < $cantDetalles; $i++) {
 
                 // 1. Encontrar un lote válido
-                // Seleccionamos un lote al azar de los que tienen stock
                 $lote = $lotesConStock->random();
 
-                // Si por alguna razón se agota en esta misma ejecución
                 if ($lote->stock_actual <= 0) {
-                    continue; // Saltar al siguiente item
+                    continue;
                 }
 
-                // 2. Obtener el medicamento (ya lo tenemos a través del lote)
                 $med = $lote->medicamento;
-                // Si el medicamento no se encuentra (datos corruptos), saltar
                 if (!$med) {
                     continue;
                 }
 
-                // 3. Calcular cantidades y precios
-                // Nos aseguramos de no vender más de lo que hay, máximo 3 unidades
+                // 2. Calcular cantidades y precios
                 $cantidad = rand(1, min(3, $lote->stock_actual));
 
-                // Usar el precio de venta del medicamento, o uno aleatorio si no existe
+                // PRECIO FINAL (Con IGV incluido)
                 $precioUnitario = $med->precio_venta ?? rand(5, 20);
 
-                // 10% de probabilidad de un descuento del 5%
+                // --- NUEVA LÓGICA SUNAT (Cálculo inverso) ---
+                // Asumimos IGV 18% para el Seeder por defecto
+                $valorUnitario = $precioUnitario / 1.18; // Base Imponible
+                $igvUnitario   = $precioUnitario - $valorUnitario; // Impuesto
+                // ---------------------------------------------
+
+                // Descuentos (Lógica simple)
                 $descuentoUnitario = (rand(1, 10) == 1) ? round($precioUnitario * 0.05, 2) : 0;
 
-                // 4. Calcular subtotales (CORRECCIÓN PRINCIPAL)
+                // 3. Calcular subtotales
                 $subtotalBruto = $cantidad * $precioUnitario;
                 $subtotalDescuento = $cantidad * $descuentoUnitario;
                 $subtotalNeto = $subtotalBruto - $subtotalDescuento;
 
-                // 5. Crear el detalle de venta con las columnas correctas
+                // 4. Crear el detalle de venta con LOS NUEVOS CAMPOS
                 DetalleVenta::create([
-                    'venta_id' => $venta->id,
-                    'medicamento_id' => $med->id,
-                    'lote_id' => $lote->id,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precioUnitario,
+                    'venta_id'          => $venta->id,
+                    'medicamento_id'    => $med->id,
+                    'lote_id'           => $lote->id,
+                    'cantidad'          => $cantidad,
+
+                    // Datos para el Cliente
+                    'precio_unitario'   => $precioUnitario,
                     'descuento_unitario' => $descuentoUnitario,
-                    'subtotal_bruto' => $subtotalBruto,
+
+                    // Datos para SUNAT (¡Lo que te faltaba!)
+                    'valor_unitario'    => $valorUnitario,
+                    'igv'               => $igvUnitario,
+                    'tipo_afectacion'   => '10', // Código '10' = Gravado - Operación Onerosa
+
+                    // Totales
+                    'subtotal_bruto'    => $subtotalBruto,
                     'subtotal_descuento' => $subtotalDescuento,
-                    'subtotal_neto' => $subtotalNeto,
-                    // 'subtotal' => 0, // <-- ESTA ERA LA LÍNEA DEL ERROR
+                    'subtotal_neto'     => $subtotalNeto,
                 ]);
 
-                // 6. Reducir el stock del lote (TU PETICIÓN)
-                // Usamos decrement para una actualización segura en la BD
+                // 5. Reducir el stock del lote
                 $lote->decrement('stock_actual', $cantidad);
-                // Actualizamos también la colección en memoria para el resto del bucle
                 $lote->stock_actual -= $cantidad;
             }
         }
 
-        // 7. Actualizar los totales en la tabla 'ventas'
-        // (El modelo Venta ya tiene total_bruto, total_descuento, total_neto)
+        // 7. Actualizar los totales en la tabla 'ventas' (PADRE)
+        // Ahora también debemos sumarizar op_gravada y total_igv
         foreach (Venta::all() as $venta) {
-            // Recargamos la relación 'detalles'
             $venta->load('detalles');
 
-            $venta->total_bruto = $venta->detalles->sum('subtotal_bruto');
-            $venta->total_descuento = $venta->detalles->sum('subtotal_descuento');
-            $venta->total_neto = $venta->detalles->sum('subtotal_neto');
-            $venta->save();
+            if ($venta->detalles->count() > 0) {
+                // Totales de Dinero
+                $venta->total_bruto     = $venta->detalles->sum('subtotal_bruto');
+                $venta->total_descuento = $venta->detalles->sum('subtotal_descuento');
+                $venta->total_neto      = $venta->detalles->sum('subtotal_neto');
+
+                // Totales de Impuestos (Recálculo inverso sobre el total neto final)
+                // Es más preciso hacerlo sobre el total neto para evitar errores de redondeo de centavos
+                $venta->op_gravada      = $venta->total_neto / 1.18;
+                $venta->total_igv       = $venta->total_neto - $venta->op_gravada;
+                $venta->porcentaje_igv  = 18.00;
+
+                // Si hubiera exonerado, iría en op_exonerada, pero por ahora asumimos todo gravado en el seeder
+                $venta->op_exonerada    = 0;
+                $venta->op_inafecta     = 0;
+
+                $venta->save();
+            } else {
+                // Si la venta quedó vacía por falta de stock en lotes, la borramos para no dejar basura
+                $venta->delete();
+            }
         }
     }
 }

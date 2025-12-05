@@ -11,17 +11,32 @@ return new class extends Migration
         Schema::create('detalle_ventas', function (Blueprint $table) {
             $table->bigIncrements('id');
 
-            $table->foreignId('venta_id')->constrained('ventas');
+            // Relaciones
+            $table->foreignId('venta_id')->constrained('ventas')->onDelete('cascade');
             $table->foreignId('lote_id')->constrained('lotes');
             $table->foreignId('medicamento_id')->constrained('medicamentos');
-
             $table->integer('cantidad');
-            $table->decimal('precio_unitario', 10, 2); // Cambiado a 2 decimales
-            $table->decimal('descuento_unitario', 10, 2)->default(0); // Cambiado a 2
 
-            $table->decimal('subtotal_bruto', 10, 2);
-            $table->decimal('subtotal_descuento', 10, 2)->default(0);
-            $table->decimal('subtotal_neto', 10, 2);
+            // --- PRECIOS Y VALORES UNITARIOS (SUNAT) ---
+            // 1. Lo que ve el cliente
+            $table->decimal('precio_unitario', 12, 2); // Precio con IGV (ej: 11.80)
+
+            // 2. Lo que ve la SUNAT (Cálculos internos)
+            $table->decimal('valor_unitario', 12, 2);  // Precio SIN IGV (ej: 10.00)
+            $table->decimal('igv', 12, 2)->default(0); // Impuesto de este ítem (ej: 1.80)
+
+            // 3. Código de Afectación (Vital para Selva vs Costa)
+            // '10': Gravado - Operación Onerosa (Lima)
+            // '20': Exonerado - Operación Onerosa (Selva)
+            // '30': Inafecto (Muestras médicas, bonificaciones)
+            $table->string('tipo_afectacion', 5)->default('10');
+
+            $table->decimal('descuento_unitario', 12, 2)->default(0);
+
+            // --- SUBTOTALES ---
+            $table->decimal('subtotal_bruto', 12, 2);     // Cantidad * Precio
+            $table->decimal('subtotal_descuento', 12, 2)->default(0);
+            $table->decimal('subtotal_neto', 12, 2);      // (Bruto - Dscto)
 
             $table->timestamps();
         });
