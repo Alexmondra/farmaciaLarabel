@@ -31,9 +31,9 @@
         <thead>
           <tr>
             <th style="width: 50px;">Img</th>
-            <th>Código</th>
+            <th>Cód. SUNAT</th>
             <th>Nombre</th>
-            <th>Dirección</th>
+            <th>Distrito / Ubigeo</th>
             <th>Impuesto</th>
             <th>Estado</th>
             <th style="width:100px;">Acciones</th>
@@ -49,9 +49,15 @@
               <i class="fas fa-store text-muted fa-lg"></i>
               @endif
             </td>
-            <td>{{ $s->codigo }}</td>
-            <td>{{ $s->nombre }}</td>
-            <td>{{ $s->direccion }}</td>
+            <td class="font-weight-bold">{{ $s->codigo }}</td>
+            <td>
+              {{ $s->nombre }} <br>
+              <small class="text-muted">{{ $s->direccion }}</small>
+            </td>
+            <td>
+              {{ $s->distrito }} <br>
+              <small class="text-muted">{{ $s->ubigeo }}</small>
+            </td>
             <td>{{ $s->impuesto_porcentaje }}%</td>
             <td>
               <span class="badge badge-{{ $s->activo ? 'success' : 'secondary' }}">
@@ -113,22 +119,30 @@
     const modalTitulo = $('#modalTitulo');
     const methodField = $('#methodField');
 
-    // CORRECCIÓN 1: Aseguramos que los IDs coincidan con el _form.blade.php
+    // SERIES
     const inputSerieBoleta = $('#inputSerieBoleta');
     const inputSerieFactura = $('#inputSerieFactura');
-    const inputSerieTicket = $('#inputSerieTicket'); // Corregido (tenía Tiket)
+    const inputSerieTicket = $('#inputSerieTicket');
 
-    // 2. VARIABLES DE SUGERENCIA
+    // VARIABLES DE SUGERENCIA (Pasadas desde el controlador)
     const sugerenciaB = @json($sugerenciaBoleta ?? 'B001');
     const sugerenciaF = @json($sugerenciaFactura ?? 'F001');
     const sugerenciaT = @json($sugerenciaTiket ?? 'T001');
 
-    // Referencias a Inputs
+    // INPUTS GENERALES
     const inputNombre = $('#inputNombre');
+    const inputCodigo = $('#inputCodigo'); // Ahora editable
+
+    // INPUTS UBICACION Y CONTACTO (NUEVOS)
+    const inputUbigeo = $('#inputUbigeo');
+    const inputDepartamento = $('#inputDepartamento');
+    const inputProvincia = $('#inputProvincia');
+    const inputDistrito = $('#inputDistrito');
     const inputDireccion = $('#inputDireccion');
+    const inputEmail = $('#inputEmail');
     const inputTelefono = $('#inputTelefono');
+
     const inputImpuesto = $('#inputImpuesto');
-    const inputCodigo = $('input[name="codigo"]');
 
     // Referencias Imagen/Estado
     const previewImg = $('#previewImagen');
@@ -193,17 +207,17 @@
       previewImg.attr('src', 'https://ui-avatars.com/api/?name=Nueva&background=cccccc&color=fff&size=128');
       checkActivo.prop('checked', true).trigger('change');
 
-      // --- AQUÍ LA MAGIA: Pre-llenamos con la sugerencia ---
+      // Limpiar inputs nuevos manualmente por si acaso
+      inputUbigeo.val('');
+      inputDepartamento.val('');
+      inputProvincia.val('');
+      inputDistrito.val('');
+      inputEmail.val('');
+
+      // Sugerencias de series
       inputSerieBoleta.val(sugerenciaB);
       inputSerieFactura.val(sugerenciaF);
-
-      // CORRECCIÓN 2: Variable bien escrita (sugerenciaT) y objeto correcto (inputSerieTicket)
       inputSerieTicket.val(sugerenciaT);
-
-      // Estilos visuales
-      inputSerieBoleta.addClass('bg-light');
-      inputSerieFactura.addClass('bg-light');
-      inputSerieTicket.addClass('bg-light');
 
       modal.modal('show');
     }
@@ -222,23 +236,27 @@
 
       modalTitulo.html('<i class="fas fa-edit mr-2"></i> Editar: ' + data.nombre);
 
-      // Llenar datos existentes
-      $('#inputNombre').val(data.nombre);
-      $('#inputDireccion').val(data.direccion);
-      $('#inputTelefono').val(data.telefono);
-      $('#inputImpuesto').val(data.impuesto_porcentaje);
-      $('input[name="codigo"]').val(data.codigo);
+      // --- LLENADO DE DATOS ---
+      inputNombre.val(data.nombre);
+      inputCodigo.val(data.codigo); // Carga el código SUNAT
 
-      // --- LLENAR SERIES ---
+      // Ubicación
+      inputUbigeo.val(data.ubigeo);
+      inputDepartamento.val(data.departamento);
+      inputProvincia.val(data.provincia);
+      inputDistrito.val(data.distrito);
+      inputDireccion.val(data.direccion);
+
+      // Contacto
+      inputEmail.val(data.email);
+      inputTelefono.val(data.telefono);
+
+      inputImpuesto.val(data.impuesto_porcentaje);
+
+      // Series
       inputSerieBoleta.val(data.serie_boleta);
       inputSerieFactura.val(data.serie_factura);
-
       inputSerieTicket.val(data.serie_ticket);
-
-      // Quitamos el estilo de sugerencia
-      inputSerieBoleta.removeClass('bg-light');
-      inputSerieFactura.removeClass('bg-light');
-      inputSerieTicket.removeClass('bg-light');
 
       checkActivo.prop('checked', data.activo == 1).trigger('change');
 

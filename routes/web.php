@@ -10,6 +10,8 @@ use App\Http\Controllers\Compras\{ProveedorController, CompraController};
 use App\Http\Controllers\Ventas\{CajaSesionController, VentaController};
 use App\Http\Controllers\Configuracion\SucursalController;
 use App\Http\Controllers\Ventas\ClienteController;
+use App\Http\Controllers\Configuracion\ConfiguracionController;
+
 
 // =========================================================================
 // 1. RUTAS PÚBLICAS
@@ -71,6 +73,8 @@ Route::middleware(['auth'])->group(function () {
         });
         Route::resource('usuarios', UsuarioController::class)->except(['show']);
     });
+
+
 
     // =================================================================
     // MÓDULO: INVENTARIO
@@ -141,7 +145,14 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('configuracion')->name('configuracion.')->group(function () {
         Route::resource('sucursales', SucursalController::class)
             ->parameters(['sucursales' => 'sucursal']);
+
+        Route::get('/general', [ConfiguracionController::class, 'index'])->name('general.index');
+        Route::put('/general', [ConfiguracionController::class, 'update'])->name('general.update');
     });
+
+
+
+
 
     Route::post('/configuracion/update', [ClienteController::class, 'updateConfig'])->name('configuracion.update');
 });

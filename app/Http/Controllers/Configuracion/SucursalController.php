@@ -12,13 +12,16 @@ class SucursalController extends Controller
 {
     public function index(Request $request)
     {
-        $sucursales = Sucursal::orderBy('nombre')->get();
+        $sucursales = Sucursal::orderBy('codigo')->get(); // Ordenar por código SUNAT
+
+        // --- LOGICA DE SUGERENCIAS PARA SERIES ---
+        // Se mantiene igual para ayudar al usuario
         $siguienteId = Sucursal::max('id') + 1;
         $numeroSerie = str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
 
         $sugerenciaBoleta  = 'B' . $numeroSerie; // Ej: B004
         $sugerenciaFactura = 'F' . $numeroSerie; // Ej: F004
-        $sugerenciaTiket = 'T' . $numeroSerie;
+        $sugerenciaTiket   = 'T' . $numeroSerie;
 
         return view('configuracion.sucursales.index', compact('sucursales', 'sugerenciaBoleta', 'sugerenciaFactura', 'sugerenciaTiket'));
     }
@@ -31,26 +34,32 @@ class SucursalController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            // --- VALIDACIÓN CÓDIGO SUNAT ---
+            'codigo'              => ['required', 'string', 'size:4', 'unique:sucursales,codigo'],
+
             'nombre'              => ['required', 'string', 'max:120'],
+
+            // --- NUEVOS CAMPOS UBICACIÓN ---
+            'ubigeo'              => ['nullable', 'string', 'max:6'], // Generalmente 6 dígitos
+            'departamento'        => ['nullable', 'string', 'max:100'],
+            'provincia'           => ['nullable', 'string', 'max:100'],
+            'distrito'            => ['nullable', 'string', 'max:100'],
             'direccion'           => ['nullable', 'string', 'max:200'],
+
+            // --- CONTACTO ---
             'telefono'            => ['nullable', 'string', 'max:30'],
+            'email'               => ['nullable', 'email', 'max:120'],
+
             'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
             'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
 
-            // --- NUEVOS CAMPOS ---
+            // --- SERIES ---
             'serie_boleta'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_boleta'],
             'serie_factura'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_factura'],
-            'serie_ticket'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket'],
-
-            // ---------------------
+            'serie_ticket'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket'],
 
             'activo'              => ['sometimes', 'boolean'],
         ]);
-
-        // Generar Código Interno (SUC-001)
-        $ultimoId = Sucursal::max('id');
-        $nuevoNumero = $ultimoId + 1;
-        $data['codigo'] = 'SUC-' . str_pad($nuevoNumero, 3, '0', STR_PAD_LEFT);
 
         $data['activo'] = $request->boolean('activo');
 
@@ -72,18 +81,26 @@ class SucursalController extends Controller
     public function update(Request $request, Sucursal $sucursal)
     {
         $data = $request->validate([
+            // Validamos que el código sea único pero ignorando la sucursal actual
+            'codigo'              => ['required', 'string', 'size:4', Rule::unique('sucursales')->ignore($sucursal->id)],
+
             'nombre'              => ['required', 'string', 'max:120'],
+
+            'ubigeo'              => ['nullable', 'string', 'max:6'],
+            'departamento'        => ['nullable', 'string', 'max:100'],
+            'provincia'           => ['nullable', 'string', 'max:100'],
+            'distrito'            => ['nullable', 'string', 'max:100'],
             'direccion'           => ['nullable', 'string', 'max:200'],
+
             'telefono'            => ['nullable', 'string', 'max:30'],
+            'email'               => ['nullable', 'email', 'max:120'],
+
             'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
             'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
 
-            // --- VALIDAR SERIES (Ignorando el actual para no dar error de unique) ---
             'serie_boleta'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_boleta,' . $sucursal->id],
             'serie_factura'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_factura,' . $sucursal->id],
-            'serie_ticket'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket,' . $sucursal->id],
-
-            // -----------------------------------------------------------------------
+            'serie_ticket'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket,' . $sucursal->id],
 
             'activo'              => ['sometimes', 'boolean'],
         ]);
@@ -106,9 +123,8 @@ class SucursalController extends Controller
     public function destroy(Sucursal $sucursal)
     {
         try {
-            // 1. Intentamos eliminar la imagen y el registro
             if ($sucursal->imagen_sucursal) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($sucursal->imagen_sucursal);
+                Storage::disk('public')->delete($sucursal->imagen_sucursal);
             }
 
             $sucursal->delete();
@@ -119,13 +135,14 @@ class SucursalController extends Controller
 
             if ($e->getCode() == "23000") {
                 return redirect()->route('configuracion.sucursales.index')
-                    ->with('error', 'No se puede eliminar: Esta sucursal tiene movimientos, cajas o usuarios asociados.');
+                    ->with('error', 'No se puede eliminar: Esta sucursal tiene movimientos asociados.');
             }
 
             return redirect()->route('configuracion.sucursales.index')
                 ->with('error', 'Ocurrió un error inesperado al eliminar.');
         }
     }
+
 
     // ---------------------------------------------------------------
     // MÉTODOS DE SELECCIÓN (SIN CAMBIOS, SOLO COPIADOS PARA MANTENER)

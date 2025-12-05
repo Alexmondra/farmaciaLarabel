@@ -348,9 +348,16 @@ return [
                     'icon' => 'fas fa-user-lock',
                 ],
                 [
-                    'text' => 'Datos de Empresa',
+                    'text' => 'Datos de Sucursales',
                     'url'  => 'configuracion/sucursales',
                     'can'  => 'sucursales.ver',
+                    'icon' => 'fas fa-building',
+                ],
+
+                [
+                    'text' => 'Empresa',
+                    'url'  => 'configuracion/general',
+                    'can'  => 'config.ver',
                     'icon' => 'fas fa-building',
                 ],
             ],

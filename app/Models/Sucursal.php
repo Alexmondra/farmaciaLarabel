@@ -9,15 +9,21 @@ class Sucursal extends Model
     protected $table = 'sucursales';
 
     protected $fillable = [
-        'codigo',
+        'codigo',   // Ahora es el Código Anexo SUNAT (0000, 0001...)
         'nombre',
+        'ubigeo',
+        'departamento',
+        'provincia',
+        'distrito',
+        'direccion',
+        'telefono',
+        'email',
+        'imagen_sucursal',
+        'impuesto_porcentaje',
         'serie_boleta',
         'serie_factura',
         'serie_ticket',
-        'direccion',
-        'telefono',
-        'imagen_sucursal',
-        'impuesto_porcentaje',
+
         'activo'
     ];
 
@@ -26,6 +32,7 @@ class Sucursal extends Model
         'impuesto_porcentaje' => 'decimal:2',
     ];
 
+    // Relaciones
     public function usuarios()
     {
         return $this->hasMany(User::class);

@@ -31,44 +31,74 @@
     {{-- COLUMNA DERECHA: DATOS DEL FORMULARIO --}}
     <div class="col-md-9 pl-4">
 
-        {{-- FILA 1: CÓDIGO (SOLO EDITAR) Y NOMBRE --}}
+        {{-- FILA 1: CÓDIGO SUNAT Y NOMBRE --}}
         <div class="form-row">
-            @if(isset($sucursal))
             <div class="form-group col-md-3">
-                <label class="small font-weight-bold text-muted">CÓDIGO</label>
-                <input type="text" value="{{ $sucursal->codigo }}" class="form-control bg-light" disabled>
-                <input type="hidden" name="codigo" value="{{ $sucursal->codigo }}">
+                <label class="small font-weight-bold text-dark">COD. SUNAT *</label>
+                {{-- Ahora el código es editable y de 4 dígitos --}}
+                <input type="text" name="codigo" id="inputCodigo" class="form-control font-weight-bold"
+                    placeholder="0000" maxlength="4" required
+                    value="{{ isset($sucursal) ? $sucursal->codigo : '' }}">
+                <small class="text-muted">Ej: 0001 (Anexo)</small>
             </div>
             <div class="form-group col-md-9">
                 <label class="small font-weight-bold text-teal">NOMBRE SUCURSAL *</label>
-                <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Ej: Farmacia Principal" required>
+                <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Ej: Oficina Principal" required>
             </div>
-            @else
-            <div class="form-group col-md-12">
-                <label class="small font-weight-bold text-teal">NOMBRE SUCURSAL *</label>
-                <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Ej: Farmacia Principal" required>
-            </div>
-            @endif
         </div>
 
-        {{-- FILA 2: DIRECCIÓN Y TELÉFONO --}}
+        {{-- BLOQUE DE UBICACIÓN --}}
+        <h6 class="text-teal font-weight-bold mt-2 mb-2" style="font-size: 0.9rem;">
+            <i class="fas fa-map-marked-alt mr-1"></i> Ubicación
+        </h6>
+
         <div class="form-row">
-            <div class="form-group col-md-8">
-                <label class="small font-weight-bold text-muted">DIRECCIÓN</label>
-                <div class="input-group">
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-muted">DEPARTAMENTO</label>
+                <input type="text" name="departamento" id="inputDepartamento" class="form-control form-control-sm" placeholder="Lima">
+            </div>
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-muted">PROVINCIA</label>
+                <input type="text" name="provincia" id="inputProvincia" class="form-control form-control-sm" placeholder="Lima">
+            </div>
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-muted">DISTRITO</label>
+                <input type="text" name="distrito" id="inputDistrito" class="form-control form-control-sm" placeholder="Miraflores">
+            </div>
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-muted">UBIGEO</label>
+                <input type="text" name="ubigeo" id="inputUbigeo" class="form-control form-control-sm" maxlength="6" placeholder="150101">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="small font-weight-bold text-muted">DIRECCIÓN FISCAL</label>
+            <div class="input-group input-group-sm">
+                <div class="input-group-prepend">
+                    <span class="input-group-text bg-light"><i class="fas fa-map-marker-alt text-danger"></i></span>
+                </div>
+                <input type="text" name="direccion" id="inputDireccion" class="form-control" placeholder="Av. Larco 123, Of. 401">
+            </div>
+        </div>
+
+        {{-- FILA CONTACTO --}}
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label class="small font-weight-bold text-muted">EMAIL</label>
+                <div class="input-group input-group-sm">
                     <div class="input-group-prepend">
-                        <span class="input-group-text bg-white"><i class="fas fa-map-marker-alt text-danger"></i></span>
+                        <span class="input-group-text bg-light"><i class="fas fa-envelope text-primary"></i></span>
                     </div>
-                    <input type="text" name="direccion" id="inputDireccion" class="form-control border-left-0" placeholder="Av. Siempre Viva 123">
+                    <input type="email" name="email" id="inputEmail" class="form-control" placeholder="sucursal@empresa.com">
                 </div>
             </div>
-            <div class="form-group col-md-4">
+            <div class="form-group col-md-6">
                 <label class="small font-weight-bold text-muted">TELÉFONO</label>
-                <div class="input-group">
+                <div class="input-group input-group-sm">
                     <div class="input-group-prepend">
-                        <span class="input-group-text bg-white"><i class="fas fa-phone text-primary"></i></span>
+                        <span class="input-group-text bg-light"><i class="fas fa-phone text-success"></i></span>
                     </div>
-                    <input type="text" name="telefono" id="inputTelefono" class="form-control border-left-0" placeholder="(01) 000-000">
+                    <input type="text" name="telefono" id="inputTelefono" class="form-control" placeholder="(01) 000-000">
                 </div>
             </div>
         </div>
@@ -81,7 +111,7 @@
         </h6>
 
         <div class="form-row">
-            <div class="form-group col-md-4">
+            <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-dark">IGV (%)</label>
                 <div class="input-group input-group-sm">
                     <input type="number" step="0.01" name="impuesto_porcentaje" id="inputImpuesto" class="form-control font-weight-bold" value="18.00" required>
@@ -91,18 +121,18 @@
                 </div>
             </div>
 
-            <div class="form-group col-md-4">
-                <label class="small font-weight-bold text-dark">SERIE BOLETA *</label>
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-dark">SERIE BOLETA</label>
                 <input type="text" name="serie_boleta" id="inputSerieBoleta" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" placeholder="B001" required>
             </div>
 
-            <div class="form-group col-md-4">
-                <label class="small font-weight-bold text-dark">SERIE FACTURA *</label>
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-dark">SERIE FACTURA</label>
                 <input type="text" name="serie_factura" id="inputSerieFactura" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" placeholder="F001" required>
             </div>
 
-            <div class="form-group col-md-4">
-                <label class="small font-weight-bold text-dark">SERIE TIKET *</label>
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-dark">SERIE TICKET</label>
                 <input type="text" name="serie_ticket" id="inputSerieTicket" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" placeholder="T001" required>
             </div>
         </div>

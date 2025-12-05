@@ -11,6 +11,28 @@ class Configuracion extends Model
 
     protected $table = 'configuraciones';
 
-    // Permite editar todos los campos
-    protected $guarded = ['id'];
+    protected $fillable = [
+        // Datos Empresa
+        'empresa_ruc',
+        'empresa_razon_social',
+        'empresa_direccion',
+
+        // Conexión SUNAT
+        'sunat_produccion',
+        'sunat_sol_user',
+        'sunat_sol_pass',
+        'sunat_certificado_path',
+        'sunat_certificado_pass',
+
+        // Puntos Básicos
+        'puntos_por_moneda',
+        'valor_punto_canje',
+        'mensaje_ticket',
+    ];
+
+    protected $casts = [
+        'sunat_produccion'  => 'boolean',
+        'valor_punto_canje' => 'decimal:4',
+        'puntos_por_moneda' => 'integer',
+    ];
 }
