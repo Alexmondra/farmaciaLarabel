@@ -38,7 +38,7 @@ return new class extends Migration
 
             // Datos de Pago y Estado
             $table->string('medio_pago', 30)->nullable(); // EFECTIVO, YAPE, PLIN, TARJETA
-            $table->enum('estado', ['EMITIDA', 'ANULADA', 'ACEPTADA_SUNAT', 'RECHAZADA_SUNAT'])->default('EMITIDA');
+            $table->string('estado', 30)->default('EMITIDA');
             $table->text('observaciones')->nullable();
 
             // --- BLOQUE DE RESPUESTA DE FACTURACIÓN ELECTRÓNICA ---

@@ -43,7 +43,7 @@
     </div>
 
     {{-- ======================================================= --}}
-    {{-- VISTA TICKET (80mm)                                     --}}
+    {{-- VISTA TICKET (80mm) --}}
     {{-- ======================================================= --}}
     <div id="wrapper-ticket" class="d-flex justify-content-center">
         <div class="ticket-box">
@@ -58,10 +58,8 @@
                 <h6 class="font-weight-bold mb-0">{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</h6>
                 <small class="d-block mt-1">Fecha: {{ $venta->fecha_emision->format('d/m/Y H:i:s') }}</small>
             </div>
-            <div class="mb-3 small">
-                <div><strong>CLI:</strong> {{ Str::limit($venta->cliente->nombre_completo, 25) }}</div>
-                <div><strong>DOC:</strong> {{ $venta->cliente->documento }}</div>
-            </div>
+
+            {{-- ... (TABLA DE PRODUCTOS IGUAL QUE ANTES) ... --}}
             <table class="table table-sm table-borderless small mb-2" style="font-size: 11px;">
                 <thead class="border-bottom border-dark">
                     <tr>
@@ -74,24 +72,30 @@
                     @foreach($venta->detalles as $det)
                     <tr>
                         <td class="pl-0 font-weight-bold align-top">{{ $det->cantidad }}</td>
-                        <td class="align-top">
-                            {{ Str::limit($det->medicamento->nombre, 18) }}
-                        </td>
+                        <td class="align-top">{{ Str::limit($det->medicamento->nombre, 18) }}</td>
                         <td class="text-right pr-0 align-top font-weight-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
+
             <div class="border-top border-dark pt-1 mt-1" style="font-size: 11px;">
                 <div class="d-flex justify-content-between mt-1 pt-1 border-top border-dark" style="font-size: 14px;">
                     <span class="font-weight-bold">TOTAL</span>
                     <span class="font-weight-bold">S/ {{ number_format($venta->total_neto, 2) }}</span>
                 </div>
                 <p class="text-center small mt-2 mb-0">SON: {{ $montoLetras }}</p>
+
+                {{-- ¡AQUÍ ESTÁ EL QR QUE FALTABA! --}}
+                <div class="text-center mt-3">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($qrString) }}"
+                        style="width: 100px; height: 100px;">
+                    <p class="small mt-1 mb-0">Representación impresa de la<br>{{ $venta->tipo_comprobante }} ELECTRÓNICA</p>
+                </div>
+                {{-- FIN DEL QR --}}
             </div>
         </div>
     </div>
-
 
     {{-- ======================================================= --}}
     {{-- VISTA A4                                                --}}

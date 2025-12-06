@@ -139,9 +139,9 @@ class VentaController extends Controller
         $tipoDoc   = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
         $fecha     = $venta->fecha_emision->format('Y-m-d');
         $clienteDocType = strlen($venta->cliente->documento) == 11 ? '6' : '1';
+        $hash = $venta->hash ?? '';
 
-        $qrString = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|";
-
+        $qrString = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
         // --- Convertir a Letras (Sin NumberFormatter) ---
         $montoLetras = $this->convertirNumeroALetras($venta->total_neto);
 

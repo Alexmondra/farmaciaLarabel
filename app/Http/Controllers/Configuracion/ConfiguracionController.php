@@ -11,7 +11,7 @@ class ConfiguracionController extends Controller
 {
     public function index()
     {
-        // Obtener la configuración (ID 1) o crearla si no existe
+        // Obtener configuración (ID 1) o crearla por defecto
         $config = Configuracion::firstOrCreate(
             ['id' => 1],
             [
@@ -39,7 +39,9 @@ class ConfiguracionController extends Controller
             'sunat_sol_user'       => 'nullable|string|max:255',
             'sunat_sol_pass'       => 'nullable|string|max:255',
             'sunat_certificado_pass' => 'nullable|string|max:255',
-            'sunat_certificado_path' => 'nullable|file|mimes:pfx,p12', // Certificados digitales
+
+            // AHORA ACEPTAMOS TAMBIÉN .PEM y .TXT
+            'sunat_certificado_path' => 'nullable|file|mimes:pfx,p12,pem,txt',
 
             // Puntos
             'puntos_por_moneda'    => 'required|integer|min:1',
@@ -47,22 +49,45 @@ class ConfiguracionController extends Controller
             'mensaje_ticket'       => 'nullable|string|max:200',
         ]);
 
-        // Manejo del checkbox (si no viene, es false)
+        // Manejo del checkbox (si no viene checkeado, es false)
         $data['sunat_produccion'] = $request->has('sunat_produccion');
 
-        // Subida del Certificado (si se envió uno nuevo)
+        // --- LÓGICA DE CERTIFICADO INTELIGENTE ---
         if ($request->hasFile('sunat_certificado_path')) {
-            // Eliminar el anterior si existe
-            if ($config->sunat_certificado_path) {
+
+            $file = $request->file('sunat_certificado_path');
+            $extension = strtolower($file->getClientOriginalExtension());
+            $content = file_get_contents($file->getRealPath());
+            $finalPemContent = $content; // Por defecto asumimos que ya es PEM
+
+            // Si el usuario subió un PFX/P12, intentamos convertirlo a PEM
+            if (in_array($extension, ['pfx', 'p12'])) {
+                $password = $request->input('sunat_certificado_pass');
+
+                $certs = [];
+                // Intentamos leer el PFX con la contraseña
+                if (openssl_pkcs12_read($content, $certs, $password)) {
+                    // Extraemos Clave Privada + Certificado Público
+                    $finalPemContent = $certs['pkey'] . $certs['cert'];
+                } else {
+                    return back()->withErrors(['sunat_certificado_pass' => 'La contraseña del certificado PFX es incorrecta o el archivo está dañado.']);
+                }
+            }
+
+            if ($config->sunat_certificado_path && Storage::exists($config->sunat_certificado_path)) {
                 Storage::delete($config->sunat_certificado_path);
             }
-            // Guardar el nuevo en carpeta segura (no pública)
-            $data['sunat_certificado_path'] = $request->file('sunat_certificado_path')->store('certificados');
+
+
+            $nombreArchivo = 'certificados/' . $request->empresa_ruc . '_produccion.pem';
+            Storage::put($nombreArchivo, $finalPemContent);
+
+            $data['sunat_certificado_path'] = $nombreArchivo;
         }
 
         $config->update($data);
 
         return redirect()->route('configuracion.general.index')
-            ->with('success', 'Configuración actualizada correctamente.');
+            ->with('success', 'Configuración actualizada. ¡Listo para facturar!');
     }
 }

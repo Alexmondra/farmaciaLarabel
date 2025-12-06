@@ -2,247 +2,150 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\DetalleVenta;
 use App\Models\Ventas\CajaSesion;
-use App\Models\Ventas\Cliente;
 use App\Models\Inventario\Lote;
-use App\Models\Configuracion; // <--- Importamos el modelo
+use App\Models\User;
+use App\Services\Sunat\SunatService;
+use Illuminate\Support\Facades\DB;
 use Exception;
 
 class VentaService
 {
-    /**
-     * Proceso principal de creación de venta
-     */
-    public function registrarVenta($user, array $data)
+    protected $sunatService;
+
+    public function __construct(SunatService $sunatService)
     {
-        $items = json_decode($data['items'], true);
+        $this->sunatService = $sunatService;
+    }
 
-        // 1. Pre-Validación
-        $this->validarStockPrevio($items);
+    public function registrarVenta(User $user, array $data): Venta
+    {
+        return DB::transaction(function () use ($user, $data) {
 
-        return DB::transaction(function () use ($user, $data, $items) {
+            // 1. CARGAR CAJA Y SUCURSAL
+            // Usamos la sucursal de la CAJA (Así evitamos el error "on null" si eres Admin)
+            $caja = CajaSesion::with('sucursal')
+                ->where('id', $data['caja_sesion_id'])
+                ->where('estado', 'ABIERTO')
+                ->first();
 
-            // 2. Obtener y Bloquear Caja
-            $caja = $this->bloquearCaja($user, $data['caja_sesion_id']);
-
-            // --- NUEVO: DETERMINAR SERIE SEGÚN COMPROBANTE ---
-            $serie = '';
-            switch ($data['tipo_comprobante']) {
-                case 'BOLETA':
-                    $serie = $caja->sucursal->serie_boleta;
-                    break;
-                case 'FACTURA':
-                    $serie = $caja->sucursal->serie_factura;
-                    break;
-                case 'TICKET':
-                    // Nota: Asegúrate de que en tu BD el campo se llame igual (serie_ticket o serie_tiket)
-                    $serie = $caja->sucursal->serie_ticket ?? $caja->sucursal->serie_tiket;
-                    break;
-                default:
-                    throw new Exception("Tipo de comprobante no válido.");
+            if (!$caja) {
+                throw new Exception("La caja seleccionada está cerrada o no existe.");
             }
 
-            // Validar que la sucursal tenga configurada la serie
-            if (empty($serie)) {
-                throw new Exception("La sucursal no tiene configurada una serie para {$data['tipo_comprobante']}.");
+            if (!$caja->sucursal) {
+                throw new Exception("La caja abierta (ID {$caja->id}) no tiene sucursal asignada.");
             }
-            // --------------------------------------------------
 
-            // 3. Procesar Items
-            $resultadoItems = $this->procesarItems($items, $caja);
+            $sucursal = $caja->sucursal;
 
-            // 4. Calcular Totales
-            $totales = $this->calcularTotalesFinales($resultadoItems, $data);
+            // 2. PROCESAR ITEMS
+            $items = json_decode($data['items'], true);
+            $itemsProcesados = [];
+            $totalNeto = 0;   // Total a Pagar (Con IGV)
+            $totalBruto = 0;  // Total Base (Sin IGV)
+            $totalIGV = 0;    // Total Impuestos
 
-            // 5. Gestión de Puntos
-            $this->procesarPuntosCliente($data['cliente_id'], $data, $totales['total_neto']);
+            foreach ($items as $index => $item) {
+                // Solución al error "Undefined array key 'id'"
+                $loteId = $item['id'] ?? $item['lote_id'] ?? null;
 
-            // 6. Crear Venta
+                if (!$loteId) throw new Exception("Error en Item #" . ($index + 1) . ": Falta ID del producto.");
+
+                $precioVenta = (float) ($item['precio_venta'] ?? $item['precio_unitario'] ?? 0);
+                $cantidad = (int) $item['cantidad'];
+
+                // Cálculos por ITEM
+                $valorUnitario = $precioVenta / 1.18; // Precio sin IGV
+                $igvUnitario = $precioVenta - $valorUnitario;
+
+                $subtotalNeto = $precioVenta * $cantidad; // Precio x Cantidad
+                $subtotalBruto = $valorUnitario * $cantidad; // Base x Cantidad
+                $igvTotal = $igvUnitario * $cantidad;
+
+                // Acumuladores Generales
+                $totalNeto += $subtotalNeto;
+                $totalBruto += $subtotalBruto;
+                $totalIGV += $igvTotal;
+
+                $itemsProcesados[] = [
+                    'lote_id' => $loteId,
+                    'medicamento_id' => $item['medicamento_id'] ?? null,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => $precioVenta,
+                    'valor_unitario' => $valorUnitario,
+                    'igv' => $igvTotal,
+                    'subtotal_neto' => $subtotalNeto,
+                    'subtotal_bruto' => $subtotalBruto // <--- ¡AQUÍ ESTABA EL FALTANTE!
+                ];
+            }
+
+            // 3. GENERAR SERIE Y NUMERO
+            $tipoComp = $data['tipo_comprobante'];
+            $serie = ($tipoComp == 'FACTURA' ? $sucursal->serie_factura : $sucursal->serie_boleta)
+                ?: ($tipoComp == 'FACTURA' ? 'F001' : 'B001');
+
+            $ultimoCorrelativo = Venta::where('tipo_comprobante', $tipoComp)
+                ->where('serie', $serie)
+                ->max('numero');
+            $nuevoNumero = $ultimoCorrelativo ? ($ultimoCorrelativo + 1) : 1;
+
+            // 4. CREAR VENTA
             $venta = Venta::create([
                 'caja_sesion_id'   => $caja->id,
-                'sucursal_id'      => $caja->sucursal_id,
+                'sucursal_id'      => $sucursal->id,
                 'cliente_id'       => $data['cliente_id'],
                 'user_id'          => $user->id,
-                'tipo_comprobante' => $data['tipo_comprobante'],
-
-                // --- AQUÍ USAMOS LA SERIE DINÁMICA ---
+                'tipo_comprobante' => $tipoComp,
                 'serie'            => $serie,
-                'numero'           => $this->obtenerCorrelativo($serie, $data['tipo_comprobante']),
-                // -------------------------------------
-
+                'numero'           => $nuevoNumero,
                 'fecha_emision'    => now(),
-
-                // Totales Tributarios
-                'op_gravada'       => $totales['op_gravada'],
-                'op_exonerada'     => $totales['op_exonerada'],
-                'op_inafecta'      => 0,
-                'total_igv'        => $totales['total_igv'],
-                'porcentaje_igv'   => $caja->sucursal->impuesto_porcentaje,
-
-                // Totales Finales
-                'total_bruto'      => $totales['total_bruto'],
-                'total_descuento'  => $totales['descuento_puntos'],
-                'total_neto'       => $totales['total_neto'],
-
                 'medio_pago'       => $data['medio_pago'],
                 'estado'           => 'EMITIDA',
+
+                'total_bruto'     => round($totalBruto, 2),
+                'total_descuento' => 0,
+                'total_neto'      => round($totalNeto, 2),
+
+                'op_gravada'      => round($totalBruto, 2),
+                'op_exonerada'    => 0,
+                'op_inafecta'     => 0,
+                'total_igv'       => round($totalIGV, 2),
+                'porcentaje_igv'  => 18.00,
             ]);
 
-            // 7. Guardar Detalles
-            $venta->detalles()->saveMany($resultadoItems['detalles']);
+            // 5. GUARDAR DETALLES
+            foreach ($itemsProcesados as $item) {
+                $lote = Lote::lockForUpdate()->find($item['lote_id']);
+
+                if (!$lote || $lote->stock_actual < $item['cantidad']) {
+                    throw new Exception("Stock insuficiente para el lote: " . $item['lote_id']);
+                }
+
+                $lote->decrement('stock_actual', $item['cantidad']);
+
+                DetalleVenta::create([
+                    'venta_id'        => $venta->id,
+                    'lote_id'         => $item['lote_id'],
+                    'medicamento_id'  => $item['medicamento_id'] ?? $lote->medicamento_id,
+                    'cantidad'        => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'valor_unitario'  => $item['valor_unitario'],
+                    'igv'             => $item['igv'],
+                    'subtotal_neto'   => $item['subtotal_neto'],
+                    'subtotal_bruto'  => $item['subtotal_bruto'], // <--- ¡SOLUCIONADO!
+                    'subtotal_descuento' => 0 // Aseguramos que no quede null
+                ]);
+            }
+
+            // 6. ENVIAR A SUNAT
+            if ($tipoComp == 'BOLETA' || $tipoComp == 'FACTURA') {
+                $this->sunatService->transmitirAComprobante($venta);
+            }
 
             return $venta;
         });
-    }
-
-    private function validarStockPrevio(array $items)
-    {
-        foreach ($items as $item) {
-            $loteInfo = DB::table('lotes')
-                ->select('stock_actual', 'codigo_lote')
-                ->where('id', $item['lote_id'])
-                ->first();
-
-
-            if (!$loteInfo || $loteInfo->stock_actual < $item['cantidad']) {
-                $loteCodigo = $loteInfo->codigo_lote ?? '?';
-                return back()->withErrors("Stock insuficiente para: {$item['nombre']} (Lote: $loteCodigo)")->withInput();
-            }
-        }
-    }
-
-    private function bloquearCaja($user, $cajaSesionId)
-    {
-        return CajaSesion::where('id', $cajaSesionId)
-            ->where('user_id', $user->id)
-            ->where('estado', 'ABIERTO')
-            ->lockForUpdate()
-            ->firstOrFail();
-    }
-
-    private function procesarItems(array $items, $caja)
-    {
-        $detalles = [];
-        $acumuladores = [
-            'bruto'        => 0,
-            'op_gravada'   => 0,
-            'op_exonerada' => 0,
-            'igv'          => 0
-        ];
-
-        foreach ($items as $item) {
-            $cantidad = (int)$item['cantidad'];
-
-            $lote = Lote::with('medicamento')
-                ->where('id', $item['lote_id'])
-                ->where('sucursal_id', $caja->sucursal_id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($lote->stock_actual < $cantidad) {
-                throw new Exception("Stock insuficiente: {$item['nombre']}");
-            }
-
-            $lote->decrement('stock_actual', $cantidad);
-
-            $precioVenta = (float)$item['precio_venta'];
-            $subtotal    = $cantidad * $precioVenta;
-
-            $esExoneradoProd = !$lote->medicamento->afecto_igv;
-            $esExoneradoSuc  = $caja->sucursal->impuesto_porcentaje == 0;
-
-            if ($esExoneradoProd || $esExoneradoSuc) {
-                $valorUnitario    = $precioVenta;
-                $igvUnitario      = 0;
-                $tipoAfectacion   = '20';
-                $acumuladores['op_exonerada'] += $subtotal;
-            } else {
-                $valorUnitario    = $precioVenta / 1.18;
-                $igvUnitario      = $precioVenta - $valorUnitario;
-                $tipoAfectacion   = '10';
-                $acumuladores['op_gravada'] += ($valorUnitario * $cantidad);
-                $acumuladores['igv']        += ($igvUnitario * $cantidad);
-            }
-
-            $acumuladores['bruto'] += $subtotal;
-
-            $detalles[] = new DetalleVenta([
-                'lote_id'         => $lote->id,
-                'medicamento_id'  => $lote->medicamento_id,
-                'cantidad'        => $cantidad,
-                'precio_unitario' => $precioVenta,
-                'valor_unitario'  => $valorUnitario,
-                'igv'             => $igvUnitario,
-                'tipo_afectacion' => $tipoAfectacion,
-                'subtotal_bruto'  => $subtotal,
-                'subtotal_neto'   => $subtotal,
-            ]);
-        }
-
-        return ['detalles' => $detalles, 'acumuladores' => $acumuladores];
-    }
-
-    private function calcularTotalesFinales($resultadoItems, $data)
-    {
-        $acum = $resultadoItems['acumuladores'];
-        $descuentoPuntos = isset($data['descuento_puntos']) ? (float)$data['descuento_puntos'] : 0;
-
-        return [
-            'op_gravada'       => $acum['op_gravada'],
-            'op_exonerada'     => $acum['op_exonerada'],
-            'total_igv'        => $acum['igv'],
-            'total_bruto'      => $acum['bruto'],
-            'descuento_puntos' => $descuentoPuntos,
-            'total_neto'       => $acum['bruto'] - $descuentoPuntos
-        ];
-    }
-
-    /**
-     * Sub-proceso: Maneja Puntos (GASTAR y GANAR) de forma dinámica
-     */
-    private function procesarPuntosCliente($clienteId, $data, $totalPagado)
-    {
-        // 1. Validar Cliente
-        if (!$clienteId || $clienteId <= 1) return;
-        $cliente = Cliente::find($clienteId);
-        if (!$cliente) return;
-
-        // 2. GASTAR PUNTOS (Redimir)
-        if (!empty($data['puntos_usados']) && $data['puntos_usados'] > 0) {
-            if ($cliente->puntos >= $data['puntos_usados']) {
-                $cliente->decrement('puntos', $data['puntos_usados']);
-            } else {
-                throw new Exception("El cliente no tiene suficientes puntos para el descuento.");
-            }
-        }
-
-        if ($totalPagado > 0) {
-
-            $config = Configuracion::first();
-            $puntosPorMoneda = $config ? $config->puntos_por_moneda : 1;
-
-            if ($puntosPorMoneda > 0) {
-                $puntosGanados = floor($totalPagado * $puntosPorMoneda);
-
-                if ($puntosGanados > 0) {
-                    $cliente->increment('puntos', $puntosGanados);
-                }
-            }
-        }
-    }
-
-    private function obtenerCorrelativo($serie, $tipoComprobante)
-    {
-        // Buscamos la última venta que tenga ESTA serie y ESTE tipo
-        // Usamos lockForUpdate para evitar duplicados si dos venden a la vez
-        $ultimoNumero = Venta::where('tipo_comprobante', $tipoComprobante)
-            ->where('serie', $serie)
-            ->lockForUpdate()
-            ->max('numero');
-
-        return $ultimoNumero ? ($ultimoNumero + 1) : 1;
     }
 }
