@@ -104,7 +104,8 @@
                         @endif
 
                         <div class="custom-file" style="display:none;" id="divCertificado">
-                            <input type="file" class="custom-file-input input-edit" id="customFile" name="sunat_certificado_path" accept=".pfx,.p12" disabled>
+                            {{-- Agregamos .pem y .txt al accept --}}
+                            <input type="file" class="custom-file-input input-edit" id="customFile" name="sunat_certificado_path" accept=".pfx,.p12,.pem,.txt" disabled>
                             <label class="custom-file-label" for="customFile">Subir nuevo...</label>
                         </div>
                     </div>
