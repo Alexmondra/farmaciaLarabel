@@ -22,14 +22,23 @@ class SunatService
         $config = Configuracion::firstOrFail();
         $see = new See();
 
-        $rutaCert = storage_path('app/' . $config->sunat_certificado_path);
+        // 1. INTENTAMOS OBTENER LA RUTA REAL USANDO "STORAGE"
+        // Storage::path() encuentra el archivo automáticamente, esté en 'private' o donde sea.
+        if ($config->sunat_certificado_path && Storage::exists($config->sunat_certificado_path)) {
+            $rutaCert = Storage::path($config->sunat_certificado_path);
+        } else {
+            $rutaCert = Storage::path('sunat/certificado_prueba.pem');
+        }
 
+        // Validación final de seguridad
         if (!file_exists($rutaCert)) {
-            $rutaCert = storage_path('app/sunat/certificado_prueba.pem');
+            // Este error te ayudará a saber qué pasa si vuelve a fallar
+            throw new Exception("No se encuentra el certificado en: " . $rutaCert);
         }
 
         $see->setCertificate(file_get_contents($rutaCert));
 
+        // 2. Definir si es Producción o Pruebas
         if ($config->sunat_produccion) {
             $see->setService('https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService');
             $see->setClaveSOL($config->empresa_ruc, $config->sunat_sol_user, $config->sunat_sol_pass);
