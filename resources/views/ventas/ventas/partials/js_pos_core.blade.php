@@ -322,6 +322,7 @@
 
             // Recalcular vuelto con el NUEVO total
             if (window.calcularVuelto) window.calcularVuelto(totalFinal);
+            if (typeof validarBotonConfirmar === 'function') validarBotonConfirmar(totalFinal);
         }
 
         // ==========================================
@@ -490,40 +491,79 @@
 
 
         // ==========================================
-        // 4. LOGICA COBRO
+        // 4. LOGICA COBRO, VUELTO Y REFERENCIA (CORREGIDO)
         // ==========================================
+
+        // A. Función para validar si el botón se activa o no
+        function validarBotonConfirmar(totalVenta) {
+            let medio = $('#medio_pago').val();
+            let btn = $('#btn-confirmar-venta');
+
+            // 1. Si no hay venta, bloqueado siempre
+            if (totalVenta <= 0) {
+                btn.prop('disabled', true).removeClass('btn-light').addClass('btn-secondary');
+                return;
+            }
+
+            // 2. Reglas según medio de pago
+            if (medio === 'EFECTIVO') {
+                let pagaCon = parseFloat($('#input-paga-con').val()) || 0;
+
+                // Tolerancia de 0.01 céntimos para evitar errores de decimales
+                if (pagaCon >= (totalVenta - 0.01)) {
+                    // SI ALCANZA EL DINERO -> ACTIVA
+                    btn.prop('disabled', false).removeClass('btn-secondary').addClass('btn-light');
+                } else {
+                    // NO ALCANZA -> BLOQUEA
+                    btn.prop('disabled', true).removeClass('btn-light').addClass('btn-secondary');
+                }
+            } else {
+                // TARJETA/YAPE/PLIN -> SIEMPRE ACTIVO (Referencia es opcional)
+                btn.prop('disabled', false).removeClass('btn-secondary').addClass('btn-light');
+            }
+        }
+
+        // B. Evento: Cuando cambias entre Efectivo / Yape / Tarjeta
         $('#medio_pago').change(function() {
             let metodo = $(this).val();
+            let totalFinal = obtenerTotalActual(); // Usamos función auxiliar
+
             if (metodo === 'EFECTIVO') {
                 $('#bloque-calculadora').slideDown();
+                $('#bloque-referencia').slideUp();
                 $('#input-paga-con').focus();
+                $('#referencia_pago').val('');
             } else {
                 $('#bloque-calculadora').slideUp();
+                $('#bloque-referencia').slideDown();
+                $('#referencia_pago').focus();
                 $('#input-paga-con').val('');
                 $('#txt-vuelto').text('0.00');
             }
+
+            validarBotonConfirmar(totalFinal);
         });
 
+        // C. Evento: ¡ESTE ES EL QUE TE FALTABA! (Cuando escribes el dinero)
         $('#input-paga-con').on('input', function() {
-            // Ahora leemos el texto directamente (que puede ser el precio con descuento)
-            // Nota: Si hay descuento, el HTML es complejo. Mejor tomamos el total calculado en memoria.
-            // Para simplificar, volveremos a calcular el total desde el carrito - descuento.
+            let totalFinal = obtenerTotalActual();
 
-            let totalCarrito = 0;
-            Object.values(carrito).forEach(i => totalCarrito += (i.cantidad * i.precio_venta));
-            let descuento = parseFloat($('#descuento-aplicado-soles').val()) || 0;
-            if (descuento > totalCarrito) descuento = totalCarrito;
-            let totalFinal = totalCarrito - descuento;
-
+            // 1. Calculamos visualmente el vuelto
             calcularVuelto(totalFinal);
+
+            // 2. Validamos si el botón debe prenderse
+            validarBotonConfirmar(totalFinal);
         });
 
+        // D. Función Visual: Calcular Vuelto (Texto Rojo/Verde)
         window.calcularVuelto = function(totalVenta) {
             if ($('#medio_pago').val() !== 'EFECTIVO') return;
+
             let pagaCon = parseFloat($('#input-paga-con').val()) || 0;
             let vuelto = pagaCon - totalVenta;
             let elVuelto = $('#txt-vuelto');
-            if (vuelto < -0.01) { // Pequeña tolerancia flotante
+
+            if (vuelto < -0.01) {
                 elVuelto.text('Falta dinero');
                 elVuelto.parent().removeClass('text-success').addClass('text-danger');
             } else {
@@ -532,50 +572,14 @@
             }
         };
 
-        $('#form-venta').on('submit', function(e) {
-            let items = $('#input-items-json').val();
-            if (items === '[]' || items === '') {
-                e.preventDefault();
-                toastr.error('Carrito vacío.');
-                return;
-            }
-            let tipo = $('#tipo_comprobante').val();
-            let clienteId = $('#cliente_id_hidden').val();
-            if (tipo === 'FACTURA' && !clienteId) {
-                e.preventDefault();
-                toastr.error('Falta RUC para Factura.');
-                return;
-            }
-
-            // Validar pago efectivo
+        // E. Auxiliar para no repetir código de cálculo de total
+        function obtenerTotalActual() {
             let totalCarrito = 0;
             Object.values(carrito).forEach(i => totalCarrito += (i.cantidad * i.precio_venta));
             let descuento = parseFloat($('#descuento-aplicado-soles').val()) || 0;
             if (descuento > totalCarrito) descuento = totalCarrito;
-            let totalFinal = totalCarrito - descuento;
-
-            if ($('#medio_pago').val() === 'EFECTIVO') {
-                let pagaCon = parseFloat($('#input-paga-con').val()) || 0;
-                if ($('#input-paga-con').val().length > 0 && pagaCon < totalFinal) {
-                    e.preventDefault();
-                    toastr.error('El monto de pago es insuficiente.');
-                    $('#input-paga-con').focus().addClass('is-invalid');
-                    return;
-                }
-            }
-
-            // --- INYECTAR PUNTOS Y DESCUENTO AL FORMULARIO ---
-            // Eliminamos inputs previos si existieran para no duplicar
-            $(this).find('input[name="puntos_usados"]').remove();
-            $(this).find('input[name="descuento_puntos"]').remove();
-
-            let puntosUsados = $('#input-puntos-usar').val();
-            // Solo enviamos si realmente se aplicó un descuento > 0
-            if (descuento > 0 && puntosUsados > 0) {
-                $(this).append(`<input type="hidden" name="puntos_usados" value="${puntosUsados}">`);
-                $(this).append(`<input type="hidden" name="descuento_puntos" value="${descuento.toFixed(2)}">`);
-            }
-        });
+            return totalCarrito - descuento;
+        }
 
         // ==========================================
         // 5. CATEGORIAS TECLADO

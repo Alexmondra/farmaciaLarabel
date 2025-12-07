@@ -38,7 +38,12 @@
                     </span>
                 </div>
 
-                <input type="number" id="input-puntos-usar" class="form-control text-center font-weight-bold text-primary" placeholder="Pts a usar..." min="0">
+                <input type="number"
+                    id="input-puntos-usar"
+                    name="puntos_usados"
+                    class="form-control text-center font-weight-bold text-primary"
+                    placeholder="Pts a usar..."
+                    min="0">
 
                 <div class="input-group-append">
                     <span class="input-group-text bg-white text-success font-weight-bold border-info" style="border-right: 0;">
@@ -52,7 +57,10 @@
                     </button>
                 </div>
             </div>
-            <input type="hidden" id="descuento-aplicado-soles" value="0">
+            <input type="hidden"
+                id="descuento-aplicado-soles"
+                name="descuento_puntos"
+                value="0">
         </div>
     </div>
 </div>

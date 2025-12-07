@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\DetalleVenta;
 use App\Models\Ventas\CajaSesion;
+use App\Models\Ventas\Cliente;
+use App\Models\Configuracion;
 use App\Models\Inventario\Lote;
 use App\Models\User;
 use App\Services\Sunat\SunatService;
@@ -24,51 +26,48 @@ class VentaService
     {
         return DB::transaction(function () use ($user, $data) {
 
+            // ---------------------------------------------------
             // 1. CARGAR CAJA Y SUCURSAL
-            // Usamos la sucursal de la CAJA (Así evitamos el error "on null" si eres Admin)
+            // ---------------------------------------------------
             $caja = CajaSesion::with('sucursal')
                 ->where('id', $data['caja_sesion_id'])
                 ->where('estado', 'ABIERTO')
                 ->first();
 
-            if (!$caja) {
-                throw new Exception("La caja seleccionada está cerrada o no existe.");
-            }
-
-            if (!$caja->sucursal) {
-                throw new Exception("La caja abierta (ID {$caja->id}) no tiene sucursal asignada.");
-            }
+            if (!$caja) throw new Exception("La caja seleccionada está cerrada o no existe.");
+            if (!$caja->sucursal) throw new Exception("La caja abierta no tiene sucursal asignada.");
 
             $sucursal = $caja->sucursal;
 
+            // ---------------------------------------------------
             // 2. PROCESAR ITEMS
+            // ---------------------------------------------------
             $items = json_decode($data['items'], true);
             $itemsProcesados = [];
-            $totalNeto = 0;   // Total a Pagar (Con IGV)
-            $totalBruto = 0;  // Total Base (Sin IGV)
-            $totalIGV = 0;    // Total Impuestos
+
+            // Variable 1: Suma total de los productos (Precio Regular)
+            $sumaPrecioVentaTotal = 0;
 
             foreach ($items as $index => $item) {
-                // Solución al error "Undefined array key 'id'"
                 $loteId = $item['id'] ?? $item['lote_id'] ?? null;
-
                 if (!$loteId) throw new Exception("Error en Item #" . ($index + 1) . ": Falta ID del producto.");
 
                 $precioVenta = (float) ($item['precio_venta'] ?? $item['precio_unitario'] ?? 0);
                 $cantidad = (int) $item['cantidad'];
 
-                // Cálculos por ITEM
-                $valorUnitario = $precioVenta / 1.18; // Precio sin IGV
-                $igvUnitario = $precioVenta - $valorUnitario;
+                // Cálculos base por item
 
-                $subtotalNeto = $precioVenta * $cantidad; // Precio x Cantidad
-                $subtotalBruto = $valorUnitario * $cantidad; // Base x Cantidad
+                // Obtenemos el factor (Ej: 1.18 o 1.00)
+                $factor = 1 + ($sucursal->impuesto_porcentaje / 100);
+                // Cálculos
+                $valorUnitario = $precioVenta / $factor;
+                $igvUnitario   = $precioVenta - $valorUnitario;
+
+                $subtotalNeto = $precioVenta * $cantidad;
+                $subtotalBruto = $valorUnitario * $cantidad;
                 $igvTotal = $igvUnitario * $cantidad;
 
-                // Acumuladores Generales
-                $totalNeto += $subtotalNeto;
-                $totalBruto += $subtotalBruto;
-                $totalIGV += $igvTotal;
+                $sumaPrecioVentaTotal += $subtotalNeto;
 
                 $itemsProcesados[] = [
                     'lote_id' => $loteId,
@@ -78,11 +77,31 @@ class VentaService
                     'valor_unitario' => $valorUnitario,
                     'igv' => $igvTotal,
                     'subtotal_neto' => $subtotalNeto,
-                    'subtotal_bruto' => $subtotalBruto // <--- ¡AQUÍ ESTABA EL FALTANTE!
+                    'subtotal_bruto' => $subtotalBruto
                 ];
             }
 
-            // 3. GENERAR SERIE Y NUMERO
+            // ---------------------------------------------------
+            // 3. APLICAR DESCUENTOS POR PUNTOS
+            // ---------------------------------------------------
+            $descuentoDinero = isset($data['descuento_puntos']) ? (float)$data['descuento_puntos'] : 0;
+            $puntosUsados = isset($data['puntos_usados']) ? (int)$data['puntos_usados'] : 0;
+
+            // Seguridad: El descuento no puede ser mayor al total
+            if ($descuentoDinero > $sumaPrecioVentaTotal) {
+                $descuentoDinero = $sumaPrecioVentaTotal;
+            }
+
+            // Variable 2: Total que realmente paga el cliente (Variable UNIFICADA)
+            $totalPagarCliente = $sumaPrecioVentaTotal - $descuentoDinero;
+            // Recálculo de Bases para SUNAT (Proporcional)
+            $opGravadaFinal = $totalPagarCliente / 1.18;
+            $totalIgvFinal = $totalPagarCliente - $opGravadaFinal;
+
+
+            // ---------------------------------------------------
+            // 4. GENERAR SERIE Y NUMERO
+            // ---------------------------------------------------
             $tipoComp = $data['tipo_comprobante'];
             $serie = ($tipoComp == 'FACTURA' ? $sucursal->serie_factura : $sucursal->serie_boleta)
                 ?: ($tipoComp == 'FACTURA' ? 'F001' : 'B001');
@@ -92,7 +111,9 @@ class VentaService
                 ->max('numero');
             $nuevoNumero = $ultimoCorrelativo ? ($ultimoCorrelativo + 1) : 1;
 
-            // 4. CREAR VENTA
+            // ---------------------------------------------------
+            // 5. CREAR VENTA (GUARDANDO LOS DATOS CORRECTOS)
+            // ---------------------------------------------------
             $venta = Venta::create([
                 'caja_sesion_id'   => $caja->id,
                 'sucursal_id'      => $sucursal->id,
@@ -103,20 +124,25 @@ class VentaService
                 'numero'           => $nuevoNumero,
                 'fecha_emision'    => now(),
                 'medio_pago'       => $data['medio_pago'],
+                'referencia_pago'  => $data['referencia_pago'] ?? null,
                 'estado'           => 'EMITIDA',
 
-                'total_bruto'     => round($totalBruto, 2),
-                'total_descuento' => 0,
-                'total_neto'      => round($totalNeto, 2),
+                // Totales
+                'total_bruto'     => round($opGravadaFinal, 2),
+                'total_descuento' => round($descuentoDinero, 2), // ¡Aquí usamos $descuentoDinero!
+                'total_neto'      => round($totalPagarCliente, 2), // ¡Aquí usamos $totalPagarCliente!
 
-                'op_gravada'      => round($totalBruto, 2),
-                'op_exonerada'    => 0,
+                // Impuestos
+                'op_gravada'   => ($sucursal->impuesto_porcentaje > 0) ? $opGravadaFinal : 0,
+                'op_exonerada' => ($sucursal->impuesto_porcentaje == 0) ? $totalPagarCliente : 0, // Todo va aquí
                 'op_inafecta'     => 0,
-                'total_igv'       => round($totalIGV, 2),
-                'porcentaje_igv'  => 18.00,
+                'total_igv'    => ($sucursal->impuesto_porcentaje > 0) ? $totalIgvFinal : 0,
+                'porcentaje_igv' => $sucursal->impuesto_porcentaje,
             ]);
 
-            // 5. GUARDAR DETALLES
+            // ---------------------------------------------------
+            // 6. GUARDAR DETALLES
+            // ---------------------------------------------------
             foreach ($itemsProcesados as $item) {
                 $lote = Lote::lockForUpdate()->find($item['lote_id']);
 
@@ -135,12 +161,43 @@ class VentaService
                     'valor_unitario'  => $item['valor_unitario'],
                     'igv'             => $item['igv'],
                     'subtotal_neto'   => $item['subtotal_neto'],
-                    'subtotal_bruto'  => $item['subtotal_bruto'], // <--- ¡SOLUCIONADO!
-                    'subtotal_descuento' => 0 // Aseguramos que no quede null
+                    'subtotal_bruto'  => $item['subtotal_bruto'],
+                    'subtotal_descuento' => 0
                 ]);
             }
 
-            // 6. ENVIAR A SUNAT
+            // ---------------------------------------------------
+            // 7. ACTUALIZAR PUNTOS DEL CLIENTE
+            // ---------------------------------------------------
+            if ($data['cliente_id']) {
+                $cliente = Cliente::find($data['cliente_id']);
+                if ($cliente) {
+
+                    // A. RESTAR PUNTOS (Si usó descuento)
+                    if ($puntosUsados > 0) {
+                        if ($cliente->puntos >= $puntosUsados) {
+                            $cliente->decrement('puntos', $puntosUsados);
+                        } else {
+                            $cliente->update(['puntos' => 0]);
+                        }
+                    }
+
+                    // B. SUMAR PUNTOS (Por la nueva compra)
+                    $config = Configuracion::first();
+                    $ratio = $config->puntos_por_moneda ?? 1;
+
+                    // Usamos la misma variable $totalPagarCliente del paso 3
+                    $puntosGanados = intval($totalPagarCliente * $ratio);
+
+                    if ($puntosGanados > 0) {
+                        $cliente->increment('puntos', $puntosGanados);
+                    }
+                }
+            }
+
+            // ---------------------------------------------------
+            // 8. ENVIAR A SUNAT
+            // ---------------------------------------------------
             if ($tipoComp == 'BOLETA' || $tipoComp == 'FACTURA') {
                 $this->sunatService->transmitirAComprobante($venta);
             }

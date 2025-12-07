@@ -20,7 +20,7 @@ return new class extends Migration
             // Datos del Comprobante
             $table->string('tipo_comprobante', 20);   // BOLETA, FACTURA, TICKET
             $table->string('serie', 10)->nullable();  // B001, F001
-            $table->string('numero', 20)->nullable(); // 0000045
+            $table->unsignedBigInteger('numero'); // 0000045
             $table->dateTime('fecha_emision');
 
             // --- BLOQUE ECONÓMICO (TOTALES) ---
@@ -38,6 +38,7 @@ return new class extends Migration
 
             // Datos de Pago y Estado
             $table->string('medio_pago', 30)->nullable(); // EFECTIVO, YAPE, PLIN, TARJETA
+            $table->string('referencia_pago', 50)->nullable();
             $table->string('estado', 30)->default('EMITIDA');
             $table->text('observaciones')->nullable();
 

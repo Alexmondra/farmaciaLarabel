@@ -98,6 +98,7 @@ class VentaController extends Controller
             'items'            => ['required', 'string'],
             'puntos_usados'    => ['nullable', 'integer', 'min:0'],
             'descuento_puntos' => ['nullable', 'numeric', 'min:0'],
+            'referencia_pago'  => ['nullable', 'string', 'max:50'],
         ]);
 
         // Ajuste de datos básicos

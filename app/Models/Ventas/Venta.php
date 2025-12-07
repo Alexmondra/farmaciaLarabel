@@ -47,6 +47,7 @@ class Venta extends Model
 
         // Otros
         'medio_pago',
+        'referencia_pago',
         'estado',
         'observaciones',
     ];
