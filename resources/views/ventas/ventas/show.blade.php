@@ -1,40 +1,60 @@
 @extends('adminlte::page')
 
-@section('title', 'Ver Comprobante')
+@section('title', 'Comprobante Venta')
 
 @section('content_header')
-<div class="no-print">
+{{-- Cabecera oculta al imprimir --}}
+<div class="no-print animate__animated animate__fadeInDown">
     <div class="d-flex justify-content-between align-items-center">
-        <h1>
-            <i class="fas fa-file-invoice text-teal mr-2"></i>
-            {{ $venta->tipo_comprobante }}: {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}
+        <h1 class="text-bold">
+            <i class="fas fa-receipt text-teal mr-2"></i>
+            <span class="d-none d-sm-inline">Comprobante:</span>
+            {{ $venta->tipo_comprobante }}
+            <span class="text-muted" style="font-size: 0.8em;">{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</span>
         </h1>
-        <a href="{{ route('ventas.create') }}" class="btn btn-primary shadow-sm">
-            <i class="fas fa-cash-register mr-1"></i> Nueva Venta
-        </a>
+        <div>
+            <a href="{{ route('ventas.create') }}" class="btn btn-primary btn-lg shadow-sm">
+                <i class="fas fa-cash-register mr-1"></i> <span class="d-none d-md-inline">Nueva Venta</span>
+            </a>
+        </div>
     </div>
 </div>
 @stop
 
 @section('content')
-<div class="container-fluid pb-5">
+<div class="container-fluid pb-5 animate__animated animate__fadeIn">
 
-    {{-- BARRA DE HERRAMIENTAS (NO SE IMPRIME) --}}
-    <div class="card shadow-sm no-print mb-4 border-0">
-        <div class="card-body py-2">
+    {{-- === BARRA DE ACCIONES (FUTURISTA) === --}}
+    <div class="card shadow-lg no-print mb-4 border-0 card-glass">
+        <div class="card-body p-3">
             <div class="row align-items-center">
-                <div class="col-md-4">
-                    <div class="btn-group w-100 shadow-sm" role="group">
-                        <button type="button" class="btn btn-dark" id="btn-ticket" onclick="verTicket()">
-                            <i class="fas fa-receipt mr-2"></i> Ticket (80mm)
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <div class="btn-group w-100 shadow-sm custom-toggle" role="group">
+                        <button type="button" class="btn btn-outline-dark active-view" id="btn-ticket" onclick="cambiarVista('ticket')">
+                            <i class="fas fa-receipt mr-2"></i> Ticket
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" id="btn-a4" onclick="verA4()">
-                            <i class="far fa-file-pdf mr-2"></i> Formato A4
+                        <button type="button" class="btn btn-outline-dark" id="btn-a4" onclick="cambiarVista('a4')">
+                            <i class="far fa-file-pdf mr-2"></i> Hoja A4
                         </button>
                     </div>
                 </div>
+
                 <div class="col-md-8 text-right">
-                    <button onclick="window.print()" class="btn btn-danger font-weight-bold shadow px-4">
+                    {{-- Botón Enviar (Nuevo) --}}
+                    <div class="btn-group mr-2">
+                        <button type="button" class="btn btn-info shadow-sm dropdown-toggle" data-toggle="dropdown">
+                            <i class="fab fa-whatsapp mr-1"></i> Enviar
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item" href="#"><i class="fab fa-whatsapp text-success mr-2"></i> Enviar por WhatsApp</a>
+                            <a class="dropdown-item" href="#"><i class="fas fa-envelope text-primary mr-2"></i> Enviar por Correo</a>
+                        </div>
+                    </div>
+
+
+
+                    {{-- Botón Imprimir --}}
+                    <button onclick="window.print()" class="btn btn-danger btn-lg font-weight-bold shadow px-4 pulse-btn">
                         <i class="fas fa-print mr-2"></i> IMPRIMIR
                     </button>
                 </div>
@@ -45,113 +65,154 @@
     {{-- ======================================================= --}}
     {{-- VISTA TICKET (80mm) --}}
     {{-- ======================================================= --}}
-    <div id="wrapper-ticket" class="d-flex justify-content-center">
-        <div class="ticket-box">
+    <div id="wrapper-ticket" class="d-flex justify-content-center view-container">
+        <div class="ticket-box elevation-3">
+
+            {{-- CABECERA --}}
             <div class="text-center mb-2">
-                <h5 class="font-weight-bold mb-1 mt-2 text-uppercase" style="font-size: 1.1rem;">{{ $venta->sucursal->nombre }}</h5>
-                <p class="small mb-0">{{ $venta->sucursal->direccion }}</p>
-                <p class="small mb-0 font-weight-bold">RUC: {{ $venta->sucursal->ruc ?? '20000000001' }}</p>
-                <p class="small">{{ $venta->sucursal->telefono ?? '' }}</p>
-            </div>
-            <div class="text-center border-top border-bottom border-dark py-2 mb-2">
-                <h6 class="font-weight-bold mb-0">{{ $venta->tipo_comprobante }} ELECTRÓNICA</h6>
-                <h6 class="font-weight-bold mb-0">{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</h6>
-                <small class="d-block mt-1">Fecha: {{ $venta->fecha_emision->format('d/m/Y H:i:s') }}</small>
+                @if(isset($logoBase64))
+                <img src="{{ $logoBase64 }}" style="max-height: 55px; margin-bottom: 5px; filter: grayscale(100%);">
+                <br>
+                @endif
+                <h5 class="font-weight-bold mb-1 text-uppercase" style="font-size: 1.1rem;">{{ $venta->sucursal->nombre }}</h5>
+                <p class="mb-0 small">{{ $venta->sucursal->direccion }}</p>
+                <p class="mb-0 small font-weight-bold">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</p>
+                <p class="mb-0 small">Tel: {{ $venta->sucursal->telefono }}</p>
             </div>
 
-            {{-- ... (TABLA DE PRODUCTOS IGUAL QUE ANTES) ... --}}
-            <table class="table table-sm table-borderless small mb-2" style="font-size: 11px;">
+            {{-- INFO VENTA --}}
+            <div class="border-top border-bottom border-dark py-1 mb-2">
+                <div class="d-flex justify-content-between font-weight-bold small">
+                    <span>{{ $venta->tipo_comprobante }}</span>
+                    <span>{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</span>
+                </div>
+                <div class="mt-1 small" style="line-height: 1.2;">
+                    <div>Fecha: {{ $venta->fecha_emision->format('d/m/Y H:i') }}</div>
+                    <div>Pago: <b>{{ $venta->medio_pago }}</b></div>
+                    <div>Cliente: {{ Str::limit($venta->cliente->nombre_completo, 22) }}</div>
+                    @if($venta->cliente->documento != '00000000')
+                    <div>{{ $venta->cliente->tipo_documento }}: {{ $venta->cliente->documento }}</div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- ITEMS --}}
+            <table class="table table-sm table-borderless mb-2 w-100">
                 <thead class="border-bottom border-dark">
-                    <tr>
-                        <th class="pl-0">Cant.</th>
-                        <th>Descripción</th>
-                        <th class="text-right pr-0">Total</th>
+                    <tr class="small text-uppercase">
+                        <th class="pl-0 text-left" style="width: 15%;">Cant</th>
+                        <th class="text-left" style="width: 55%;">Descrip.</th>
+                        <th class="text-right pr-0" style="width: 30%;">Total</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="small">
                     @foreach($venta->detalles as $det)
                     <tr>
-                        <td class="pl-0 font-weight-bold align-top">{{ $det->cantidad }}</td>
-                        <td class="align-top">{{ Str::limit($det->medicamento->nombre, 18) }}</td>
-                        <td class="text-right pr-0 align-top font-weight-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
+                        <td class="pl-0 text-left align-top font-weight-bold">{{ $det->cantidad }}</td>
+                        <td class="text-left align-top">{{ Str::limit($det->medicamento->nombre, 18) }}</td>
+                        <td class="text-right pr-0 align-top">{{ number_format($det->subtotal_neto, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
 
-            <div class="border-top border-dark pt-1 mt-1" style="font-size: 11px;">
-                <div class="d-flex justify-content-between mt-1 pt-1 border-top border-dark" style="font-size: 14px;">
-                    <span class="font-weight-bold">TOTAL</span>
-                    <span class="font-weight-bold">S/ {{ number_format($venta->total_neto, 2) }}</span>
-                </div>
-                <p class="text-center small mt-2 mb-0">SON: {{ $montoLetras }}</p>
+            {{-- TOTALES --}}
+            <div class="border-top border-dark pt-1">
+                <table class="w-100 mb-1 small">
+                    <tr>
+                        <td class="text-right pr-2">SUBTOTAL:</td>
+                        <td class="text-right font-weight-bold">{{ number_format($venta->op_gravada, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-right pr-2">IGV (18%):</td>
+                        <td class="text-right font-weight-bold">{{ number_format($venta->total_igv, 2) }}</td>
+                    </tr>
+                    @if($venta->total_descuento > 0)
+                    <tr>
+                        <td class="text-right pr-2">DESCUENTO:</td>
+                        <td class="text-right font-weight-bold">-{{ number_format($venta->total_descuento, 2) }}</td>
+                    </tr>
+                    @endif
+                    <tr style="font-size: 13px; border-top: 1px dashed #000;">
+                        <td class="text-right pr-2 pt-1"><b>TOTAL:</b></td>
+                        <td class="text-right pt-1 text-nowrap"><b>S/ {{ number_format($venta->total_neto, 2) }}</b></td>
+                    </tr>
+                </table>
 
-                {{-- ¡AQUÍ ESTÁ EL QR QUE FALTABA! --}}
-                <div class="text-center mt-3">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($qrString) }}"
-                        style="width: 100px; height: 100px;">
-                    <p class="small mt-1 mb-0">Representación impresa de la<br>{{ $venta->tipo_comprobante }} ELECTRÓNICA</p>
+                <p class="text-center mt-1 mb-2 small text-uppercase">SON: {{ $montoLetras }}</p>
+
+                <div class="text-center mt-2">
+                    <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 85px; height: 85px;">
+                    <p class="mt-1 mb-0 font-weight-bold" style="font-size: 9px;">GRACIAS POR SU PREFERENCIA</p>
+                    <p class="mb-0 mt-1" style="font-size: 8px; line-height: 1.3; color: #000;">
+                        Representación impresa de la<br>
+                        <strong class="text-uppercase">{{ $venta->tipo_comprobante }} ELECTRÓNICA</strong><br>
+                        Revisar en: <b>mundofarma.online/consulta</b>
+                    </p>
                 </div>
-                {{-- FIN DEL QR --}}
             </div>
         </div>
     </div>
 
     {{-- ======================================================= --}}
-    {{-- VISTA A4                                                --}}
+    {{-- VISTA A4 (DISEÑO IDÉNTICO AL PDF) --}}
     {{-- ======================================================= --}}
-    <div id="wrapper-a4" class="d-none justify-content-center">
-        <div class="a4-box bg-white">
+    <div id="wrapper-a4" class="d-none justify-content-center view-container">
+        <div class="a4-box bg-white elevation-3 position-relative">
 
-            {{-- CABECERA A4 --}}
-            <div class="row mb-4">
-                <div class="col-7">
-                    <h3 class="font-weight-bold text-uppercase text-dark">{{ $venta->sucursal->nombre }}</h3>
-                    <div class="text-muted small">
-                        <p class="mb-0">{{ $venta->sucursal->direccion }}</p>
-                        <p class="mb-0">Tel: {{ $venta->sucursal->telefono }}</p>
-                    </div>
-                </div>
-                <div class="col-5">
-                    <div class="border border-dark rounded text-center p-3">
-                        <h5 class="font-weight-bold">R.U.C. {{ $venta->sucursal->ruc ?? '20000000001' }}</h5>
-                        <div class="bg-dark text-white py-1 my-2 font-weight-bold header-box-print">
-                            {{ $venta->tipo_comprobante }} ELECTRÓNICA
+            {{-- HEADER A4 --}}
+            <table class="w-100 mb-4">
+                <tr>
+                    <td width="20%" class="align-middle">
+                        @if(isset($logoBase64))
+                        <img src="{{ $logoBase64 }}" style="max-width: 120px; max-height: 80px;">
+                        @endif
+                    </td>
+                    <td width="50%" class="text-center align-middle">
+                        <div class="h5 font-weight-bold text-uppercase mb-1">{{ $config->empresa_razon_social ?? $venta->sucursal->nombre }}</div>
+                        <div class="font-weight-bold text-secondary mb-1">{{ $venta->sucursal->nombre }}</div>
+                        <div class="small text-muted" style="line-height: 1.3;">
+                            {{ $venta->sucursal->direccion }}<br>
+                            Tel: {{ $venta->sucursal->telefono }} - {{ $venta->sucursal->email }}
                         </div>
-                        <h4 class="mb-0 font-weight-bold">{{ $venta->serie }} - {{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</h4>
+                    </td>
+                    <td width="30%" class="align-top text-right">
+                        <div class="ruc-box">
+                            <div class="h5 font-weight-bold mb-1">R.U.C. {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
+                            <div class="doc-type-box">{{ $venta->tipo_comprobante }} ELECTRÓNICA</div>
+                            <div class="h5 font-weight-bold mb-0">{{ $venta->serie }} - {{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            {{-- CLIENTE A4 --}}
+            <div class="client-box mb-4">
+                <div class="row m-0">
+                    <div class="col-8 pl-0">
+                        <span class="font-weight-bold">Cliente:</span> {{ $venta->cliente->nombre_completo }}<br>
+                        <span class="font-weight-bold">{{ $venta->cliente->tipo_documento }}:</span> {{ $venta->cliente->documento }}<br>
+                        @if(!empty($venta->cliente->direccion) && $venta->cliente->direccion != '-')
+                        <span class="font-weight-bold">Dirección:</span> {{ Str::limit($venta->cliente->direccion, 80) }}
+                        @endif
+                    </div>
+                    <div class="col-4 pr-0 border-left">
+                        <span class="font-weight-bold">Fecha:</span> {{ $venta->fecha_emision->format('d/m/Y H:i:s') }}<br>
+                        <span class="font-weight-bold">Pago:</span> {{ $venta->medio_pago }}<br>
+                        <span class="font-weight-bold">Moneda:</span> SOLES
                     </div>
                 </div>
             </div>
 
-            {{-- DATOS CLIENTE --}}
-            <div class="card mb-4 border-dark shadow-none">
-                <div class="card-body p-3 small">
-                    <div class="row">
-                        <div class="col-sm-7 border-right">
-                            <h6 class="font-weight-bold text-secondary text-uppercase mb-2">Cliente</h6>
-                            <p class="mb-1"><strong>Razón Social:</strong> {{ $venta->cliente->nombre_completo }}</p>
-                            <p class="mb-1"><strong>Documento:</strong> {{ $venta->cliente->documento }}</p>
-                            <p class="mb-0"><strong>Dirección:</strong> {{ $venta->cliente->direccion ?? '-' }}</p>
-                        </div>
-                        <div class="col-sm-5 pl-4">
-                            <h6 class="font-weight-bold text-secondary text-uppercase mb-2">Detalles</h6>
-                            <p class="mb-1"><strong>Fecha:</strong> {{ $venta->fecha_emision->format('d/m/Y') }}</p>
-                            <p class="mb-1"><strong>Hora:</strong> {{ $venta->fecha_emision->format('H:i:s') }}</p>
-                            <p class="mb-0"><strong>Pago:</strong> {{ $venta->medio_pago }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- TABLA A4 --}}
-            <table class="table table-bordered table-sm text-sm mb-4 table-print">
-                <thead class="bg-dark text-white">
-                    <tr class="text-center text-uppercase">
-                        <th style="width: 50px;">Cant.</th>
-                        <th style="width: 60px;">Und.</th>
-                        <th>Descripción</th>
-                        <th style="width: 100px;">P. Unit</th>
-                        <th style="width: 100px;">Total</th>
+            {{-- ITEMS A4 --}}
+            <table class="table-items w-100 mb-4">
+                <thead>
+                    <tr>
+                        <th width="8%">CANT</th>
+                        <th width="10%">UND</th>
+                        <th class="text-left pl-3">DESCRIPCIÓN</th>
+                        <th width="12%">P.UNIT</th>
+                        <th width="12%">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,9 +220,11 @@
                     <tr>
                         <td class="text-center">{{ $det->cantidad }}</td>
                         <td class="text-center">NIU</td>
-                        <td>
+                        <td class="pl-3">
                             <span class="font-weight-bold">{{ $det->medicamento->nombre }}</span>
+                            @if($det->medicamento->presentacion)
                             <br><small class="text-muted">{{ $det->medicamento->presentacion }}</small>
+                            @endif
                         </td>
                         <td class="text-right">{{ number_format($det->precio_unitario, 2) }}</td>
                         <td class="text-right font-weight-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
@@ -170,45 +233,46 @@
                 </tbody>
             </table>
 
-            {{-- TOTALES --}}
-            <div class="row" style="page-break-inside: avoid;">
-                <div class="col-8">
-                    <div class="border p-2">
-                        <p class="small mb-1"><strong>SON:</strong> {{ $montoLetras }}</p>
-                        <div class="d-flex align-items-center mt-2">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ urlencode($qrString) }}" style="width: 80px;">
+            {{-- FOOTER A4 (ABSOLUTO AL FONDO) --}}
+            <div class="footer-print-area">
+                <div class="row m-0">
+                    {{-- QR y Legales --}}
+                    <div class="col-8 pl-0">
+                        <div class="d-flex">
+                            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 85px; height: 85px;">
+                            <div class="ml-3 mt-1">
+                                <div class="font-weight-bold small mb-1">{{ $montoLetras }}</div>
+                                <div style="font-size: 10px; color: #666; line-height: 1.4;">
+                                    Representación impresa de la {{ $venta->tipo_comprobante }} ELECTRÓNICA.<br>
+                                    Autorizado mediante Resolución N.° 300-2014/SUNAT.<br>
+                                    Consulte validez en: <a href="https://mundofarma.online" class="text-dark font-weight-bold text-decoration-none">mundofarma.online</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-4">
-                    <table class="table table-sm table-clear text-right small">
-                        @if($venta->op_gravada > 0)
-                        <tr>
-                            <td><strong>Op. Gravada:</strong></td>
-                            <td>{{ number_format($venta->op_gravada, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>I.G.V. (18%):</strong></td>
-                            <td>{{ number_format($venta->total_igv, 2) }}</td>
-                        </tr>
-                        @endif
-                        @if($venta->op_exonerada > 0)
-                        <tr>
-                            <td><strong>Op. Exonerada:</strong></td>
-                            <td>{{ number_format($venta->op_exonerada, 2) }}</td>
-                        </tr>
-                        @endif
-                        @if($venta->total_descuento > 0)
-                        <tr>
-                            <td class="text-danger">Desc. Total:</td>
-                            <td class="text-danger">- {{ number_format($venta->total_descuento, 2) }}</td>
-                        </tr>
-                        @endif
-                        <tr class="bg-dark text-white footer-print">
-                            <td class="py-2"><strong>TOTAL:</strong></td>
-                            <td class="py-2"><strong>S/ {{ number_format($venta->total_neto, 2) }}</strong></td>
-                        </tr>
-                    </table>
+                    {{-- Totales --}}
+                    <div class="col-4 pr-0">
+                        <table class="w-100 small mb-2">
+                            <tr>
+                                <td class="text-right font-weight-bold">SUBTOTAL:</td>
+                                <td class="text-right">S/ {{ number_format($venta->op_gravada, 2) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right font-weight-bold">I.G.V. (18%):</td>
+                                <td class="text-right">S/ {{ number_format($venta->total_igv, 2) }}</td>
+                            </tr>
+                            @if($venta->total_descuento > 0)
+                            <tr>
+                                <td class="text-right font-weight-bold text-danger">DESCUENTO:</td>
+                                <td class="text-right text-danger">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
+                            </tr>
+                            @endif
+                        </table>
+                        <div class="bg-dark text-white p-2 d-flex justify-content-between font-weight-bold rounded">
+                            <span>TOTAL:</span>
+                            <span>S/ {{ number_format($venta->total_neto, 2) }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -219,65 +283,181 @@
 
 @section('js')
 <script>
-    function verTicket() {
-        $('#wrapper-ticket').removeClass('d-none').addClass('d-flex');
-        $('#wrapper-a4').addClass('d-none').removeClass('d-flex');
+    // 1. DETECTAR TECLA ENTER PARA IMPRIMIR
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Evita que el Enter haga scroll o click en otro lado
+            window.print(); // Abre el diálogo de impresión
+        }
+    });
 
-        $('#btn-ticket').addClass('btn-dark').removeClass('btn-outline-secondary');
-        $('#btn-a4').removeClass('btn-dark').addClass('btn-outline-secondary');
-    }
+    // 2. FUNCIONES DE VISTA (TICKET / A4)
+    function cambiarVista(tipo) {
+        if (tipo === 'ticket') {
+            $('#wrapper-ticket').removeClass('d-none').addClass('d-flex');
+            $('#wrapper-a4').addClass('d-none').removeClass('d-flex');
 
-    function verA4() {
-        $('#wrapper-ticket').addClass('d-none').removeClass('d-flex');
-        $('#wrapper-a4').removeClass('d-none').addClass('d-flex');
+            // Estilos de botones
+            $('#btn-ticket').addClass('active-view').removeClass('btn-outline-dark').addClass('btn-dark');
+            $('#btn-a4').removeClass('active-view').addClass('btn-outline-dark').removeClass('btn-dark');
+        } else {
+            $('#wrapper-ticket').addClass('d-none').removeClass('d-flex');
+            $('#wrapper-a4').removeClass('d-none').addClass('d-flex');
 
-        $('#btn-ticket').removeClass('btn-dark').addClass('btn-outline-secondary');
-        $('#btn-a4').addClass('btn-dark').removeClass('btn-outline-secondary');
+            // Estilos de botones
+            $('#btn-ticket').removeClass('active-view').addClass('btn-outline-dark').removeClass('btn-dark');
+            $('#btn-a4').addClass('active-view').removeClass('btn-outline-dark').addClass('btn-dark');
+        }
     }
 </script>
 @stop
 
 @section('css')
 <style>
-    /* PANTALLA */
+    /* === VARIABLES PARA MODO OSCURO (AdminLTE support) === */
+    :root {
+        --paper-bg: #fff;
+        --paper-text: #000;
+    }
+
+    /* En modo oscuro, ajustamos la UI de pantalla, pero NO el papel */
+    .dark-mode .card-glass {
+        background: rgba(52, 58, 64, 0.9);
+        backdrop-filter: blur(10px);
+    }
+
+    .dark-mode .ticket-box,
+    .dark-mode .a4-box {
+        border: 5px solid #444;
+    }
+
+    /* Borde visual en pantalla */
+
+    /* === ESTILOS VISUALES GENERALES === */
+    .card-glass {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s;
+    }
+
+    .pulse-btn {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
+    }
+
+    /* ESTILOS INTERNOS DE LOS DOCUMENTOS */
+    .ruc-box {
+        border: 2px solid #000;
+        border-radius: 8px;
+        text-align: center;
+        padding: 10px;
+        background: #fff;
+        width: 100%;
+        color: #000;
+    }
+
+    .doc-type-box {
+        background: #000;
+        color: #fff;
+        padding: 5px;
+        margin: 6px 0;
+        font-weight: bold;
+        display: block;
+    }
+
+    .client-box {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 11px;
+        color: #333;
+    }
+
+    .table-items thead th {
+        background: #eee;
+        border-bottom: 2px solid #000;
+        padding: 8px;
+        font-size: 10px;
+        font-weight: bold;
+        text-align: center;
+        color: #000;
+    }
+
+    .table-items td {
+        border-bottom: 1px solid #eee;
+        padding: 8px;
+        font-size: 11px;
+        vertical-align: middle;
+        color: #000;
+    }
+
+    /* === VISTA PANTALLA TICKET === */
     .ticket-box {
         width: 80mm;
         margin: 20px auto;
-        padding: 10px;
+        padding: 15px;
         background: #fff;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        color: #000;
         font-family: 'Courier New', Courier, monospace;
     }
 
+    /* === VISTA PANTALLA A4 === */
     .a4-box {
         width: 210mm;
         min-height: 297mm;
         margin: 20px auto;
-        padding: 40px;
+        padding: 15mm;
         background: #fff;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-        font-family: sans-serif;
+        color: #000;
+        font-family: Arial, Helvetica, sans-serif;
+        position: relative;
+        /* Para el footer absoluto */
     }
 
-    /* IMPRESIÓN */
+    /* Footer en Pantalla (Simulado) */
+    .footer-print-area {
+        position: absolute;
+        bottom: 15mm;
+        left: 15mm;
+        right: 15mm;
+    }
+
+
+    /* === MODO IMPRESIÓN (CROSS-BROWSER FIJO) === */
     @media print {
         @page {
             size: A4 portrait;
             margin: 0;
-            /* <--- ESTO ES LO QUE ELIMINA EL ENCABEZADO Y URL AUTOMÁTICO */
         }
 
         body {
+            margin: 0 !important;
+            padding: 0 !important;
             background: #fff !important;
-            margin: 0;
-            padding: 0;
+            color: #000 !important;
         }
 
+        /* Ocultar interfaz */
         .no-print,
         nav,
         footer,
         aside,
-        .content-header {
+        .content-header,
+        .btn,
+        .main-footer {
             display: none !important;
         }
 
@@ -287,6 +467,7 @@
             padding: 0 !important;
             border: none !important;
             box-shadow: none !important;
+            background: #fff !important;
         }
 
         /* TICKET */
@@ -296,78 +477,55 @@
             margin: 0 !important;
         }
 
-        #wrapper-ticket:not(.d-none) .ticket-box {
-            width: 100% !important;
-            padding: 5mm !important;
-            box-shadow: none !important;
-        }
-
         /* A4 */
         #wrapper-a4:not(.d-none) {
             display: block !important;
             width: 100% !important;
-            position: static !important;
-            overflow: visible !important;
+            height: 100% !important;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
-        #wrapper-a4:not(.d-none) .a4-box {
-            width: 100% !important;
-            /* Aquí devolvemos el espacio que quitamos en el @page margin */
-            padding: 15mm 15mm !important;
+        .a4-box {
+            width: 210mm !important;
+            height: 296mm !important;
+            /* Altura forzada A4 */
+            margin: 0 !important;
+            padding: 15mm !important;
+            border: none !important;
             box-shadow: none !important;
+            position: relative !important;
         }
 
-        /* ESTILOS PARA QUE SE VEA BIEN AL IMPRIMIR */
-        .table-print thead th {
-            color: #000 !important;
-            background-color: transparent !important;
-            border-bottom: 2px solid #000 !important;
-        }
-
-        .header-box-print,
-        .footer-print {
-            color: #000 !important;
-            background-color: transparent !important;
-            border: 1px solid #000 !important;
-        }
-
-        thead {
-            display: table-header-group;
-        }
-
-        tr {
+        /* Footer Clavado */
+        .footer-print-area {
+            position: absolute !important;
+            bottom: 15mm !important;
+            left: 15mm !important;
+            width: 180mm !important;
             page-break-inside: avoid;
+            background: #fff;
         }
 
-        /* FIX COLUMNAS BOOTSTRAP */
-        .col-sm-7 {
-            width: 58%;
-            float: left;
+        /* Correcciones visuales */
+        .bg-dark {
+            background-color: #000 !important;
+            color: #fff !important;
+            -webkit-print-color-adjust: exact;
         }
 
-        .col-sm-5 {
-            width: 42%;
-            float: left;
-        }
-
-        .col-7 {
-            width: 58%;
-            float: left;
-        }
-
-        .col-5 {
-            width: 42%;
-            float: left;
+        .col-4,
+        .col-8 {
+            float: left !important;
         }
 
         .col-8 {
-            width: 66%;
-            float: left;
+            width: 66.666667% !important;
         }
 
         .col-4 {
-            width: 33%;
-            float: left;
+            width: 33.333333% !important;
         }
     }
 </style>

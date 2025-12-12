@@ -47,11 +47,22 @@ class ConfiguracionController extends Controller
             'puntos_por_moneda'    => 'required|integer|min:1',
             'valor_punto_canje'    => 'required|numeric|min:0',
             'mensaje_ticket'       => 'nullable|string|max:200',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
         ]);
 
         // Manejo del checkbox (si no viene checkeado, es false)
         $data['sunat_produccion'] = $request->has('sunat_produccion');
 
+        if ($request->hasFile('logo')) {
+            // Borrar logo anterior si existe y no es el default (opcional)
+            if ($config->ruta_logo && Storage::disk('public')->exists($config->ruta_logo)) {
+                Storage::disk('public')->delete($config->ruta_logo);
+            }
+
+            // Guardar nuevo en carpeta 'public/logos'
+            $path = $request->file('logo')->store('logos', 'public');
+            $data['ruta_logo'] = $path;
+        }
         // --- LÓGICA DE CERTIFICADO INTELIGENTE ---
         if ($request->hasFile('sunat_certificado_path')) {
 

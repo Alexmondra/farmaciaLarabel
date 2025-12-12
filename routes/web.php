@@ -11,6 +11,8 @@ use App\Http\Controllers\Ventas\{CajaSesionController, VentaController};
 use App\Http\Controllers\Configuracion\SucursalController;
 use App\Http\Controllers\Ventas\ClienteController;
 use App\Http\Controllers\Configuracion\ConfiguracionController;
+use App\Http\Controllers\PublicoController;
+use App\Http\Controllers\Reportes\ReporteVentasController;
 
 
 // =========================================================================
@@ -25,6 +27,16 @@ require __DIR__ . '/auth.php';
 // =========================================================================
 // 2. RUTAS PROTEGIDAS (SOLO REQUIEREN LOGIN)
 // =========================================================================
+
+// Rutas Públicas (fuera del middleware auth)
+Route::view('/consulta-comprobante', 'publico.buscar')->name('publico.buscar_vista');
+Route::post('/consulta-comprobante', [PublicoController::class, 'buscar'])->name('publico.buscar_post');
+Route::get('/descargar-publico/{id}', [PublicoController::class, 'descargar'])->name('publico.descargar')->middleware('signed');
+
+
+
+
+
 Route::middleware(['auth'])->group(function () {
 
     // --- Dashboard y Perfil Base ---
@@ -134,6 +146,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::resource('ventas', VentaController::class);
+    Route::post('/ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
 
 
     Route::get('clientes/check-documento', [ClienteController::class, 'checkDocumento'])->name('clientes.check');
@@ -155,4 +168,21 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::post('/configuracion/update', [ClienteController::class, 'updateConfig'])->name('configuracion.update');
+
+
+
+    //iniciamos el modulo de reportes
+
+
+    Route::get('reportes/ventas-dia', [ReporteVentasController::class, 'ventasDia'])
+        ->name('reportes.ventas-dia');
+
+    Route::get('reportes/ventas-historial', [ReporteVentasController::class, 'ventasHistorial'])
+        ->name('reportes.ventas-historial');
+
+    Route::get('reportes/ventas-anuladas', [ReporteVentasController::class, 'ventasAnuladas'])
+        ->name('reportes.ventas-anuladas');
+
+    Route::get('reportes/venta/{id}/pdf', [ReporteVentasController::class, 'descargarPdf'])
+        ->name('reportes.venta.pdf');
 });

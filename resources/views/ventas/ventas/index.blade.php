@@ -127,9 +127,19 @@
                         @endif
                     </td>
                     <td class="align-middle text-right pr-3">
-                        <a href="{{ route('ventas.show', $venta->id) }}" class="btn btn-sm btn-info shadow-sm" title="Ver Detalle">
+                        <a href="{{ route('ventas.show', $venta->id) }}" class="btn btn-sm btn-info shadow-sm">
                             <i class="fas fa-eye"></i>
                         </a>
+
+                        @if($venta->estado !== 'ANULADO')
+                        <form action="{{ route('ventas.anular', $venta->id) }}" method="POST" class="d-inline"
+                            onsubmit="return confirm('¿Estás seguro de anular esta venta? Se emitirá una Nota de Crédito a SUNAT y se devolverá el stock.');">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-danger shadow-sm" title="Anular Venta">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                        </form>
+                        @endif
                     </td>
                 </tr>
                 @empty

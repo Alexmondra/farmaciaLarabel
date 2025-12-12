@@ -16,6 +16,10 @@ use App\Models\Configuracion;
 use App\Models\Ventas\Venta;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+
+use Greenter\Model\Sale\Note;
+use App\Models\Ventas\NotaCredito;
+
 use Exception;
 
 class SunatService
@@ -102,9 +106,8 @@ class SunatService
         $sucursal = $venta->sucursal;
         $tipoDoc = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
 
-        // 1. Detectar si es operación en Amazonía (IGV 0)
-        // Si el porcentaje guardado en la venta es 0, asumimos Exonerado (Amazonía)
-        $esAmazonia = ($venta->porcentaje_igv == 0);
+        // Detectar si la Sucursal está en Amazonía (IGV 0%) para la Leyenda
+        $sucursalEnAmazonia = ($sucursal->impuesto_porcentaje == 0);
 
         $invoice = new Invoice();
         $invoice->setUblVersion('2.1')
@@ -145,20 +148,21 @@ class SunatService
 
         // Descuentos Globales
         if ($venta->total_descuento > 0) {
-            // Si es Amazonía (Exonerado), el factor es 1.00, si es Lima es 1.18
-            $factorDivisor = $esAmazonia ? 1.00 : 1.18;
+            // Nota: El cálculo del factorDivisor aquí es complejo si es mixto.
+            // Para simplificar, asumimos que si hay IGV global > 0, usamos factor 1.18, sino 1.00
+            $factorDivisor = ($venta->total_igv > 0) ? 1.18 : 1.00;
             $descuentoBase = $venta->total_descuento / $factorDivisor;
 
             $cargo = new Charge();
-            $cargo->setCodTipo('02')
+            $cargo->setCodTipo('02') // Descuento global
                 ->setFactor(1)
                 ->setMonto(round($descuentoBase, 2))
-                ->setMontoBase(round(($esAmazonia ? $venta->op_exonerada : $venta->op_gravada) + $descuentoBase, 2));
+                ->setMontoBase(round(($venta->op_gravada + $venta->op_exonerada) + $descuentoBase, 2));
 
             $invoice->setDescuentos([$cargo]);
         }
 
-        // Totales
+        // Totales (Usamos lo calculado en VentaService)
         $invoice->setMtoOperGravadas($venta->op_gravada)
             ->setMtoOperExoneradas($venta->op_exonerada)
             ->setMtoIGV($venta->total_igv)
@@ -172,25 +176,28 @@ class SunatService
         foreach ($venta->detalles as $det) {
             $item = new SaleDetail();
 
-            // Si es Amazonía, el valor base es igual al precio, y el IGV es 0
-            $base = $det->valor_unitario * $det->cantidad;
-            $igvCalculado = ($esAmazonia) ? 0.00 : ($base * 0.18);
+            // Lógica por Ítem: Si tiene IGV guardado, es Gravado (10). Si es 0, es Exonerado (20).
+            $tieneIgv = ($det->igv > 0.00);
 
             // CÓDIGOS DE AFECTACIÓN IGV
-            // 10: Gravado - Operación Onerosa (Lima)
-            // 20: Exonerado - Operación Onerosa (Amazonía)
-            $tipoAfectacion = $esAmazonia ? '20' : '10';
+            // 10: Gravado - Operación Onerosa
+            // 20: Exonerado - Operación Onerosa
+            $tipoAfectacion = $tieneIgv ? '10' : '20';
+            $porcentaje     = $tieneIgv ? 18.00 : 0.00;
+
+            // Base imponible del ítem (Cantidad * ValorUnitario)
+            $baseItem = $det->valor_unitario * $det->cantidad;
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')
                 ->setCantidad($det->cantidad)
-                ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO') // Asegurar nombre
-                ->setMtoBaseIgv($base)
-                ->setPorcentajeIgv($esAmazonia ? 0.00 : 18.00)
-                ->setIgv($igvCalculado)
-                ->setTipAfeIgv($tipoAfectacion)
-                ->setTotalImpuestos($igvCalculado)
-                ->setMtoValorVenta($base)
+                ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO')
+                ->setMtoBaseIgv($baseItem)
+                ->setPorcentajeIgv($porcentaje)
+                ->setIgv($det->igv)
+                ->setTipAfeIgv($tipoAfectacion) // ¡Clave para mixto!
+                ->setTotalImpuestos($det->igv)
+                ->setMtoValorVenta($baseItem)
                 ->setMtoValorUnitario($det->valor_unitario)
                 ->setMtoPrecioUnitario($det->precio_unitario);
 
@@ -206,10 +213,10 @@ class SunatService
         $textoMonto = $formatter->toInvoice($venta->total_neto, 2, 'SOLES');
         $leyendas[] = (new Legend())->setCode('1000')->setValue('SON: ' . $textoMonto);
 
-        // 2. Leyenda Obligatoria para Amazonía
-        if ($esAmazonia) {
+        // 2. Leyenda Obligatoria SOLO para zona de Amazonía
+        if ($sucursalEnAmazonia) {
             $leyendas[] = (new Legend())
-                ->setCode('2000') // Código genérico o usar 2001
+                ->setCode('2000')
                 ->setValue('BIENES TRANSFERIDOS EN LA AMAZONÍA REGIÓN SELVA PARA SER CONSUMIDOS EN LA MISMA');
         }
 
@@ -231,5 +238,136 @@ class SunatService
         @$dom->loadXML($xml);
         $digestValue = $dom->getElementsByTagName('DigestValue')->item(0);
         return $digestValue ? $digestValue->nodeValue : null;
+    }
+
+
+
+    public function transmitirNotaCredito(NotaCredito $nota, Venta $ventaOriginal)
+    {
+        try {
+            $see = $this->getSee();
+
+            // 1. Generar el objeto Note (Greenter)
+            $note = $this->generarObjetoNota($nota, $ventaOriginal);
+
+            // 2. Firmar XML
+            $xml = $see->getXmlSigned($note);
+            $nombreArchivo = $note->getName();
+
+            // 3. Guardar XML
+            Storage::put('sunat/xml/nc/' . $nombreArchivo . '.xml', $xml);
+
+            $nota->ruta_xml = 'sunat/xml/nc/' . $nombreArchivo . '.xml';
+            $nota->hash = $this->getHashFromXml($xml);
+            $nota->save();
+
+            // 4. Enviar a SUNAT
+            $result = $see->sendXml(get_class($note), $note->getName(), $xml);
+
+            if ($result->isSuccess()) {
+                $cdr = $result->getCdrResponse();
+                Storage::put('sunat/cdr/R-' . $nombreArchivo . '.zip', $result->getCdrZip());
+
+                $nota->ruta_cdr = 'sunat/cdr/R-' . $nombreArchivo . '.zip';
+                $nota->sunat_exito = true;
+                $nota->mensaje_sunat = $cdr->getDescription();
+            } else {
+                $error = $result->getError();
+                $nota->sunat_exito = false;
+                $nota->codigo_error_sunat = $error->getCode();
+                $nota->mensaje_sunat = $error->getMessage();
+            }
+
+            $nota->save();
+            return $result->isSuccess();
+        } catch (\Exception $e) {
+            Log::error("Error SUNAT Nota Crédito {$nota->id}: " . $e->getMessage());
+            $nota->mensaje_sunat = "Error Interno: " . $e->getMessage();
+            $nota->save();
+            return false;
+        }
+    }
+
+    public function generarObjetoNota(NotaCredito $nota, Venta $venta)
+    {
+        $config = Configuracion::first();
+        $sucursal = $venta->sucursal;
+
+        $note = new Note();
+        $note
+            ->setUblVersion('2.1')
+            ->setTipDocAfectado($venta->tipo_comprobante == 'FACTURA' ? '01' : '03')
+            ->setNumDocfectado($venta->serie . '-' . $venta->numero) // Referencia a la factura original
+            ->setCodMotivo($nota->cod_motivo)
+            ->setDesMotivo($nota->descripcion_motivo)
+            ->setTipoDoc('07') // Tipo Nota de Crédito
+            ->setSerie($nota->serie)
+            ->setCorrelativo($nota->numero)
+            ->setFechaEmision(new \DateTime($nota->fecha_emision))
+            ->setTipoMoneda('PEN');
+
+        // Emisor (Igual que la factura)
+        $address = new Address();
+        $address->setUbigueo($sucursal->ubigeo ?? '150101')
+            ->setDepartamento($sucursal->departamento)
+            ->setProvincia($sucursal->provincia)
+            ->setDistrito($sucursal->distrito)
+            ->setDireccion($sucursal->direccion)
+            ->setCodigo($sucursal->codigo ?? '0000');
+
+        $emisor = new Company();
+        $emisor->setRuc($config->sunat_produccion ? $config->empresa_ruc : '20000000001')
+            ->setRazonSocial($config->empresa_razon_social)
+            ->setNombreComercial($sucursal->nombre)
+            ->setAddress($address);
+        $note->setCompany($emisor);
+
+        // Cliente (Igual que la factura)
+        $client = new Client();
+        $client->setTipoDoc(strlen($venta->cliente->documento) == 11 ? '6' : '1')
+            ->setNumDoc($venta->cliente->documento)
+            ->setRznSocial($venta->cliente->nombre_completo);
+        $note->setClient($client);
+
+        // Totales (Reutilizamos los de la venta porque es anulación total)
+        $note->setMtoOperGravadas($venta->op_gravada)
+            ->setMtoOperExoneradas($venta->op_exonerada)
+            ->setMtoIGV($venta->total_igv)
+            ->setTotalImpuestos($venta->total_igv)
+            ->setValorVenta($venta->op_gravada + $venta->op_exonerada)
+            ->setSubTotal($venta->total_neto)
+            ->setMtoImpVenta($venta->total_neto);
+
+        // Detalles (Deben ser idénticos a la venta original)
+        $items = [];
+        foreach ($venta->detalles as $det) {
+            $item = new SaleDetail();
+
+            $baseItem = $det->valor_unitario * $det->cantidad;
+
+            $item->setCodProducto('MED-' . $det->medicamento_id)
+                ->setUnidad('NIU')
+                ->setCantidad($det->cantidad)
+                ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO') // Ojo: asegúrate de cargar la relación medicamento en el controller
+                ->setMtoBaseIgv($baseItem)
+                ->setPorcentajeIgv($det->igv > 0 ? 18.00 : 0.00)
+                ->setIgv($det->igv)
+                ->setTipAfeIgv($det->tipo_afectacion ?? ($det->igv > 0 ? '10' : '20'))
+                ->setTotalImpuestos($det->igv)
+                ->setMtoValorVenta($baseItem)
+                ->setMtoValorUnitario($det->valor_unitario)
+                ->setMtoPrecioUnitario($det->precio_unitario);
+
+            $items[] = $item;
+        }
+        $note->setDetails($items);
+
+        $formatter = new NumeroALetras();
+        $textoMonto = $formatter->toInvoice($venta->total_neto, 2, 'SOLES');
+        $note->setLegends([
+            (new Legend())->setCode('1000')->setValue('SON: ' . $textoMonto)
+        ]);
+
+        return $note;
     }
 }

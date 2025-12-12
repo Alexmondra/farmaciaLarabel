@@ -5,17 +5,21 @@ namespace App\Http\Controllers\Ventas;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;  // <-- ¡Importante!
+use Illuminate\Support\Facades\DB;
 use App\Services\SucursalResolver;
 use App\Services\VentaService;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\CajaSesion;
-use App\Models\Ventas\Cliente;      // <-- Nuevo
-use App\Models\Inventario\Lote;     // <-- Nuevo 
+use App\Models\Ventas\Cliente;
+use App\Models\Inventario\Lote;
 use App\Models\Sucursal;
 use App\Models\Inventario\MedicamentoSucursal;
 use App\Models\Inventario\Categoria;
-
+use App\Models\Configuracion;
+use Illuminate\Support\Facades\Storage;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Luecano\NumeroALetras\NumeroALetras;
+use Illuminate\Support\Str;
 
 class VentaController extends Controller
 {
@@ -99,6 +103,8 @@ class VentaController extends Controller
             'puntos_usados'    => ['nullable', 'integer', 'min:0'],
             'descuento_puntos' => ['nullable', 'numeric', 'min:0'],
             'referencia_pago'  => ['nullable', 'string', 'max:50'],
+            'paga_con'         => ['nullable', 'numeric'],
+
         ]);
 
         // Ajuste de datos básicos
@@ -126,85 +132,79 @@ class VentaController extends Controller
     {
         $user = Auth::user();
 
+        // 1. Cargar Configuración Global
+        $config = Configuracion::first();
+
         $venta = Venta::with(['detalles.medicamento', 'cliente', 'usuario', 'sucursal'])
             ->findOrFail($id);
 
+        // 2. Permisos
         if (!$user->hasRole('Administrador')) {
             if ($venta->sucursal_id !== $user->sucursal_id) {
-                abort(403, 'No tienes permiso para ver esta venta.');
+                abort(403, 'Esta venta pertenece a otra sucursal.');
             }
         }
 
-        // --- Generar QR ---
-        $rucEmisor = $venta->sucursal->ruc ?? '20123456789';
+        // --- 3. LOGICA DEL LOGO (Igual que el PDF) ---
+        // Prioridad: Si la sucursal tiene logo propio, úsalo. Si no, usa el general.
+        $rutaLogo = $venta->sucursal->imagen_sucursal ?? $config->ruta_logo;
+
+        // Convertimos a Base64 para evitar problemas de rutas rotas
+        $logoBase64 = $this->obtenerImagenBase64($rutaLogo);
+
+
+        // --- 4. QR LOCAL ---
+        $rucEmisor = $config->empresa_ruc ?? '20000000001';
         $tipoDoc   = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
         $fecha     = $venta->fecha_emision->format('Y-m-d');
         $clienteDocType = strlen($venta->cliente->documento) == 11 ? '6' : '1';
-        $hash = $venta->hash ?? '';
+        $hash      = $venta->hash ?? '';
 
-        $qrString = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
-        // --- Convertir a Letras (Sin NumberFormatter) ---
-        $montoLetras = $this->convertirNumeroALetras($venta->total_neto);
+        $qrData = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
 
-        return view('ventas.ventas.show', compact('venta', 'qrString', 'montoLetras'));
+        $qrBase64 = base64_encode(QrCode::format('svg')->size(150)->generate($qrData));
+
+        // --- 5. MONTO EN LETRAS ---
+        // Usamos la librería directo aquí, más limpio.
+        $formatter = new NumeroALetras();
+        $entero = floor($venta->total_neto);
+        $decimal = round(($venta->total_neto - $entero) * 100);
+        $letras = $formatter->toWords($entero);
+        $montoLetras = "SON: " . Str::upper($letras) . " CON {$decimal}/100 SOLES";
+
+        // Pasamos 'logoBase64' a la vista
+        return view('ventas.ventas.show', compact('venta', 'qrBase64', 'montoLetras', 'logoBase64', 'config'));
     }
 
-    // --- FUNCIÓN AUXILIAR PARA NÚMERO A LETRAS (SIMPLE) ---
-    private function convertirNumeroALetras($monto)
+    /**
+     * Método Auxiliar Privado para convertir imágenes a Base64
+     * (Pon esto al final de tu VentaController class)
+     */
+    private function obtenerImagenBase64($rutaRelativa)
     {
-        $monto = str_replace(',', '', $monto); // Quitamos comas por si acaso
-        $entero = floor($monto);
-        $decimal = round(($monto - $entero) * 100);
+        if (!$rutaRelativa) {
+            return null;
+        }
 
-        // Función básica para enteros hasta 9999 (Suficiente para farmacia común)
-        // Si necesitas millones, avísame para ampliarla, pero esto saca del apuro.
-        $texto = $this->enteroALetras($entero);
+        $path = null;
 
-        return "SON: " . strtoupper($texto) . " CON $decimal/100 SOLES";
+        // Buscar en Storage (recomendado)
+        if (file_exists(storage_path('app/public/' . $rutaRelativa))) {
+            $path = storage_path('app/public/' . $rutaRelativa);
+        }
+        // Fallback: Buscar en public directo (legacy)
+        elseif (file_exists(public_path($rutaRelativa))) {
+            $path = public_path($rutaRelativa);
+        }
+
+        if (!$path) {
+            return null;
+        }
+
+        $type = pathinfo($path, PATHINFO_EXTENSION);
+        $data = file_get_contents($path);
+        return 'data:image/' . $type . ';base64,' . base64_encode($data);
     }
-
-    private function enteroALetras($n)
-    {
-        $n = (int)$n;
-        if ($n == 0) return 'CERO';
-
-        $unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-        $decenas  = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
-        $centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
-
-        if ($n < 10) return $unidades[$n];
-
-        if ($n < 20) {
-            $especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
-            return $especiales[$n - 10];
-        }
-
-        if ($n < 100) {
-            $d = floor($n / 10);
-            $u = $n % 10;
-            if ($u == 0) return $decenas[$d];
-            if ($d == 2) return 'VEINTI' . $unidades[$u]; // Veintiuno, Veintidos...
-            return $decenas[$d] . ' Y ' . $unidades[$u];
-        }
-
-        if ($n < 1000) {
-            $c = floor($n / 100);
-            $r = $n % 100;
-            if ($n == 100) return 'CIEN';
-            return $centenas[$c] . ($r > 0 ? ' ' . $this->enteroALetras($r) : '');
-        }
-
-        if ($n < 1000000) {
-            $mil = floor($n / 1000);
-            $r = $n % 1000;
-            $txt = ($mil == 1) ? 'MIL' : $this->enteroALetras($mil) . ' MIL';
-            return $txt . ($r > 0 ? ' ' . $this->enteroALetras($r) : '');
-        }
-
-        return 'MONTO MUY ALTO';
-    }
-
-
 
 
     public function create(Request $request)
@@ -342,5 +342,33 @@ class VentaController extends Controller
             });
 
         return response()->json($lotes);
+    }
+
+
+
+
+    public function anular(Request $request, $id)
+    {
+        try {
+            $user = Auth::user();
+            $venta = Venta::with(['detalles', 'sucursal', 'cliente'])->findOrFail($id);
+
+            // Validaciones básicas de seguridad
+            if ($venta->estado === 'ANULADO') {
+                return back()->with('error', 'Esta venta ya está anulada.');
+            }
+            $notaCredito = $this->ventaService->anularVenta($user, $venta, "Solicitud del cliente");
+
+            $mensaje = 'Venta anulada correctamente. ';
+            if ($notaCredito->sunat_exito) {
+                $mensaje .= 'Nota de Crédito enviada y aceptada por SUNAT.';
+            } else {
+                $mensaje .= 'Nota generada, pero hubo un error al enviar a SUNAT. Revisa el historial.';
+            }
+
+            return back()->with('success', $mensaje);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al anular: ' . $e->getMessage());
+        }
     }
 }

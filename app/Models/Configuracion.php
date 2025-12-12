@@ -28,6 +28,7 @@ class Configuracion extends Model
         'puntos_por_moneda',
         'valor_punto_canje',
         'mensaje_ticket',
+        'ruta_logo',
     ];
 
     protected $casts = [

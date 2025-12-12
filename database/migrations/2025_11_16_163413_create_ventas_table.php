@@ -38,6 +38,7 @@ return new class extends Migration
 
             // Datos de Pago y Estado
             $table->string('medio_pago', 30)->nullable(); // EFECTIVO, YAPE, PLIN, TARJETA
+            $table->decimal('monto_recibido', 12, 2)->default(0);
             $table->string('referencia_pago', 50)->nullable();
             $table->string('estado', 30)->default('EMITIDA');
             $table->text('observaciones')->nullable();

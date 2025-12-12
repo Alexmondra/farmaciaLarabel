@@ -319,17 +319,31 @@ return [
             ],
         ],
 
-        // 6. REPORTES (Limpio en un solo bloque)
+        // 6. REPORTES
         [
-            'text' => 'Reportes',
-            'icon' => 'fas fa-chart-bar',
+            'text'    => 'Reportes',
+            'icon'    => 'fas fa-chart-pie',
             'submenu' => [
-                ['text' => 'Ventas del Día', 'url' => '#', 'icon' => 'far fa-circle'],
-                ['text' => 'Productos Top', 'url' => '#', 'icon' => 'far fa-circle'],
-                ['text' => 'Rentabilidad', 'url' => '#', 'icon' => 'far fa-circle'],
+                [
+                    'text' => 'Ventas',
+                    'icon' => 'fas fa-cash-register',
+                    'submenu' => [
+                        ['text' => 'Ventas del Día',    'url' => 'reportes/ventas-dia', 'icon' => 'far fa-circle'],
+                        ['text' => 'Historial de ventas',  'url' => 'reportes/ventas-historial', 'icon' => 'far fa-circle'],
+                        ['text' => 'Ventas Anuladas',   'url' => 'reportes/ventas-anuladas', 'icon' => 'far fa-circle text-danger'],
+                    ],
+                ],
+                [
+                    'text' => 'Estado de medicamento',
+                    'icon' => 'fas fa-medkit',
+                    'submenu' => [
+                        ['text' => 'Lotes por Vencer',  'url' => 'reportes/vencimientos', 'icon' => 'far fa-circle text-danger'],
+                        ['text' => 'Stock Bajo/Reponer', 'url' => 'reportes/stock-bajo',   'icon' => 'far fa-circle text-warning'],
+                        ['text' => 'Productos Top',     'url' => 'reportes/mas-vendidos', 'icon' => 'far fa-circle'],
+                    ],
+                ],
             ],
         ],
-
         // 7. CONFIGURACIÓN (Seguridad y Parámetros juntos)
         [
             'text' => 'Configuración',

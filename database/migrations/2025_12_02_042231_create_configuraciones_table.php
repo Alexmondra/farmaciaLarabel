@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('sunat_certificado_pass')->nullable(); // Por si el certificado tiene clave
             $table->integer('puntos_por_moneda')->default(1);
             $table->decimal('valor_punto_canje', 10, 4)->default(0.0200);
-
+            $table->string('ruta_logo')->nullable();
             // --- 4. EXTRAS ---
             $table->string('mensaje_ticket')->nullable()->default('Gracias por su preferencia');
 
