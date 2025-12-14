@@ -13,7 +13,40 @@ use App\Http\Controllers\Ventas\ClienteController;
 use App\Http\Controllers\Configuracion\ConfiguracionController;
 use App\Http\Controllers\PublicoController;
 use App\Http\Controllers\Reportes\ReporteVentasController;
+use App\Http\Controllers\Guias\GuiaRemisionController;
 
+
+Route::get('/debug-greenter', function () {
+    // Esta ruta busca la carpeta exacta donde deberían estar las guías
+    $path = base_path('vendor/greenter/model/src/Model/Despatch');
+
+    echo "<h1>🕵️ Diagnóstico de Archivos Greenter</h1>";
+    echo "<b>Ruta buscada:</b> " . $path . "<br><hr>";
+
+    if (is_dir($path)) {
+        echo "<h3 style='color:green'>✅ La carpeta 'Despatch' SI existe.</h3>";
+        echo "<b>Archivos encontrados dentro:</b><br>";
+        $files = scandir($path);
+
+        // Verificamos si el archivo específico está
+        if (in_array('DespatchAdvice.php', $files)) {
+            echo "<h2 style='color:blue'>¡EL ARCHIVO DespatchAdvice.php ESTÁ AQUÍ!</h2>";
+            echo "Si ves esto, el problema es solo caché. Ejecuta: <code>composer dump-autoload -o</code>";
+        } else {
+            echo "<h2 style='color:red'>❌ FALTA EL ARCHIVO DespatchAdvice.php</h2>";
+            echo "La carpeta existe pero el archivo no. La librería está corrupta.";
+        }
+
+        echo "<pre>" . print_r($files, true) . "</pre>";
+    } else {
+        echo "<h2 style='color:red'>❌ LA CARPETA 'Despatch' NO EXISTE.</h2>";
+        echo "Tu instalación de Greenter está incompleta o es una versión muy antigua.";
+
+        // Verificamos si al menos existe Greenter Model
+        $parent = base_path('vendor/greenter/model');
+        echo "<br><b>¿Existe al menos la carpeta 'model'?</b> " . (is_dir($parent) ? 'SÍ' : 'NO');
+    }
+});
 
 // =========================================================================
 // 1. RUTAS PÚBLICAS
@@ -168,9 +201,12 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::post('/configuracion/update', [ClienteController::class, 'updateConfig'])->name('configuracion.update');
+    Route::get('guias/lookup-medicamentos', [GuiaRemisionController::class, 'lookupMedicamentos'])->name('guias.lookup_medicamentos');
+    Route::get('guias/buscar-venta', [GuiaRemisionController::class, 'buscarVenta'])->name('guias.buscar_venta');
 
 
-
+    Route::get('guias/{id}/pdf', [GuiaRemisionController::class, 'imprimir'])->name('guias.pdf');
+    Route::resource('guias', GuiaRemisionController::class);
     //iniciamos el modulo de reportes
 
 

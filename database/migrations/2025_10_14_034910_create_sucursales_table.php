@@ -29,7 +29,10 @@ return new class extends Migration {
             // --- SERIES DE FACTURACIÓN ---
             $table->string('serie_boleta', 4)->nullable();  // Ej: B001
             $table->string('serie_factura', 4)->nullable(); // Ej: F001
-            $table->string('serie_ticket', 4)->nullable();  // Ej: T001
+            $table->string('serie_nc_boleta', 4)->nullable();  // Ej: BC01
+            $table->string('serie_nc_factura', 4)->nullable(); // Ej: FC01
+            $table->string('serie_guia', 4)->nullable();    // Ej: T001 
+            $table->string('serie_ticket', 4)->nullable();  // Ej: TK01
 
             $table->boolean('activo')->default(true);
             $table->timestamps();

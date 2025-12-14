@@ -1,7 +1,6 @@
 <div class="row">
     {{-- COLUMNA IZQUIERDA: FOTO Y ESTADO --}}
     <div class="col-md-3 text-center border-right">
-
         <div class="mt-2 mb-3 position-relative d-inline-block" style="cursor: pointer;" onclick="document.getElementById('customFile').click()">
             <img id="previewImagen"
                 src="{{ isset($sucursal) && $sucursal->imagen_sucursal ? asset('storage/'.$sucursal->imagen_sucursal) : asset('img/default-store.png') }}"
@@ -20,7 +19,8 @@
         <div class="form-group mt-3">
             <label class="d-block text-muted small text-uppercase font-weight-bold">Estado</label>
             <div class="custom-control custom-switch custom-switch-off-danger custom-switch-on-success">
-                <input type="checkbox" class="custom-control-input" id="checkActivo" name="activo" value="1" checked>
+                <input type="checkbox" class="custom-control-input" id="checkActivo" name="activo" value="1"
+                    {{ (!isset($sucursal) || $sucursal->activo) ? 'checked' : '' }}>
                 <label class="custom-control-label font-weight-bold" for="checkActivo">
                     <span id="labelActivo">Operativa</span>
                 </label>
@@ -28,84 +28,81 @@
         </div>
     </div>
 
-    {{-- COLUMNA DERECHA: DATOS DEL FORMULARIO --}}
+    {{-- COLUMNA DERECHA: DATOS --}}
     <div class="col-md-9 pl-4">
 
-        {{-- FILA 1: CÓDIGO SUNAT Y NOMBRE --}}
         <div class="form-row">
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-dark">COD. SUNAT *</label>
-                {{-- Ahora el código es editable y de 4 dígitos --}}
-                <input type="text" name="codigo" id="inputCodigo" class="form-control font-weight-bold"
-                    placeholder="0000" maxlength="4" required
-                    value="{{ isset($sucursal) ? $sucursal->codigo : '' }}">
-                <small class="text-muted">Ej: 0001 (Anexo)</small>
+                <input type="text" name="codigo" class="form-control font-weight-bold" placeholder="0000" maxlength="4" required
+                    value="{{ old('codigo', isset($sucursal) ? $sucursal->codigo : ($sugerenciaCodigo ?? '')) }}">
+
             </div>
             <div class="form-group col-md-9">
                 <label class="small font-weight-bold text-teal">NOMBRE SUCURSAL *</label>
-                <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Ej: Oficina Principal" required>
+                <input type="text" name="nombre" class="form-control" placeholder="Ej: Oficina Principal" required
+                    value="{{ old('nombre', $sucursal->nombre ?? '') }}">
             </div>
         </div>
 
-        {{-- BLOQUE DE UBICACIÓN --}}
+        {{-- UBICACIÓN --}}
         <h6 class="text-teal font-weight-bold mt-2 mb-2" style="font-size: 0.9rem;">
             <i class="fas fa-map-marked-alt mr-1"></i> Ubicación
         </h6>
-
         <div class="form-row">
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-muted">DEPARTAMENTO</label>
-                <input type="text" name="departamento" id="inputDepartamento" class="form-control form-control-sm" placeholder="Lima">
+                <input type="text" name="departamento" class="form-control form-control-sm" placeholder="Lima"
+                    value="{{ old('departamento', $sucursal->departamento ?? '') }}">
             </div>
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-muted">PROVINCIA</label>
-                <input type="text" name="provincia" id="inputProvincia" class="form-control form-control-sm" placeholder="Lima">
+                <input type="text" name="provincia" class="form-control form-control-sm" placeholder="Lima"
+                    value="{{ old('provincia', $sucursal->provincia ?? '') }}">
             </div>
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-muted">DISTRITO</label>
-                <input type="text" name="distrito" id="inputDistrito" class="form-control form-control-sm" placeholder="Miraflores">
+                <input type="text" name="distrito" class="form-control form-control-sm" placeholder="Miraflores"
+                    value="{{ old('distrito', $sucursal->distrito ?? '') }}">
             </div>
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-muted">UBIGEO</label>
-                <input type="text" name="ubigeo" id="inputUbigeo" class="form-control form-control-sm" maxlength="6" placeholder="150101">
+                <input type="text" name="ubigeo" class="form-control form-control-sm" maxlength="6" placeholder="150101"
+                    value="{{ old('ubigeo', $sucursal->ubigeo ?? '') }}">
             </div>
         </div>
-
         <div class="form-group">
             <label class="small font-weight-bold text-muted">DIRECCIÓN FISCAL</label>
             <div class="input-group input-group-sm">
-                <div class="input-group-prepend">
-                    <span class="input-group-text bg-light"><i class="fas fa-map-marker-alt text-danger"></i></span>
-                </div>
-                <input type="text" name="direccion" id="inputDireccion" class="form-control" placeholder="Av. Larco 123, Of. 401">
+                <div class="input-group-prepend"><span class="input-group-text bg-light"><i class="fas fa-map-marker-alt text-danger"></i></span></div>
+                <input type="text" name="direccion" class="form-control" placeholder="Av. Larco 123"
+                    value="{{ old('direccion', $sucursal->direccion ?? '') }}">
             </div>
         </div>
 
-        {{-- FILA CONTACTO --}}
+        {{-- CONTACTO --}}
         <div class="form-row">
             <div class="form-group col-md-6">
                 <label class="small font-weight-bold text-muted">EMAIL</label>
                 <div class="input-group input-group-sm">
-                    <div class="input-group-prepend">
-                        <span class="input-group-text bg-light"><i class="fas fa-envelope text-primary"></i></span>
-                    </div>
-                    <input type="email" name="email" id="inputEmail" class="form-control" placeholder="sucursal@empresa.com">
+                    <div class="input-group-prepend"><span class="input-group-text bg-light"><i class="fas fa-envelope text-primary"></i></span></div>
+                    <input type="email" name="email" class="form-control" placeholder="sucursal@empresa.com"
+                        value="{{ old('email', $sucursal->email ?? '') }}">
                 </div>
             </div>
             <div class="form-group col-md-6">
                 <label class="small font-weight-bold text-muted">TELÉFONO</label>
                 <div class="input-group input-group-sm">
-                    <div class="input-group-prepend">
-                        <span class="input-group-text bg-light"><i class="fas fa-phone text-success"></i></span>
-                    </div>
-                    <input type="text" name="telefono" id="inputTelefono" class="form-control" placeholder="(01) 000-000">
+                    <div class="input-group-prepend"><span class="input-group-text bg-light"><i class="fas fa-phone text-success"></i></span></div>
+                    <input type="text" name="telefono" class="form-control" placeholder="(01) 000-000"
+                        value="{{ old('telefono', $sucursal->telefono ?? '') }}">
                 </div>
             </div>
         </div>
 
         <hr class="my-2">
 
-        {{-- FILA 3: CONFIGURACIÓN SUNAT/FISCAL --}}
+        {{-- FACTURACIÓN & SERIES --}}
         <h6 class="text-teal font-weight-bold mb-3" style="font-size: 0.9rem;">
             <i class="fas fa-file-invoice mr-1"></i> Facturación & Series
         </h6>
@@ -114,28 +111,46 @@
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-dark">IGV (%)</label>
                 <div class="input-group input-group-sm">
-                    <input type="number" step="0.01" name="impuesto_porcentaje" id="inputImpuesto" class="form-control font-weight-bold" value="18.00" required>
-                    <div class="input-group-append">
-                        <span class="input-group-text">%</span>
-                    </div>
+                    <input type="number" step="0.01" name="impuesto_porcentaje" class="form-control font-weight-bold" required
+                        value="{{ old('impuesto_porcentaje', $sucursal->impuesto_porcentaje ?? '18.00') }}">
+                    <div class="input-group-append"><span class="input-group-text">%</span></div>
                 </div>
             </div>
 
+            {{-- Aquí estaba el problema: Si $sugerencia no existe, debe poner vacío, no fallar --}}
             <div class="form-group col-md-3">
-                <label class="small font-weight-bold text-dark">SERIE BOLETA</label>
-                <input type="text" name="serie_boleta" id="inputSerieBoleta" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" placeholder="B001" required>
+                <label class="small font-weight-bold text-primary">SERIE FACTURA</label>
+                <input type="text" name="serie_factura" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" required placeholder="F001"
+                    value="{{ old('serie_factura', isset($sucursal) ? $sucursal->serie_factura : ($sugerenciaFactura ?? '')) }}">
             </div>
-
             <div class="form-group col-md-3">
-                <label class="small font-weight-bold text-dark">SERIE FACTURA</label>
-                <input type="text" name="serie_factura" id="inputSerieFactura" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" placeholder="F001" required>
+                <label class="small font-weight-bold text-info">SERIE BOLETA</label>
+                <input type="text" name="serie_boleta" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" required placeholder="B001"
+                    value="{{ old('serie_boleta', isset($sucursal) ? $sucursal->serie_boleta : ($sugerenciaBoleta ?? '')) }}">
             </div>
-
             <div class="form-group col-md-3">
-                <label class="small font-weight-bold text-dark">SERIE TICKET</label>
-                <input type="text" name="serie_ticket" id="inputSerieTicket" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" placeholder="T001" required>
+                <label class="small font-weight-bold text-muted">SERIE TICKET</label>
+                <input type="text" name="serie_ticket" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" required placeholder="TK01"
+                    value="{{ old('serie_ticket', isset($sucursal) ? $sucursal->serie_ticket : ($sugerenciaTicket ?? '')) }}">
             </div>
         </div>
 
+        <div class="form-row bg-white pt-2 rounded border-top">
+            <div class="form-group col-md-4">
+                <label class="small font-weight-bold text-danger">NC FACTURA</label>
+                <input type="text" name="serie_nc_factura" class="form-control form-control-sm text-uppercase font-weight-bold" maxlength="4" required placeholder="FC01"
+                    value="{{ old('serie_nc_factura', isset($sucursal) ? $sucursal->serie_nc_factura : ($sugerenciaNCFactura ?? '')) }}">
+            </div>
+            <div class="form-group col-md-4">
+                <label class="small font-weight-bold text-danger">NC BOLETA</label>
+                <input type="text" name="serie_nc_boleta" class="form-control form-control-sm text-uppercase font-weight-bold" maxlength="4" required placeholder="BC01"
+                    value="{{ old('serie_nc_boleta', isset($sucursal) ? $sucursal->serie_nc_boleta : ($sugerenciaNCBoleta ?? '')) }}">
+            </div>
+            <div class="form-group col-md-4">
+                <label class="small font-weight-bold text-success">GUÍA REMISIÓN</label>
+                <input type="text" name="serie_guia" class="form-control form-control-sm text-uppercase font-weight-bold" maxlength="4" required placeholder="T001"
+                    value="{{ old('serie_guia', isset($sucursal) ? $sucursal->serie_guia : ($sugerenciaGuia ?? '')) }}">
+            </div>
+        </div>
     </div>
 </div>

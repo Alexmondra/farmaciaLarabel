@@ -65,26 +65,28 @@ class SunatService
             $xml = $see->getXmlSigned($invoice);
             $nombreArchivo = $invoice->getName();
 
-            // 2. Guardar XML
-            Storage::put('sunat/xml/' . $nombreArchivo . '.xml', $xml);
+            // --- CAMBIO 1: GUARDAR EN CARPETA 'FACTURAS' ---
+            $rutaXml = 'sunat/xml/facturas/' . $nombreArchivo . '.xml';
+            Storage::put($rutaXml, $xml);
 
-            $venta->ruta_xml = 'sunat/xml/' . $nombreArchivo . '.xml';
+            $venta->ruta_xml = $rutaXml;
             $venta->hash = $this->getHashFromXml($xml);
             $venta->save();
 
-            // 3. Enviar a SUNAT
+            // 2. Enviar a SUNAT
             $result = $see->sendXml(get_class($invoice), $invoice->getName(), $xml);
 
             if ($result->isSuccess()) {
-                $cdr = $result->getCdrResponse();
-                Storage::put('sunat/cdr/R-' . $nombreArchivo . '.zip', $result->getCdrZip());
+                // --- CAMBIO 2: GUARDAR CDR EN CARPETA 'FACTURAS' ---
+                $rutaCdr = 'sunat/cdr/facturas/R-' . $nombreArchivo . '.zip';
 
-                $venta->ruta_cdr = 'sunat/cdr/R-' . $nombreArchivo . '.zip';
+                Storage::put($rutaCdr, $result->getCdrZip());
+
+                $venta->ruta_cdr = $rutaCdr;
                 $venta->codigo_error_sunat = 0;
-                $venta->mensaje_sunat = $cdr->getDescription();
+                $venta->mensaje_sunat = $result->getCdrResponse()->getDescription();
                 $venta->estado = 'ACEPTADA';
             } else {
-                // Error de validación de SUNAT
                 $error = $result->getError();
                 $venta->codigo_error_sunat = $error->getCode();
                 $venta->mensaje_sunat = $error->getMessage();
@@ -93,6 +95,7 @@ class SunatService
             $venta->save();
             return $result->isSuccess();
         } catch (\Exception $e) {
+            // ... (Manejo de errores igual) ...
             Log::error("Error SUNAT Venta {$venta->id}: " . $e->getMessage());
             $venta->mensaje_sunat = "Error Conexión: " . $e->getMessage();
             $venta->save();
@@ -247,30 +250,33 @@ class SunatService
         try {
             $see = $this->getSee();
 
-            // 1. Generar el objeto Note (Greenter)
+            // 1. Generar objeto Note
             $note = $this->generarObjetoNota($nota, $ventaOriginal);
 
             // 2. Firmar XML
             $xml = $see->getXmlSigned($note);
             $nombreArchivo = $note->getName();
 
-            // 3. Guardar XML
-            Storage::put('sunat/xml/nc/' . $nombreArchivo . '.xml', $xml);
+            // --- CAMBIO 1: CONFIRMAMOS CARPETA 'NC' PARA XML ---
+            $rutaXml = 'sunat/xml/nc/' . $nombreArchivo . '.xml';
+            Storage::put($rutaXml, $xml);
 
-            $nota->ruta_xml = 'sunat/xml/nc/' . $nombreArchivo . '.xml';
+            $nota->ruta_xml = $rutaXml;
             $nota->hash = $this->getHashFromXml($xml);
             $nota->save();
 
-            // 4. Enviar a SUNAT
+            // 3. Enviar a SUNAT
             $result = $see->sendXml(get_class($note), $note->getName(), $xml);
 
             if ($result->isSuccess()) {
-                $cdr = $result->getCdrResponse();
-                Storage::put('sunat/cdr/R-' . $nombreArchivo . '.zip', $result->getCdrZip());
+                // --- CAMBIO 2: GUARDAR CDR TAMBIÉN EN CARPETA 'NC' ---
+                $rutaCdr = 'sunat/cdr/nc/R-' . $nombreArchivo . '.zip';
 
-                $nota->ruta_cdr = 'sunat/cdr/R-' . $nombreArchivo . '.zip';
+                Storage::put($rutaCdr, $result->getCdrZip());
+
+                $nota->ruta_cdr = $rutaCdr;
                 $nota->sunat_exito = true;
-                $nota->mensaje_sunat = $cdr->getDescription();
+                $nota->mensaje_sunat = $result->getCdrResponse()->getDescription();
             } else {
                 $error = $result->getError();
                 $nota->sunat_exito = false;
@@ -281,6 +287,7 @@ class SunatService
             $nota->save();
             return $result->isSuccess();
         } catch (\Exception $e) {
+            // ... (Manejo de errores igual) ...
             Log::error("Error SUNAT Nota Crédito {$nota->id}: " . $e->getMessage());
             $nota->mensaje_sunat = "Error Interno: " . $e->getMessage();
             $nota->save();
@@ -312,8 +319,10 @@ class SunatService
             ->setDepartamento($sucursal->departamento)
             ->setProvincia($sucursal->provincia)
             ->setDistrito($sucursal->distrito)
-            ->setDireccion($sucursal->direccion)
-            ->setCodigo($sucursal->codigo ?? '0000');
+            ->setDireccion($sucursal->direccion);
+        if (method_exists($address, 'setCodigo')) {
+            $address->setCodigo($sucursal->codigo ?? '0000');
+        }
 
         $emisor = new Company();
         $emisor->setRuc($config->sunat_produccion ? $config->empresa_ruc : '20000000001')

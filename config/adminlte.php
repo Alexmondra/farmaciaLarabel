@@ -233,14 +233,14 @@ return [
 
         // 3. VENTAS Y CAJA (Agrupado para ahorrar espacio vertical)
         [
-            'text' => 'Ventas y Caja',
-            'icon' => 'fas fa-coins',
+            'text'    => 'Ventas y Distribución', // Nombre sugerido más completo
+            'icon'    => 'fas fa-coins',
             'submenu' => [
                 [
-                    'text' => 'Caja Actual',
-                    'url'  => 'cajas',
-                    'can'  => 'cajas.ver',
-                    'icon' => 'fas fa-wallet',
+                    'text'   => 'Caja Actual',
+                    'url'    => 'cajas',
+                    'can'    => 'cajas.ver',
+                    'icon'   => 'fas fa-wallet',
                     'active' => ['cajas*'],
                 ],
                 [
@@ -248,8 +248,16 @@ return [
                     'url'  => 'ventas',
                     'can'  => 'ventas.ver',
                     'icon' => 'fas fa-file-invoice-dollar',
-                    'can'  => 'ventas.ver',
                 ],
+                // --- AQUÍ AGREGAMOS LAS GUÍAS ---
+                [
+                    'text'   => 'Guías de Remisión',
+                    'url'    => 'guias',
+                    // 'can' => 'guias.ver', // Descomenta cuando tengas el permiso
+                    'icon'   => 'fas fa-shipping-fast', // Ícono de transporte/envío
+                    'active' => ['guias*'],
+                ],
+                // --------------------------------
                 [
                     'text' => 'Directorio de Clientes',
                     'url'  => 'clientes',
@@ -365,14 +373,14 @@ return [
                     'text' => 'Datos de Sucursales',
                     'url'  => 'configuracion/sucursales',
                     'can'  => 'sucursales.ver',
-                    'icon' => 'fas fa-building',
+                    'icon' => 'fas fa-store',
                 ],
 
                 [
                     'text' => 'Empresa',
                     'url'  => 'configuracion/general',
                     'can'  => 'config.ver',
-                    'icon' => 'fas fa-building',
+                    'icon' => 'fas fa-landmark',
                 ],
             ],
         ],

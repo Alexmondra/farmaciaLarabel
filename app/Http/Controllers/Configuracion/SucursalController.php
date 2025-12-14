@@ -4,69 +4,62 @@ namespace App\Http\Controllers\Configuracion;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sucursal;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\SucursalRequest; // <--- Importamos el Request
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request; // Solo para el index si usas Request genérico allí
 
 class SucursalController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $sucursales = Sucursal::orderBy('codigo')->get(); // Ordenar por código SUNAT
+        $sucursales = Sucursal::orderBy('codigo')->get();
 
-        // --- LOGICA DE SUGERENCIAS PARA SERIES ---
-        // Se mantiene igual para ayudar al usuario
+        // Lógica de sugerencias (Solo visual para el usuario al crear)
         $siguienteId = Sucursal::max('id') + 1;
         $numeroSerie = str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
 
-        $sugerenciaBoleta  = 'B' . $numeroSerie; // Ej: B004
-        $sugerenciaFactura = 'F' . $numeroSerie; // Ej: F004
-        $sugerenciaTiket   = 'T' . $numeroSerie;
+        $sugerenciaBoleta  = 'B' . $numeroSerie;
+        $sugerenciaFactura = 'F' . $numeroSerie;
+        $sugerenciaTicket  = 'TK' . substr($numeroSerie, 1);
 
-        return view('configuracion.sucursales.index', compact('sucursales', 'sugerenciaBoleta', 'sugerenciaFactura', 'sugerenciaTiket'));
+        $sugerenciaNCBoleta  = 'BC' . substr($numeroSerie, 1);
+        $sugerenciaNCFactura = 'FC' . substr($numeroSerie, 1);
+        $sugerenciaGuia      = 'T' . $numeroSerie;
+
+        // Sugerencia Código
+        $ultimoCodigo = Sucursal::max('codigo');
+        $sugerenciaCodigo = $ultimoCodigo ? str_pad($ultimoCodigo + 1, 4, '0', STR_PAD_LEFT) : '0000';
+
+        return view('configuracion.sucursales.index', compact(
+            'sucursales',
+            'sugerenciaBoleta',
+            'sugerenciaFactura',
+            'sugerenciaTicket',
+            'sugerenciaNCBoleta',
+            'sugerenciaNCFactura',
+            'sugerenciaGuia',
+            'sugerenciaCodigo'
+        ));
     }
 
     public function create()
     {
+        // Retornamos la vista (las sugerencias no son estrictamente necesarias aquí si las pasas al view o las manejas con JS, 
+        // pero el form usa old() o null)
         return view('configuracion.sucursales.create');
     }
 
-    public function store(Request $request)
+    // Usamos SucursalRequest en lugar de Request
+    public function store(SucursalRequest $request)
     {
-        $data = $request->validate([
-            // --- VALIDACIÓN CÓDIGO SUNAT ---
-            'codigo'              => ['required', 'string', 'size:4', 'unique:sucursales,codigo'],
+        $data = $request->validated();
 
-            'nombre'              => ['required', 'string', 'max:120'],
-
-            // --- NUEVOS CAMPOS UBICACIÓN ---
-            'ubigeo'              => ['nullable', 'string', 'max:6'], // Generalmente 6 dígitos
-            'departamento'        => ['nullable', 'string', 'max:100'],
-            'provincia'           => ['nullable', 'string', 'max:100'],
-            'distrito'            => ['nullable', 'string', 'max:100'],
-            'direccion'           => ['nullable', 'string', 'max:200'],
-
-            // --- CONTACTO ---
-            'telefono'            => ['nullable', 'string', 'max:30'],
-            'email'               => ['nullable', 'email', 'max:120'],
-
-            'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
-            'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
-
-            // --- SERIES ---
-            'serie_boleta'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_boleta'],
-            'serie_factura'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_factura'],
-            'serie_ticket'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket'],
-
-            'activo'              => ['sometimes', 'boolean'],
-        ]);
-
-        $data['activo'] = $request->boolean('activo');
-
+        // 2. Imagen
         if ($request->hasFile('imagen_sucursal')) {
             $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
         }
 
+        // 3. Crear
         Sucursal::create($data);
 
         return redirect()->route('configuracion.sucursales.index')
@@ -75,38 +68,17 @@ class SucursalController extends Controller
 
     public function edit(Sucursal $sucursal)
     {
+        // Al editar, pasamos el objeto $sucursal a la vista
         return view('configuracion.sucursales.edit', compact('sucursal'));
     }
 
-    public function update(Request $request, Sucursal $sucursal)
+    // Usamos SucursalRequest aquí también
+    public function update(SucursalRequest $request, Sucursal $sucursal)
     {
-        $data = $request->validate([
-            // Validamos que el código sea único pero ignorando la sucursal actual
-            'codigo'              => ['required', 'string', 'size:4', Rule::unique('sucursales')->ignore($sucursal->id)],
+        // 1. Validar (Automático, ya sabe ignorar el ID actual)
+        $data = $request->validated();
 
-            'nombre'              => ['required', 'string', 'max:120'],
-
-            'ubigeo'              => ['nullable', 'string', 'max:6'],
-            'departamento'        => ['nullable', 'string', 'max:100'],
-            'provincia'           => ['nullable', 'string', 'max:100'],
-            'distrito'            => ['nullable', 'string', 'max:100'],
-            'direccion'           => ['nullable', 'string', 'max:200'],
-
-            'telefono'            => ['nullable', 'string', 'max:30'],
-            'email'               => ['nullable', 'email', 'max:120'],
-
-            'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
-            'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
-
-            'serie_boleta'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_boleta,' . $sucursal->id],
-            'serie_factura'       => ['required', 'string', 'max:4', 'unique:sucursales,serie_factura,' . $sucursal->id],
-            'serie_ticket'        => ['required', 'string', 'max:4', 'unique:sucursales,serie_ticket,' . $sucursal->id],
-
-            'activo'              => ['sometimes', 'boolean'],
-        ]);
-
-        $data['activo'] = $request->boolean('activo');
-
+        // 2. Imagen
         if ($request->hasFile('imagen_sucursal')) {
             if ($sucursal->imagen_sucursal) {
                 Storage::disk('public')->delete($sucursal->imagen_sucursal);
@@ -114,6 +86,7 @@ class SucursalController extends Controller
             $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
         }
 
+        // 3. Actualizar
         $sucursal->update($data);
 
         return redirect()->route('configuracion.sucursales.index')
@@ -123,23 +96,11 @@ class SucursalController extends Controller
     public function destroy(Sucursal $sucursal)
     {
         try {
-            if ($sucursal->imagen_sucursal) {
-                Storage::disk('public')->delete($sucursal->imagen_sucursal);
-            }
-
+            if ($sucursal->imagen_sucursal) Storage::disk('public')->delete($sucursal->imagen_sucursal);
             $sucursal->delete();
-
-            return redirect()->route('configuracion.sucursales.index')
-                ->with('success', 'Sucursal eliminada correctamente.');
-        } catch (\Illuminate\Database\QueryException $e) {
-
-            if ($e->getCode() == "23000") {
-                return redirect()->route('configuracion.sucursales.index')
-                    ->with('error', 'No se puede eliminar: Esta sucursal tiene movimientos asociados.');
-            }
-
-            return redirect()->route('configuracion.sucursales.index')
-                ->with('error', 'Ocurrió un error inesperado al eliminar.');
+            return redirect()->route('configuracion.sucursales.index')->with('success', 'Sucursal eliminada.');
+        } catch (\Exception $e) {
+            return redirect()->route('configuracion.sucursales.index')->with('error', 'No se puede eliminar: Tiene datos asociados.');
         }
     }
 

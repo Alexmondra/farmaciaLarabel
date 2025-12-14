@@ -11,80 +11,79 @@ class SucursalesSeeder extends Seeder
     {
         $sucursales = [
             [
-                // --- SEDE PRINCIPAL (OBLIGATORIO CÓDIGO 0000) ---
-                'codigo'              => '0000', // Código SUNAT Principal
+                // --- 1. SEDE PRINCIPAL (LIMA) ---
+                'codigo'              => '0000',
                 'nombre'              => 'FARMACIA CENTRAL - LIMA',
 
-                // Ubicación (Lima / Lima / Miraflores)
                 'ubigeo'              => '150122',
                 'departamento'        => 'LIMA',
                 'provincia'           => 'LIMA',
                 'distrito'            => 'MIRAFLORES',
                 'direccion'           => 'Av. Jose Larco 123',
-
-                // Contacto
                 'telefono'            => '(01) 444-1111',
                 'email'               => 'ventas.lima@mifarmacia.com',
-
-                // Configuración Fiscal
                 'impuesto_porcentaje' => 18.00,
-                'serie_boleta'        => 'B001',
-                'serie_factura'       => 'F001',
-                'serie_ticket'        => 'T001',
                 'activo'              => true,
+
+                // CONFIGURACIÓN DE SERIES (Familia 01)
+                'serie_factura'       => 'F001',
+                'serie_boleta'        => 'B001',
+                'serie_nc_factura'    => 'FC01', // Nuevo: Nota Crédito Factura
+                'serie_nc_boleta'     => 'BC01', // Nuevo: Nota Crédito Boleta
+                'serie_guia'          => 'T001', // Nuevo: Guía Remisión (Empieza con T)
+                'serie_ticket'        => 'TK01', // Interno
             ],
             [
-                // --- SUCURSAL 1 (NORTE) ---
-                'codigo'              => '0001', // Código SUNAT Anexo 1
+                // --- 2. SUCURSAL NORTE (CHICLAYO) ---
+                'codigo'              => '0001',
                 'nombre'              => 'SUCURSAL NORTE - CHICLAYO',
 
-                // Ubicación (Lambayeque / Chiclayo / Chiclayo)
                 'ubigeo'              => '140101',
                 'departamento'        => 'LAMBAYEQUE',
                 'provincia'           => 'CHICLAYO',
                 'distrito'            => 'CHICLAYO',
                 'direccion'           => 'Calle San Jose 456',
-
-                // Contacto
                 'telefono'            => '(074) 222-3333',
                 'email'               => 'ventas.chiclayo@mifarmacia.com',
-
-                // Configuración Fiscal (Series diferentes para no mezclar)
                 'impuesto_porcentaje' => 18.00,
-                'serie_boleta'        => 'B002',
-                'serie_factura'       => 'F002',
-                'serie_ticket'        => 'T002',
                 'activo'              => true,
+
+                // CONFIGURACIÓN DE SERIES (Familia 02)
+                'serie_factura'       => 'F002',
+                'serie_boleta'        => 'B002',
+                'serie_nc_factura'    => 'FC02', // Nuevo
+                'serie_nc_boleta'     => 'BC02', // Nuevo
+                'serie_guia'          => 'T002', // Nuevo
+                'serie_ticket'        => 'TK02', // Interno (Corregido de T002 a TK02)
             ],
             [
-                // --- SUCURSAL 2 (SUR) ---
-                'codigo'              => '0002', // Código SUNAT Anexo 2
+                // --- 3. SUCURSAL SUR (AREQUIPA) ---
+                'codigo'              => '0002',
                 'nombre'              => 'SUCURSAL SUR - AREQUIPA',
 
-                // Ubicación (Arequipa / Arequipa / Yanahuara)
                 'ubigeo'              => '040126',
                 'departamento'        => 'AREQUIPA',
                 'provincia'           => 'AREQUIPA',
                 'distrito'            => 'YANAHUARA',
                 'direccion'           => 'Av. Ejercito 789',
-
-                // Contacto
                 'telefono'            => '(054) 555-6666',
                 'email'               => 'ventas.arequipa@mifarmacia.com',
-
-                // Configuración Fiscal
                 'impuesto_porcentaje' => 18.00,
-                'serie_boleta'        => 'B003',
-                'serie_factura'       => 'F003',
-                'serie_ticket'        => 'T003',
                 'activo'              => true,
+
+                // CONFIGURACIÓN DE SERIES (Familia 03)
+                'serie_factura'       => 'F003',
+                'serie_boleta'        => 'B003',
+                'serie_nc_factura'    => 'FC03', // Nuevo
+                'serie_nc_boleta'     => 'BC03', // Nuevo
+                'serie_guia'          => 'T003', // Nuevo
+                'serie_ticket'        => 'TK03', // Interno (Corregido de T003 a TK03)
             ]
         ];
 
         foreach ($sucursales as $data) {
-            // Usamos updateOrCreate para no duplicar si corres el seeder dos veces
             Sucursal::updateOrCreate(
-                ['codigo' => $data['codigo']], // Busca por código SUNAT
+                ['codigo' => $data['codigo']],
                 $data
             );
         }

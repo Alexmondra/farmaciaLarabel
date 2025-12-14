@@ -112,69 +112,117 @@
   document.addEventListener('DOMContentLoaded', function() {
 
     // ---------------------------------------------------------
-    // 1. REFERENCIAS GLOBALES
+    // 1. REFERENCIAS (Usamos selectores por 'name' para mayor seguridad)
     // ---------------------------------------------------------
     const modal = $('#modalSucursal');
     const form = $('#formSucursal');
     const modalTitulo = $('#modalTitulo');
     const methodField = $('#methodField');
 
-    // SERIES
-    const inputSerieBoleta = $('#inputSerieBoleta');
-    const inputSerieFactura = $('#inputSerieFactura');
-    const inputSerieTicket = $('#inputSerieTicket');
-
-    // VARIABLES DE SUGERENCIA (Pasadas desde el controlador)
-    const sugerenciaB = @json($sugerenciaBoleta ?? 'B001');
-    const sugerenciaF = @json($sugerenciaFactura ?? 'F001');
-    const sugerenciaT = @json($sugerenciaTiket ?? 'T001');
-
-    // INPUTS GENERALES
-    const inputNombre = $('#inputNombre');
-    const inputCodigo = $('#inputCodigo'); // Ahora editable
-
-    // INPUTS UBICACION Y CONTACTO (NUEVOS)
-    const inputUbigeo = $('#inputUbigeo');
-    const inputDepartamento = $('#inputDepartamento');
-    const inputProvincia = $('#inputProvincia');
-    const inputDistrito = $('#inputDistrito');
-    const inputDireccion = $('#inputDireccion');
-    const inputEmail = $('#inputEmail');
-    const inputTelefono = $('#inputTelefono');
-
-    const inputImpuesto = $('#inputImpuesto');
-
-    // Referencias Imagen/Estado
+    // Referencias a inputs de imagen y estado
     const previewImg = $('#previewImagen');
-    const fileInput = $('#customFile');
     const checkActivo = $('#checkActivo');
     const labelActivo = $('#labelActivo');
 
-    // ---------------------------------------------------------
-    // 2. BÚSQUEDA EN TIEMPO REAL (Live Search)
-    // ---------------------------------------------------------
-    $('#liveSearchInput').on('keyup', function() {
-      var value = $(this).val().toLowerCase();
-      var visibleRows = 0;
+    // VARIABLES DE SUGERENCIA (Vienen del controlador)
+    const sugerencias = {
+      boleta: @json($sugerenciaBoleta ?? 'B001'),
+      factura: @json($sugerenciaFactura ?? 'F001'),
+      ticket: @json($sugerenciaTicket ?? 'TK01'),
+      nc_factura: @json($sugerenciaNCFactura ?? 'FC01'),
+      nc_boleta: @json($sugerenciaNCBoleta ?? 'BC01'),
+      guia: @json($sugerenciaGuia ?? 'T001'),
+      codigo: @json($sugerenciaCodigo ?? '0001')
+    };
 
-      $("#tablaSucursales tr").filter(function() {
-        if ($(this).attr('id') === 'noResultsFound') return;
-        var match = $(this).text().toLowerCase().indexOf(value) > -1;
-        $(this).toggle(match);
-        if (match) visibleRows++;
-      });
+    // ---------------------------------------------------------
+    // 2. FUNCIÓN PARA ABRIR MODAL "CREAR"
+    // ---------------------------------------------------------
+    window.abrirModalCrear = function() {
+      form[0].reset(); // Limpia el formulario
+      form.attr('action', "{{ route('configuracion.sucursales.store') }}");
+      methodField.html(''); // Quita el método PUT (será POST por defecto)
 
-      if (visibleRows === 0) {
-        $('#noResultsFound').show();
+      modalTitulo.html('<i class="fas fa-plus-circle mr-2"></i> Registrar Nueva Sucursal');
+      previewImg.attr('src', 'https://ui-avatars.com/api/?name=Nueva&background=cccccc&color=fff&size=128');
+
+      // Estado por defecto: Activo
+      checkActivo.prop('checked', true).trigger('change');
+
+      // --- LLENAR CON SUGERENCIAS ---
+      $('input[name="codigo"]').val(sugerencias.codigo);
+
+      $('input[name="serie_boleta"]').val(sugerencias.boleta);
+      $('input[name="serie_factura"]').val(sugerencias.factura);
+      $('input[name="serie_ticket"]').val(sugerencias.ticket);
+
+      // Aquí llenamos las nuevas para que no queden vacías al crear
+      $('input[name="serie_nc_factura"]').val(sugerencias.nc_factura);
+      $('input[name="serie_nc_boleta"]').val(sugerencias.nc_boleta);
+      $('input[name="serie_guia"]').val(sugerencias.guia);
+
+      modal.modal('show');
+    }
+
+    // ---------------------------------------------------------
+    // 3. FUNCIÓN PARA ABRIR MODAL "EDITAR" (Aquí estaba el fallo)
+    // ---------------------------------------------------------
+    window.abrirModalEditar = function(data) {
+      form[0].reset(); // Limpiamos primero
+
+      let url = "{{ route('configuracion.sucursales.update', ':id') }}";
+      url = url.replace(':id', data.id);
+
+      form.attr('action', url);
+      methodField.html('<input type="hidden" name="_method" value="PUT">'); // Importante para Update
+
+      modalTitulo.html('<i class="fas fa-edit mr-2"></i> Editar: ' + data.nombre);
+
+      // --- LLENADO DE DATOS (Usando name para asegurar que los encuentra) ---
+      $('input[name="codigo"]').val(data.codigo);
+      $('input[name="nombre"]').val(data.nombre);
+
+      // Ubicación
+      $('input[name="ubigeo"]').val(data.ubigeo);
+      $('input[name="departamento"]').val(data.departamento);
+      $('input[name="provincia"]').val(data.provincia);
+      $('input[name="distrito"]').val(data.distrito);
+      $('input[name="direccion"]').val(data.direccion);
+
+      // Contacto & Fiscal
+      $('input[name="email"]').val(data.email);
+      $('input[name="telefono"]').val(data.telefono);
+      $('input[name="impuesto_porcentaje"]').val(data.impuesto_porcentaje);
+
+      // --- SERIES (Aquí corregimos para que cargue lo que tiene la BD) ---
+      $('input[name="serie_boleta"]').val(data.serie_boleta);
+      $('input[name="serie_factura"]').val(data.serie_factura);
+      $('input[name="serie_ticket"]').val(data.serie_ticket);
+
+      // ¡ESTO ES LO QUE FALTABA!
+      // Si la BD tiene null, ponle vacío o una sugerencia, pero intenta cargar 'data'
+      $('input[name="serie_nc_factura"]').val(data.serie_nc_factura);
+      $('input[name="serie_nc_boleta"]').val(data.serie_nc_boleta);
+      $('input[name="serie_guia"]').val(data.serie_guia);
+
+      // Imagen y Estado
+      checkActivo.prop('checked', data.activo == 1).trigger('change');
+
+      if (data.imagen_sucursal) {
+        previewImg.attr('src', "/storage/" + data.imagen_sucursal);
       } else {
-        $('#noResultsFound').hide();
+        // Generar avatar con iniciales si no hay foto
+        let nombreClean = data.nombre.replace(/[^a-zA-Z ]/g, "").substring(0, 2);
+        previewImg.attr('src', 'https://ui-avatars.com/api/?name=' + nombreClean + '&background=20c997&color=fff&size=128');
       }
-    });
+
+      modal.modal('show');
+    }
 
     // ---------------------------------------------------------
-    // 3. LOGICA DE IMAGEN
+    // 4. LOGICA EXTRA (Imagen, Switch, Buscador)
     // ---------------------------------------------------------
-    fileInput.change(function(e) {
+    $('#customFile').change(function(e) {
       if (this.files && this.files[0]) {
         let reader = new FileReader();
         reader.onload = function(e) {
@@ -184,9 +232,6 @@
       }
     });
 
-    // ---------------------------------------------------------
-    // 4. LOGICA DEL SWITCH
-    // ---------------------------------------------------------
     checkActivo.change(function() {
       if ($(this).is(':checked')) {
         labelActivo.text('Operativa').removeClass('text-danger').addClass('text-success');
@@ -195,80 +240,17 @@
       }
     });
 
-    // ---------------------------------------------------------
-    // 5. ABRIR MODAL CREAR
-    // ---------------------------------------------------------
-    window.abrirModalCrear = function() {
-      form[0].reset();
-      form.attr('action', "{{ route('configuracion.sucursales.store') }}");
-      methodField.html('');
-
-      modalTitulo.html('<i class="fas fa-plus-circle mr-2"></i> Registrar Nueva Sucursal');
-      previewImg.attr('src', 'https://ui-avatars.com/api/?name=Nueva&background=cccccc&color=fff&size=128');
-      checkActivo.prop('checked', true).trigger('change');
-
-      // Limpiar inputs nuevos manualmente por si acaso
-      inputUbigeo.val('');
-      inputDepartamento.val('');
-      inputProvincia.val('');
-      inputDistrito.val('');
-      inputEmail.val('');
-
-      // Sugerencias de series
-      inputSerieBoleta.val(sugerenciaB);
-      inputSerieFactura.val(sugerenciaF);
-      inputSerieTicket.val(sugerenciaT);
-
-      modal.modal('show');
-    }
-
-    // ---------------------------------------------------------
-    // 6. ABRIR MODAL EDITAR
-    // ---------------------------------------------------------
-    window.abrirModalEditar = function(data) {
-      form[0].reset();
-
-      let url = "{{ route('configuracion.sucursales.update', ':id') }}";
-      url = url.replace(':id', data.id);
-
-      form.attr('action', url);
-      methodField.html('<input type="hidden" name="_method" value="PUT">');
-
-      modalTitulo.html('<i class="fas fa-edit mr-2"></i> Editar: ' + data.nombre);
-
-      // --- LLENADO DE DATOS ---
-      inputNombre.val(data.nombre);
-      inputCodigo.val(data.codigo); // Carga el código SUNAT
-
-      // Ubicación
-      inputUbigeo.val(data.ubigeo);
-      inputDepartamento.val(data.departamento);
-      inputProvincia.val(data.provincia);
-      inputDistrito.val(data.distrito);
-      inputDireccion.val(data.direccion);
-
-      // Contacto
-      inputEmail.val(data.email);
-      inputTelefono.val(data.telefono);
-
-      inputImpuesto.val(data.impuesto_porcentaje);
-
-      // Series
-      inputSerieBoleta.val(data.serie_boleta);
-      inputSerieFactura.val(data.serie_factura);
-      inputSerieTicket.val(data.serie_ticket);
-
-      checkActivo.prop('checked', data.activo == 1).trigger('change');
-
-      if (data.imagen_sucursal) {
-        $('#previewImagen').attr('src', "/storage/" + data.imagen_sucursal);
-      } else {
-        let nombreClean = encodeURIComponent(data.nombre);
-        $('#previewImagen').attr('src', 'https://ui-avatars.com/api/?name=' + nombreClean + '&background=20c997&color=fff&size=128');
-      }
-
-      modal.modal('show');
-    }
+    $('#liveSearchInput').on('keyup', function() {
+      var value = $(this).val().toLowerCase();
+      var visibleRows = 0;
+      $("#tablaSucursales tr").filter(function() {
+        if ($(this).attr('id') === 'noResultsFound') return;
+        var match = $(this).text().toLowerCase().indexOf(value) > -1;
+        $(this).toggle(match);
+        if (match) visibleRows++;
+      });
+      $('#noResultsFound').toggle(visibleRows === 0);
+    });
 
   });
 </script>
