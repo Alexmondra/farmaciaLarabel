@@ -5,6 +5,7 @@ namespace App\Models\Guias;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Inventario\Medicamento;
+use App\Models\Inventario\Lote;
 
 class DetalleGuiaRemision extends Model
 {
@@ -15,6 +16,7 @@ class DetalleGuiaRemision extends Model
     protected $fillable = [
         'guia_remision_id',
         'medicamento_id',
+        'lote_id',
         'codigo_producto',
         'descripcion',
         'unidad_medida',
@@ -33,5 +35,10 @@ class DetalleGuiaRemision extends Model
     public function medicamento()
     {
         return $this->belongsTo(Medicamento::class, 'medicamento_id');
+    }
+
+    public function lote()
+    {
+        return $this->belongsTo(Lote::class, 'lote_id');
     }
 }

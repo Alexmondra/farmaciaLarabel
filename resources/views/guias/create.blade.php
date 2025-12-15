@@ -3,18 +3,6 @@
 @section('title', 'Nueva Guía de Remisión')
 
 @section('content_header')
-
-@if ($errors->any())
-<div class="alert alert-danger">
-    <h4><i class="icon fas fa-ban"></i> ¡Error encontrado!</h4>
-    <ul>
-        @foreach ($errors->all() as $error)
-        <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-</div>
-@endif
-
 <div class="d-flex justify-content-between align-items-center">
     <h1 class="text-navy font-weight-bold">
         <i class="fas fa-dolly text-teal mr-2"></i> Nueva Guía de Remisión
@@ -52,7 +40,25 @@
 
 @section('js')
 <script>
-    // Una pequeña alerta de confirmación antes de enviar
+    // 1. Manejo de Errores de Validación (después del reload)
+    document.addEventListener('DOMContentLoaded', function() {
+        const errorData = '{!! json_encode($errors->all()) !!}';
+
+        // Ahora parseamos la cadena JSON segura
+        const laravelErrors = JSON.parse(errorData);
+
+        if (laravelErrors.length > 0) {
+            const htmlErrors = `<ul>${laravelErrors.map(e => `<li>${e}</li>`).join('')}</ul>`;
+            Swal.fire({
+                title: '¡Error de Validación!',
+                icon: 'error',
+                html: htmlErrors,
+                confirmButtonColor: '#e74c3c', // Rojo
+                confirmButtonText: 'Entendido'
+            });
+        }
+    });
+
     function confirmarGuardado() {
         // 1. LIMPIEZA INICIAL
         // Quitamos las marcas rojas de intentos anteriores

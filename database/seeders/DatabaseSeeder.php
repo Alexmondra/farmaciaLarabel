@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             CajaSesionSeeder::class,
             VentaSeeder::class,
             DetalleVentaSeeder::class,
+            UbigeosTableSeeder::class,
         ]);
     }
 }

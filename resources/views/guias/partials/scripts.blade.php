@@ -2,9 +2,11 @@
     // ==========================================
     // VARIABLES GLOBALES
     // ==========================================
-    var itemsGuia = [];
     var timerBusqueda;
     var currentFocus = -1; // Para navegar con flechas
+
+    var itemsGuia = @json(old('items') ? json_decode(old('items')) : []);
+    if (!Array.isArray(itemsGuia)) itemsGuia = [];
 
     // RUTAS (Blade las imprime aquí)
     const URL_BUSCAR_PROD = "{{ route('guias.lookup_medicamentos') }}";
@@ -18,6 +20,9 @@
 
     document.addEventListener('DOMContentLoaded', function() {
 
+        if (itemsGuia.length > 0) {
+            renderTabla();
+        }
         // ============================================================
         // 1. LÓGICA DE BÚSQUEDA DE VENTA (IMPORTAR)
         // ============================================================
@@ -302,6 +307,48 @@
                 itemsGuia.push(item);
             }
             renderTabla();
+        }
+
+        window.eliminarItem = function(index) {
+            itemsGuia.splice(index, 1);
+            renderTabla();
+        }
+
+        function renderTabla() {
+            let tbody = $('#tablaItems tbody');
+            let html = '';
+
+            if (itemsGuia.length === 0) {
+                $('#msg-vacio').show();
+                tbody.empty();
+                $('#lbl-conteo').text('0 Items');
+            } else {
+                $('#msg-vacio').hide();
+                $('#lbl-conteo').text(itemsGuia.length + ' Items');
+
+                itemsGuia.forEach((it, i) => {
+                    // Asegurar que las descripciones no son nulas al renderizar
+                    const descripcion = it.descripcion || 'Producto sin descripción';
+
+                    html += `
+                    <tr>
+                        <td class="pl-3 py-2">
+                            <span class="badge badge-light border mr-1">${it.codigo || 'S/C'}</span> 
+                            <span class="text-navy font-weight-bold">${descripcion}</span>
+                        </td>
+                        <td class="text-center py-2">
+                            <span class="font-weight-bold" style="font-size:1.1rem">${it.cantidad}</span>
+                        </td>
+                        <td class="py-2 text-right pr-3">
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="eliminarItem(${i})">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                tbody.html(html);
+            }
+            $('#inputItemsJson').val(JSON.stringify(itemsGuia));
         }
 
         window.eliminarItem = function(index) {

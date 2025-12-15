@@ -43,6 +43,10 @@ class ConfiguracionController extends Controller
             // AHORA ACEPTAMOS TAMBIÉN .PEM y .TXT
             'sunat_certificado_path' => 'nullable|file|mimes:pfx,p12,pem,txt',
 
+            // 🔥 NUEVO – GRE API
+            'sunat_client_id' => 'nullable|string|max:120',
+            'sunat_client_secret' => 'nullable|string|max:255',
+
             // Puntos
             'puntos_por_moneda'    => 'required|integer|min:1',
             'valor_punto_canje'    => 'required|numeric|min:0',

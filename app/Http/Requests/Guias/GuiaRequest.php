@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Guias;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Rules\UbigeoExiste;
 
 class GuiaRequest extends FormRequest
 {
@@ -40,31 +41,52 @@ class GuiaRequest extends FormRequest
 
     protected function rulesForCreate()
     {
+        // El motivo '04' (Traslado entre establecimientos) no requiere cliente.
+        $requiereCliente = $this->input('motivo_traslado') !== '04' ? 'required' : 'nullable';
+
         return [
-            // GENERALES
-            'serie'              => 'required|string',
-            'numero'             => 'required|integer',
-            'fecha_traslado'     => 'required|date',
-            'motivo_traslado'    => 'required|string',
+            // ===============================================
+            // 1. GENERALES
+            // ===============================================
+            'serie'              => 'required|string|max:4',
+            'numero'             => 'required|integer|min:1',
+            'fecha_traslado'     => 'required|date|after_or_equal:today',
+            'motivo_traslado'    => 'required|string|in:01,02,04,08,09,13,14', // Códigos SUNAT
+            'descripcion_motivo' => 'nullable|string|max:200', // Campo descriptivo
             'modalidad_traslado' => 'required|string|in:01,02',
             'peso_bruto'         => 'required|numeric|min:0.001',
-            'items'              => 'required|json',
+            'numero_bultos'      => 'nullable|integer|min:1',
             'venta_id'           => 'nullable|integer|exists:ventas,id',
-            'cliente_id'         => 'nullable|integer',
 
-            // DESTINO
+            // CLIENTE: CONDICIONAL
+            'cliente_id'         => [$requiereCliente, 'integer', 'exists:clientes,id'],
+
+            // ===============================================
+            // 2. DESTINO (UBIGEOS)
+            // ===============================================
+            'ubigeo_partida'     => ['nullable', 'string', new UbigeoExiste], // Si es editable, debe validarse
+            'codigo_establecimiento_partida' => 'nullable|string|max:4',
+            'direccion_partida'  => 'nullable|string|max:200',
             'direccion_llegada'  => 'required|string|max:200',
-            'ubigeo_llegada'     => 'required|string|size:6',
+            'ubigeo_llegada'     => ['required', 'string', new UbigeoExiste], // ¡VALIDACIÓN CRÍTICA!
+            'codigo_establecimiento_llegada' => 'required_if:motivo_traslado,04|nullable|string|max:4',
+            // ===============================================
+            // 3. ITEMS (Detalles de la Guía)
+            // ===============================================
+            'items'                 => 'required|json', // Se valida el contenido en el foreach (ver after())
 
-            // CONDICIONAL TRANSPORTE PÚBLICO
-            'doc_transportista_numero'   => 'required_if:modalidad_traslado,01|nullable|digits:11',
+            // ===============================================
+            // 4. TRANSPORTE
+            // ===============================================
+            // TRASLADO: PÚBLICO (modalidad 01)
+            'doc_transportista_numero'   => 'required_if:modalidad_traslado,01|nullable|digits:11', // RUC del Transportista
             'razon_social_transportista' => 'required_if:modalidad_traslado,01|nullable|string|max:150',
 
-            // CONDICIONAL TRANSPORTE PRIVADO
+            // TRASLADO: PRIVADO (modalidad 02)
             'placa_vehiculo'    => 'required_if:modalidad_traslado,02|nullable|string|max:10',
-            'doc_chofer_numero' => 'required_if:modalidad_traslado,02|nullable|digits:8',
-            'nombre_chofer'     => 'required_if:modalidad_traslado,02|nullable|string|max:150',
-            'licencia_conducir' => 'required_if:modalidad_traslado,02|nullable|string|max:20',
+            'doc_chofer_numero' => 'required_if:modalidad_traslado,02|nullable|digits_between:8,12', // DNI/CE del Chofer
+            'nombre_chofer'     => 'nullable|string|max:150',
+            'licencia_conducir' => 'nullable|string|max:20',
         ];
     }
 
@@ -80,12 +102,18 @@ class GuiaRequest extends FormRequest
         ];
     }
 
+
     public function messages()
     {
         return [
-            'doc_transportista_numero.required_if' => 'El RUC es obligatorio para transporte público.',
-            'placa_vehiculo.required_if'           => 'La placa es obligatoria para transporte privado.',
-            'fecha_recepcion.after_or_equal'       => 'La recepción no puede ser antes del traslado.',
+            'ubigeo_llegada.required'              => 'El Ubigeo de llegada es obligatorio.',
+            'ubigeo_llegada.size'                  => 'El Ubigeo debe tener exactamente 6 dígitos.',
+            'doc_transportista_numero.required_if' => 'El RUC del transportista es obligatorio para transporte público.',
+            'placa_vehiculo.required_if'           => 'La placa del vehículo es obligatoria para transporte privado.',
+            'doc_chofer_numero.required_if'        => 'El DNI/CE del chófer es obligatorio para transporte privado.',
+            'cliente_id.required'                  => 'Debe seleccionar el cliente destinatario, salvo que sea Traslado Interno (Motivo 04).',
+            'fecha_traslado.after_or_equal'        => 'La fecha de traslado no puede ser anterior al día de hoy.',
+            'fecha_recepcion.after_or_equal'       => 'La recepción no puede ser antes de la fecha de traslado.',
         ];
     }
 }

@@ -4,14 +4,15 @@
     <div class="row">
         <div class="col-md-6">
             <label class="label-futuristic">Fecha Traslado</label>
-            <input type="date" name="fecha_traslado" class="form-control form-control-futuristic" value="{{ date('Y-m-d') }}">
+            <input type="date" name="fecha_traslado" class="form-control form-control-futuristic"
+                value="{{ old('fecha_traslado', date('Y-m-d')) }}">
         </div>
         <div class="col-md-6">
             <label class="label-futuristic">Motivo</label>
             <select name="motivo_traslado" id="selectMotivo" class="form-control form-control-futuristic">
-                <option value="01">VENTA (Salida Cliente)</option>
-                <option value="04">TRASLADO ENTRE SUCURSALES</option>
-                <option value="13">OTROS</option>
+                <option value="01" {{ old('motivo_traslado') == '01' ? 'selected' : '' }}>VENTA (Salida Cliente)</option>
+                <option value="04" {{ old('motivo_traslado') == '04' ? 'selected' : '' }}>TRASLADO ENTRE SUCURSALES</option>
+                <option value="13" {{ old('motivo_traslado') == '13' ? 'selected' : '' }}>OTROS</option>
             </select>
         </div>
 
@@ -19,7 +20,8 @@
             <label class="label-futuristic text-warning">Especifique el Motivo</label>
             <input type="text" name="descripcion_motivo" id="inputDescripcionMotivo"
                 class="form-control form-control-futuristic"
-                placeholder="Ej: Devolución, Muestras médicas, Regalo...">
+                placeholder="Ej: Devolución, Muestras médicas, Regalo..."
+                value="{{ old('descripcion_motivo') }}"> {{-- ¡Añadir old()! --}}
         </div>
     </div>
 
@@ -49,8 +51,8 @@
                 data-ubi="{{ $suc->ubigeo }}"
                 data-ruc="{{ $configuracion->empresa_ruc ?? '30000000001' }}"
                 data-razon="{{ $configuracion->empresa_razon_social ?? config('app.name') }}"
-                data-nombre="{{ $suc->nombre }}">
-                {{ $suc->nombre }}
+                data-nombre="{{ $suc->nombre }}"
+                data-codigo="{{ $suc->codigo ?? '9999' }}"> {{ $suc->nombre }}
             </option>
             @endforeach
         </select>

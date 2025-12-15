@@ -148,7 +148,6 @@ class GuiaRemisionController extends Controller
 
             // RESPUESTA INTELIGENTE
             if ($guia->sunat_exito) {
-                // Todo perfecto (Verde)
                 $msg = "Guía {$guia->serie}-{$guia->numero} CREADA y ACEPTADA por SUNAT.";
                 $tipo = 'success';
             } else {

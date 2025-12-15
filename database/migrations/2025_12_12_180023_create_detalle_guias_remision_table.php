@@ -17,6 +17,7 @@ return new class extends Migration
 
             // PRODUCTO
             $table->unsignedBigInteger('medicamento_id')->nullable();
+            $table->unsignedBigInteger('lote_id')->nullable();
             $table->string('codigo_producto', 50)->nullable();
             $table->string('descripcion', 250);
 
@@ -24,6 +25,8 @@ return new class extends Migration
             $table->string('unidad_medida', 4)->default('NIU'); // NIU = Unidad
 
             $table->timestamps();
+
+            $table->foreign('lote_id')->references('id')->on('lotes')->onDelete('restrict');
         });
     }
 

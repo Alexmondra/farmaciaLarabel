@@ -12,7 +12,7 @@
     </div>
     <div class="col-sm-6 text-right mt-3 mt-sm-0">
         {{-- SWITCH DE MODO EDICIÓN --}}
-        <div class="d-inline-flex align-items-center bg-white p-2 rounded-lg shadow-sm control-panel">
+        <div class="d-inline-flex align-items-center bg-white p-2 rounded shadow-sm control-panel">
             <span class="mr-3 font-weight-bold text-muted transition-text" id="textoModo">
                 <i class="fas fa-lock mr-1"></i> Solo Lectura
             </span>
@@ -30,15 +30,18 @@
 <form action="{{ route('configuracion.general.update') }}" method="POST" enctype="multipart/form-data" id="formConfig" autocomplete="off">
     @csrf
     @method('PUT')
-    {{-- HACK PARA NAVEGADORES --}}
+
+    {{--
+           HACK PARA NAVEGADORES: 
+           Estos inputs ocultos absorben el autocompletado de Chrome/Edge 
+           para que no ensucien el RUC ni la contraseña real.
+        --}}
     <input type="text" style="display:none">
     <input type="password" style="display:none">
 
     <div class="row">
 
-        {{-- =================================== --}}
         {{-- === COLUMNA 1: IDENTIDAD === --}}
-        {{-- =================================== --}}
         <div class="col-12 col-lg-4 mb-4">
             <div class="card card-primary card-outline h-100 shadow-sm card-modern">
                 <div class="card-header border-0">
@@ -68,7 +71,7 @@
                     </div>
 
                     <div class="text-left">
-                        {{-- RUC --}}
+                        {{-- RUC (Con atributos anti-autofill) --}}
                         <div class="form-group">
                             <label class="small text-muted font-weight-bold text-uppercase">RUC</label>
                             <div class="input-group">
@@ -80,13 +83,12 @@
                                     value="{{ $config->empresa_ruc }}"
                                     class="form-control bg-light border-0 input-edit"
                                     disabled
-                                    readonly
+                                    readonly {{-- Importante para Chrome --}}
                                     autocomplete="off"
                                     placeholder="20100000001">
                             </div>
                         </div>
 
-                        {{-- RAZÓN SOCIAL --}}
                         <div class="form-group">
                             <label class="small text-muted font-weight-bold text-uppercase">Razón Social</label>
                             <div class="input-group">
@@ -98,7 +100,6 @@
                             </div>
                         </div>
 
-                        {{-- DIRECCIÓN FISCAL --}}
                         <div class="form-group">
                             <label class="small text-muted font-weight-bold text-uppercase">Dirección Fiscal</label>
                             <textarea name="empresa_direccion" class="form-control bg-light border-0 input-edit"
@@ -109,147 +110,112 @@
             </div>
         </div>
 
-        {{-- =================================== --}}
-        {{-- === COLUMNA 2: FACTURACIÓN (Acordeón Excluyente) === --}}
-        {{-- =================================== --}}
+        {{-- === COLUMNA 2: FACTURACIÓN === --}}
         <div class="col-12 col-lg-4 mb-4">
             <div class="card card-danger card-outline h-100 shadow-sm card-modern">
+                <div class="card-header border-0">
+                    <h3 class="card-title font-weight-bold text-danger">
+                        <i class="fas fa-file-invoice mr-2"></i> SUNAT / Facturación
+                    </h3>
+                </div>
+                <div class="card-body">
 
-                {{-- Contenedor Padre del Acordeón Excluyente --}}
-                <div id="accordionFacturacion" class="w-100">
-
-                    {{-- ---------------------------------------------------- --}}
-                    {{-- BLOQUE 1: SUNAT CLÁSICA (Modo Entorno, SOL, Certificado) --}}
-                    {{-- ---------------------------------------------------- --}}
-
-                    {{-- HEADER / BOTÓN 1 --}}
-                    <div class="card-header border-0 p-0">
-                        <h3 class="card-title font-weight-bold w-100 p-3"
-                            data-toggle="collapse" data-target="#collapseSunatClasica"
-                            aria-expanded="true" aria-controls="collapseSunatClasica"
-                            style="cursor: pointer; border-radius: 15px 15px 0 0;">
-                            <i class="fas fa-file-invoice mr-2 text-danger"></i>
-                            SUNAT / Facturación
-                            <i class="fas fa-chevron-down float-right text-muted icon-collapse" data-target="#collapseSunatClasica"></i>
-                        </h3>
-                    </div>
-
-                    {{-- CUERPO COLAPSABLE 1 (Abierto por defecto) --}}
-                    <div id="collapseSunatClasica" class="collapse show" data-parent="#accordionFacturacion">
-                        <div class="card-body pt-0 pb-3"> {{-- Reducir padding-bottom para juntar --}}
-
-                            {{-- MODO ENTORNO --}}
-                            <div class="form-group bg-light p-3 rounded d-flex justify-content-between align-items-center mb-4 border border-faded">
-                                <span class="small font-weight-bold text-uppercase text-muted">Modo Entorno</span>
-                                <div class="custom-control custom-switch custom-switch-off-warning custom-switch-on-success">
-                                    <input type="checkbox" class="custom-control-input input-edit" id="sunatProduccion"
-                                        name="sunat_produccion" value="1" {{ $config->sunat_produccion ? 'checked' : '' }} disabled>
-                                    <label class="custom-control-label font-weight-bold {{ $config->sunat_produccion ? 'text-success' : 'text-warning' }}" for="sunatProduccion">
-                                        {{ $config->sunat_produccion ? 'EN PRODUCCIÓN' : 'BETA / PRUEBAS' }}
-                                    </label>
-                                </div>
-                            </div>
-
-                            {{-- CREDENCIALES SOL --}}
-                            <h6 class="small font-weight-bold text-uppercase text-muted mt-4 mb-2">Credenciales SOL</h6>
-                            <div class="form-group">
-                                <label class="small text-muted font-weight-bold">Usuario SOL</label>
-                                <input type="text" name="sunat_sol_user" value="{{ $config->sunat_sol_user }}"
-                                    class="form-control input-modern input-edit" disabled readonly autocomplete="new-password">
-                            </div>
-                            <div class="form-group">
-                                <label class="small text-muted font-weight-bold">Clave SOL</label>
-                                <input type="password" name="sunat_sol_pass" value="{{ $config->sunat_sol_pass }}"
-                                    class="form-control input-modern input-edit" disabled readonly autocomplete="new-password">
-                            </div>
-
-                            <hr class="my-4">
-
-                            {{-- CERTIFICADO DIGITAL --}}
-                            <h6 class="small font-weight-bold text-uppercase text-muted mt-4 mb-2">Certificado Digital</h6>
-                            <div class="form-group">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="small text-muted font-weight-bold m-0">Archivo Certificado</label>
-                                    @if($config->sunat_certificado_path)
-                                    <span class="badge badge-success"><i class="fas fa-check mr-1"></i> Activo</span>
-                                    @else
-                                    <span class="badge badge-danger">Faltante</span>
-                                    @endif
-                                </div>
-
-                                <div class="custom-file-modern input-edit-wrapper opacity-disabled">
-                                    <label class="w-100 btn btn-outline-secondary text-left text-truncate input-edit transition-all" for="certFile" style="cursor: pointer;" disabled>
-                                        <i class="fas fa-upload mr-2"></i> <span id="certFileName">Actualizar certificado (.pfx, .pem)...</span>
-                                    </label>
-                                    <input type="file" id="certFile" name="sunat_certificado_path" class="d-none input-edit" accept=".pfx,.p12,.pem,.txt" disabled>
-                                </div>
-                            </div>
-                            <div class="form-group mb-0">
-                                <label class="small text-muted font-weight-bold">Clave del Certificado</label>
-                                <input type="password" name="sunat_certificado_pass" value="{{ $config->sunat_certificado_pass }}"
-                                    class="form-control input-modern input-edit" disabled readonly placeholder="Solo si es PFX">
-                            </div>
-
+                    {{-- Entorno --}}
+                    <div class="form-group bg-light p-3 rounded d-flex justify-content-between align-items-center mb-4">
+                        <span class="small font-weight-bold text-uppercase text-muted">Modo Entorno</span>
+                        <div class="custom-control custom-switch custom-switch-off-warning custom-switch-on-success">
+                            <input type="checkbox" class="custom-control-input input-edit" id="sunatProduccion"
+                                name="sunat_produccion" value="1" {{ $config->sunat_produccion ? 'checked' : '' }} disabled>
+                            <label class="custom-control-label font-weight-bold {{ $config->sunat_produccion ? 'text-success' : 'text-warning' }}" for="sunatProduccion">
+                                {{ $config->sunat_produccion ? 'EN PRODUCCIÓN' : 'BETA / PRUEBAS' }}
+                            </label>
                         </div>
                     </div>
 
-                    {{-- ---------------------------------------------------- --}}
-                    {{-- BLOQUE 2: API GRE (Guías de Remisión) --}}
-                    {{-- ---------------------------------------------------- --}}
+                    {{-- Credenciales SOL --}}
+                    <div class="form-group">
+                        <label class="small text-muted font-weight-bold">Usuario SOL</label>
+                        <input type="text" name="sunat_sol_user" value="{{ $config->sunat_sol_user }}"
+                            class="form-control input-modern input-edit" disabled readonly autocomplete="new-password">
+                    </div>
 
-                    <hr class="my-0">
+                    <div class="form-group">
+                        <label class="small text-muted font-weight-bold">Clave SOL</label>
+                        <input type="password" name="sunat_sol_pass" value="{{ $config->sunat_sol_pass }}"
+                            class="form-control input-modern input-edit" disabled readonly autocomplete="new-password">
+                    </div>
 
-                    {{-- HEADER / BOTÓN 2 --}}
-                    <div class="card-footer bg-white p-0">
-                        <div
-                            data-toggle="collapse" data-target="#collapseApiGre"
-                            aria-expanded="false" aria-controls="collapseApiGre"
-                            style="cursor: pointer; padding: 0.75rem 1.25rem; border-radius: 0 0 15px 15px;">
-                            <h5 class="card-title m-0 small font-weight-bold w-100 text-info">
-                                <i class="fas fa-key mr-2"></i>
-                                Credenciales API GRE (Guías de Remisión)
-                                <i class="fas fa-chevron-down float-right text-muted icon-collapse" data-target="#collapseApiGre"></i>
-                            </h5>
+                    <hr class="my-4">
+
+                    {{-- Certificado Digital --}}
+                    <div class="form-group">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="small text-muted font-weight-bold m-0">Certificado Digital</label>
+                            @if($config->sunat_certificado_path)
+                            <span class="badge badge-success"><i class="fas fa-check mr-1"></i> Activo</span>
+                            @else
+                            <span class="badge badge-danger">Faltante</span>
+                            @endif
+                        </div>
+
+                        <div class="custom-file-modern input-edit-wrapper opacity-disabled">
+                            <label class="w-100 btn btn-outline-secondary text-left text-truncate input-edit transition-all" for="certFile" style="cursor: pointer;" disabled>
+                                <i class="fas fa-upload mr-2"></i> <span id="certFileName">Actualizar certificado (.pfx, .pem)...</span>
+                            </label>
+                            <input type="file" id="certFile" name="sunat_certificado_path" class="d-none input-edit" accept=".pfx,.p12,.pem,.txt" disabled>
                         </div>
                     </div>
 
-                    {{-- CUERPO COLAPSABLE 2 (Oculto por defecto) --}}
-                    <div id="collapseApiGre" class="collapse" data-parent="#accordionFacturacion">
-                        <div class="card-body pt-0 border-top">
-                            <div class="form-group mt-3">
-                                <label for="sunat_client_id" class="small text-muted font-weight-bold">Client ID (SUNAT API GRE)</label>
-                                <input type="text"
-                                    name="sunat_client_id"
-                                    id="sunat_client_id"
-                                    class="form-control input-modern input-edit"
-                                    value="{{ old('sunat_client_id', $config->sunat_client_id) }}"
-                                    placeholder="Client ID generado en SUNAT SOL" disabled readonly>
-                                <small class="text-muted">
-                                    Obligatorio solo si SUNAT Producción está activado
-                                </small>
-                            </div>
-                            <div class="form-group mb-0">
-                                <label for="sunat_client_secret" class="small text-muted font-weight-bold">Client Secret (SUNAT API GRE)</label>
-                                <input type="password"
-                                    name="sunat_client_secret"
-                                    id="sunat_client_secret"
-                                    class="form-control input-modern input-edit"
-                                    value="{{ old('sunat_client_secret', $config->sunat_client_secret) }}"
-                                    placeholder="Client Secret generado en SUNAT SOL" disabled readonly>
-                                <small class="text-muted">
-                                    Guárdalo con cuidado (SUNAT no lo vuelve a mostrar)
-                                </small>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label class="small text-muted font-weight-bold">Clave del Certificado</label>
+                        <input type="password" name="sunat_certificado_pass" value="{{ $config->sunat_certificado_pass }}"
+                            class="form-control input-modern input-edit" disabled readonly placeholder="Solo si es PFX">
                     </div>
 
                 </div>
             </div>
         </div>
 
-        {{-- =================================== --}}
+        <hr>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="sunat_client_id">
+                        Client ID (SUNAT API GRE)
+                    </label>
+                    <input type="text"
+                        name="sunat_client_id"
+                        id="sunat_client_id"
+                        class="form-control"
+                        value="{{ old('sunat_client_id', $config->sunat_client_id) }}"
+                        placeholder="Client ID generado en SUNAT SOL">
+                    <small class="text-muted">
+                        Obligatorio solo si SUNAT Producción está activado
+                    </small>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="sunat_client_secret">
+                        Client Secret (SUNAT API GRE)
+                    </label>
+                    <input type="password"
+                        name="sunat_client_secret"
+                        id="sunat_client_secret"
+                        class="form-control"
+                        value="{{ old('sunat_client_secret', $config->sunat_client_secret) }}"
+                        placeholder="Client Secret generado en SUNAT SOL">
+                    <small class="text-muted">
+                        Guárdalo con cuidado (SUNAT no lo vuelve a mostrar)
+                    </small>
+                </div>
+            </div>
+        </div>
+
+
         {{-- === COLUMNA 3: TIENDA === --}}
-        {{-- =================================== --}}
         <div class="col-12 col-lg-4 mb-4">
             <div class="card card-success card-outline h-100 shadow-sm card-modern">
                 <div class="card-header border-0">
@@ -259,7 +225,7 @@
                 </div>
                 <div class="card-body">
 
-                    <div class="alert alert-info bg-info-light border-0 small py-2 px-3 rounded-lg">
+                    <div class="alert alert-info bg-info-light border-0 small">
                         <i class="fas fa-info-circle mr-1"></i> Reglas de canje y mensajes.
                     </div>
 
@@ -318,10 +284,6 @@
         transition: transform 0.2s ease;
     }
 
-    .border-faded {
-        border-color: rgba(0, 0, 0, 0.05) !important;
-    }
-
     .input-modern {
         border-radius: 8px;
         border: 1px solid #e9ecef;
@@ -331,31 +293,6 @@
     .input-modern:focus {
         box-shadow: 0 0 0 3px rgba(0, 123, 255, .1);
         border-color: #80bdff;
-    }
-
-    /* === ACORDEÓN ESTILO FUTURISTA === */
-
-    /* Estilo para rotar el icono del acordeón */
-    .icon-collapse {
-        transition: transform var(--transition-speed) ease;
-        font-size: 0.8rem;
-    }
-
-    /* El selector [aria-expanded="true"] lo pone Bootstrap/jQuery cuando se expande */
-    .card-title[data-toggle="collapse"][aria-expanded="true"] .icon-collapse,
-    .card-footer>div[data-toggle="collapse"][aria-expanded="true"] .icon-collapse {
-        transform: rotate(180deg);
-    }
-
-    /* Hover para los headers de colapso */
-    .card-title[data-toggle="collapse"]:hover {
-        background-color: #f7f7f7;
-        /* Ligero hover */
-    }
-
-    .card-footer>div[data-toggle="collapse"]:hover {
-        background-color: #f7f7f7;
-        /* Ligero hover */
     }
 
     /* === MODO LECTURA VS EDICION === */
@@ -417,17 +354,6 @@
 
     .custom-switch-lg .custom-control-input:checked~.custom-control-label::after {
         transform: translateX(1.25rem);
-    }
-
-    /* COLOR CLARO PARA ALERTS */
-    .bg-info-light {
-        background-color: #d1ecf1 !important;
-        color: #0c5460 !important;
-    }
-
-    .dark-mode .bg-info-light {
-        background-color: #1a4d55 !important;
-        color: #d1ecf1 !important;
     }
 
     /* === ANIMACIONES & FAB === */
