@@ -1,11 +1,11 @@
 <div class="card card-primary card-outline card-cliente-pos">
     <div class="card-header py-2">
-        <h3 class="card-title font-weight-bold"><i class="fas fa-user-tag text-primary mr-1"></i> Cliente</h3>
+        <h3 class="card-title font-weight-bold text-dark-mode-light"><i class="fas fa-user-tag text-primary mr-1"></i> Cliente</h3>
     </div>
     <div class="card-body py-2">
         <div class="form-row align-items-end">
             <div class="col-4">
-                <label class="mb-1 text-muted small font-weight-bold">TIPO</label>
+                <label class="mb-1 text-muted-mode small font-weight-bold">TIPO</label>
                 <select name="tipo_comprobante" id="tipo_comprobante" class="form-control form-control-sm font-weight-bold">
                     <option value="BOLETA">DNI / BOL</option>
                     <option value="FACTURA">RUC / FACT</option>
@@ -13,7 +13,7 @@
                 </select>
             </div>
             <div class="col-8">
-                <label class="mb-1 text-muted small font-weight-bold" id="label-documento">NÚMERO</label>
+                <label class="mb-1 text-muted-mode small font-weight-bold" id="label-documento">NÚMERO</label>
                 <div class="input-group input-group-sm">
                     <input type="text" id="busqueda_cliente" class="form-control input-cliente-pos" placeholder="8 dígitos" autocomplete="off">
                     <div class="input-group-append">

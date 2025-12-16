@@ -4,6 +4,7 @@ namespace App\Http\Requests\Guias;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Rules\UbigeoExiste;
+use App\Models\Guias\GuiaRemision;
 
 class GuiaRequest extends FormRequest
 {
@@ -95,10 +96,13 @@ class GuiaRequest extends FormRequest
      */
     protected function rulesForRecibir()
     {
+        $guia = GuiaRemision::findOrFail($this->route('guia'));
+        $fechaTraslado = $guia->fecha_traslado->format('Y-m-d');
+
         return [
-            'fecha_recepcion' => 'required|date|after_or_equal:fecha_traslado',
+            'fecha_recepcion' => ['required', 'date', 'after_or_equal:' . $fechaTraslado],
             'observaciones'   => 'nullable|string|max:500',
-            'conformidad'     => 'required|boolean', // 1=Todo bien, 0=Hubo problemas
+            'conformidad'     => 'required|boolean',
         ];
     }
 

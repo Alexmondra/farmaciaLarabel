@@ -235,8 +235,19 @@
                 tbody.append(`
                     <tr data-lote-id="${i.lote_id}">
                         <td class="align-middle"><span class="font-weight-bold text-dark">${i.nombre}</span><br><small class="text-muted">${i.presentacion} | Lote: ${i.codigo_lote}</small></td>
-                        <td class="align-middle"><input type="number" class="form-control form-control-sm text-center input-edit-cant font-weight-bold" value="${i.cantidad}" min="1" max="${i.stock_max}" style="width: 80px; margin:0 auto;"></td>
-                        <td class="align-middle"><input type="number" class="form-control form-control-sm text-center input-edit-precio" value="${i.precio_venta.toFixed(2)}" step="0.01" min="0" style="width: 100px; margin:0 auto;"></td>
+                        
+                        <td class="align-middle text-center"> 
+                            <input type="number" class="form-control form-control-sm input-edit-cant font-weight-bold" value="${i.cantidad}" min="1" max="${i.stock_max}">
+                        </td>
+                        
+                        <td class="align-middle text-center"> 
+                            <input type="number" 
+                                class="form-control form-control-sm input-edit-precio" 
+                                value="${i.precio_venta.toFixed(2)}" 
+                                step="0.01" 
+                                min="0">
+                        </td>
+                        
                         <td class="align-middle text-right font-weight-bold text-success td-subtotal">S/ ${subtotal.toFixed(2)}</td>
                         <td class="align-middle text-center"><button type="button" class="btn btn-xs btn-outline-danger btn-eliminar-item"><i class="fas fa-trash-alt"></i></button></td>
                     </tr>
@@ -308,13 +319,11 @@
 
             // 2. Pintar en el cuadro verde
             if (descuento > 0 && total > 0) {
-                // Modo con descuento: Tachamos el original y mostramos el nuevo
                 $('#total-venta').html(`
-                    <span style="font-size: 0.6em; text-decoration: line-through; opacity: 0.7; color: #fff;">S/ ${total.toFixed(2)}</span><br>
-                    ${totalFinal.toFixed(2)}
+                <span class="original-price-strike">S/ ${total.toFixed(2)}</span><br>
+            ${totalFinal.toFixed(2)}
                 `);
             } else {
-                // Modo normal
                 $('#total-venta').text(total.toFixed(2));
             }
 

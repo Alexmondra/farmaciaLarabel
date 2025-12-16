@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 use Luecano\NumeroALetras\NumeroALetras;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Models\Guias\GuiaRemision;
 
 class ComprobanteService
 {
@@ -15,9 +16,10 @@ class ComprobanteService
     {
         $config = Configuracion::firstOrFail();
 
+        // 1. Datos del Emisor
         $datosEmisor = [
             'nombre'    => $venta->sucursal->nombre,
-            'direccion' => $venta->sucursal->direccion . " - " . $venta->sucursal->distrito, // Dirección Real
+            'direccion' => $venta->sucursal->direccion . " - " . $venta->sucursal->distrito,
             'telefono'  => $venta->sucursal->telefono,
             'email'     => $venta->sucursal->email,
             'ruc'          => $config->empresa_ruc,
@@ -30,33 +32,98 @@ class ComprobanteService
         $tipoDoc = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
         $fecha   = $venta->fecha_emision->format('Y-m-d');
         $clienteDocType = strlen($venta->cliente->documento) == 11 ? '6' : '1';
-        $hash    = $venta->hash ?? '';
 
-        $qrString = "{$datosEmisor['ruc']}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
+        // 2. Generar QR (UNIFICADO)
+        $qrParams = [
+            'ruc'              => $datosEmisor['ruc'],
+            'tipo_doc'         => $tipoDoc,
+            'serie'            => $venta->serie,
+            'numero'           => $venta->numero,
+            'hash'             => $venta->hash ?? '',
+            'monto_igv'        => $venta->total_igv,
+            'monto_neto'       => $venta->total_neto,
+            'fecha'            => $fecha,
+            'tipo_doc_cliente' => $clienteDocType,
+            'doc_cliente'      => $venta->cliente->documento,
+        ];
+        $qrBase64 = $this->generarQrBase64($qrParams);
 
-        $qrBase64 = base64_encode(QrCode::format('svg')->size(150)->generate($qrString));
-
-        // 5. CONVERTIR TOTAL A LETRAS
         $montoLetras = $this->convertirTotalALetras($venta->total_neto);
 
-        // 6. RENDERIZAR
-        $pdf = Pdf::loadView('comprobante_pdf', [
+        $data = [
             'venta'       => $venta,
-            'emisor'      => $datosEmisor, // Pasamos el array limpio
+            'emisor'      => $datosEmisor,
             'qrBase64'    => $qrBase64,
             'logoBase64'  => $logoBase64,
             'montoLetras' => $montoLetras
-        ]);
-
-        $pdf->setPaper('A4', 'portrait');
-
-        // Nombre amigable: RUC-TIPO-SERIE-NUMERO.pdf
+        ];
         $nombreArchivo = "{$datosEmisor['ruc']}-{$tipoDoc}-{$venta->serie}-{$venta->numero}.pdf";
+
+        return $this->renderizarPdf('comprobante_pdf', $data, $nombreArchivo, $tipo);
+    }
+
+    public function generarGuiaPdf(GuiaRemision $guia, $tipo = 'stream')
+    {
+        $config = Configuracion::firstOrFail();
+
+        // 1. Datos del Emisor
+        $datosEmisor = [
+            'nombre'       => $guia->sucursal->nombre,
+            'direccion'    => $guia->sucursal->direccion,
+            'ruc'          => $config->empresa_ruc,
+            'razon_social' => $config->empresa_razon_social
+        ];
+
+        $rutaLogo = $config->ruta_logo;
+        $logoBase64 = $this->obtenerImagenBase64($rutaLogo);
+
+        $tipoDoc = '09';
+
+        $qrParams = [
+            'ruc'              => $datosEmisor['ruc'],
+            'tipo_doc'         => $tipoDoc,
+            'serie'            => $guia->serie,
+            'numero'           => $guia->numero,
+            'hash'             => $guia->hash ?? '',
+        ];
+        $qrBase64 = $this->generarQrBase64($qrParams);
+
+        // 3. Datos y Nombre de Archivo
+        $data = [
+            'guia' => $guia,
+            'emisor' => $datosEmisor,
+            'logoBase64' => $logoBase64,
+            'qrBase64' => $qrBase64,
+            'fecha_impresion' => now()->format('d/m/Y H:i:s'),
+        ];
+        $nombreArchivo = "{$datosEmisor['ruc']}-{$tipoDoc}-{$guia->serie}-{$guia->numero}.pdf";
+
+        return $this->renderizarPdf('guias.show', $data, $nombreArchivo, $tipo);
+    }
+
+
+    private function renderizarPdf(string $view, array $data, string $nombreArchivo, string $tipo)
+    {
+        $pdf = Pdf::loadView($view, $data);
+        $pdf->setPaper('A4', 'portrait');
 
         if ($tipo === 'download') {
             return $pdf->download($nombreArchivo);
         }
         return $pdf->stream($nombreArchivo);
+    }
+
+    private function generarQrBase64(array $params): string
+    {
+        $qrString = "";
+
+        if ($params['tipo_doc'] === '09') {
+            $qrString = "{$params['ruc']}|{$params['tipo_doc']}|{$params['serie']}|{$params['numero']}|{$params['hash']}|";
+        } else {
+            $qrString = "{$params['ruc']}|{$params['tipo_doc']}|{$params['serie']}|{$params['numero']}|{$params['monto_igv']}|{$params['monto_neto']}|{$params['fecha']}|{$params['tipo_doc_cliente']}|{$params['doc_cliente']}|{$params['hash']}|";
+        }
+
+        return base64_encode(QrCode::format('svg')->size(150)->generate($qrString));
     }
 
     private function obtenerImagenBase64($rutaRelativa)
@@ -72,7 +139,7 @@ class ComprobanteService
         }
 
         if (!$path) {
-            return null; // Si no hay logo, no devuelve nada (para no romper el PDF)
+            return null;
         }
 
         $type = pathinfo($path, PATHINFO_EXTENSION);

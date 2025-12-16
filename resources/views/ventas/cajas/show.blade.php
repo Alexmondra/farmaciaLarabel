@@ -97,6 +97,80 @@ $obsCierre = $partesObs[1] ?? null;
     }
 
     /* ============================================================
+       RESPONSIVIDAD MÓVIL (NUEVO)
+       ============================================================ */
+    @media (max-width: 767.98px) {
+        .compact-header {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .compact-header .btn-sm {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .compact-header>div:first-child {
+            max-width: 60%;
+            /* Evita que el texto de usuario sea demasiado largo */
+        }
+
+        .compact-header .mr-3 {
+            margin-right: 0.5rem !important;
+        }
+
+        .compact-header h6 {
+            font-size: 0.9rem;
+        }
+
+        /* Ajuste de cards de números para que sean 2x2 */
+        .row.mb-3>div {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+
+        .mini-value {
+            font-size: 1rem;
+        }
+
+        /* La card de tiempos y la de Auditoría deben ocupar todo el ancho */
+        .row.mb-3>div:first-child,
+        .row.mb-3>div:last-child {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        .audit-box .text-center {
+            padding: 0.2rem 0 !important;
+        }
+
+        /* Ajuste de movimientos para que sea compacto */
+        .card-body.d-flex {
+            flex-wrap: wrap;
+        }
+
+        .card-body.d-flex>span {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-body.d-flex>div {
+            margin-bottom: 0.5rem !important;
+        }
+
+        /* Ajuste de padding de la tabla */
+        .table-clean th,
+        .table-clean td {
+            padding: 0.3rem 0.5rem !important;
+            font-size: 0.75rem;
+        }
+
+        .table-responsive {
+            white-space: normal;
+            /* Permitir que el texto se ajuste */
+        }
+    }
+
+    /* ============================================================
        MODO OSCURO (CORRECCIONES PROFUNDAS)
        ============================================================ */
     .dark-mode {
@@ -166,66 +240,68 @@ $obsCierre = $partesObs[1] ?? null;
             </div>
         </div>
 
-        <div>
+        <div class="d-flex align-items-center">
             {{-- BOTÓN OBSERVACIONES --}}
-            <button class="btn btn-sm btn-outline-info mr-2" data-toggle="modal" data-target="#modalObservaciones">
-                <i class="far fa-comment-dots mr-1"></i> Observaciones
+            <button class="btn btn-sm btn-outline-info mr-1" data-toggle="modal" data-target="#modalObservaciones" title="Ver Observaciones">
+                <i class="far fa-comment-dots mr-1 d-none d-sm-inline"></i> Obs.
             </button>
 
             @if($isOpen)
             {{-- BOTÓN CERRAR CAJA (Solo si está abierta) --}}
-            <button class="btn btn-sm btn-warning font-weight-bold mr-2 shadow-sm"
+            <button class="btn btn-sm btn-warning font-weight-bold mr-1 shadow-sm"
                 data-toggle="modal"
                 data-target="#modalCerrarCaja"
                 data-saldo-inicial="S/ {{ number_format($cajaSesion->saldo_inicial, 2) }}"
                 data-ventas-total="S/ {{ number_format($totalVentas, 2) }}"
                 data-saldo-estimado="{{ number_format($saldoTeorico, 2) }}"
-                data-action-url="{{ route('cajas.update', $cajaSesion->id) }}">
-                <i class="fas fa-lock mr-1"></i> CERRAR CAJA
+                data-action-url="{{ route('cajas.update', $cajaSesion->id) }}"
+                title="Cerrar Caja">
+                <i class="fas fa-lock mr-1 d-none d-sm-inline"></i> Cerrar
             </button>
             @else
-            <span class="badge badge-secondary mr-2 px-3 py-2">CERRADA</span>
+            <span class="badge badge-secondary mr-2 px-2 py-1 small">CERRADA</span>
             @endif
 
-            <a href="{{ route('cajas.index') }}" class="btn btn-sm btn-outline-secondary" title="Volver">
+            <a href="{{ route('cajas.index') }}" class="btn btn-sm btn-outline-secondary" title="Volver a Historial">
                 <i class="fas fa-times"></i>
             </a>
         </div>
     </div>
 
     {{-- 2. DASHBOARD DE NÚMEROS --}}
+    {{-- Usamos col-6 en móvil (xs) y col-md-X en desktop --}}
     <div class="row mb-3">
-        <div class="col-md-3 mb-2">
+        <div class="col-12 col-md-3 mb-2">
             <div class="mini-card shadow-sm">
                 <span class="mini-label"><i class="far fa-calendar-alt mr-1"></i> Tiempos</span>
                 <div class="d-flex justify-content-between mb-1">
-                    <span class="mini-sub">Inic:</span>
-                    <span class="font-weight-bold">{{ $cajaSesion->fecha_apertura->format('d/m H:i') }}</span>
+                    <span class="mini-sub small">Inic:</span>
+                    <span class="font-weight-bold small">{{ $cajaSesion->fecha_apertura->format('d/m H:i') }}</span>
                 </div>
                 <div class="d-flex justify-content-between">
-                    <span class="mini-sub">Fin:</span>
-                    <span class="font-weight-bold">
+                    <span class="mini-sub small">Fin:</span>
+                    <span class="font-weight-bold small">
                         {{ $cajaSesion->fecha_cierre ? $cajaSesion->fecha_cierre->format('d/m H:i') : '-- : --' }}
                     </span>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-2 mb-2">
+        <div class="col-6 col-md-2 mb-2">
             <div class="mini-card shadow-sm border-left-warning" style="border-left: 3px solid #ffc107;">
                 <span class="mini-label text-warning">Inicial</span>
                 <span class="mini-value">S/ {{ number_format($cajaSesion->saldo_inicial, 2) }}</span>
             </div>
         </div>
 
-        <div class="col-md-2 mb-2">
+        <div class="col-6 col-md-2 mb-2">
             <div class="mini-card shadow-sm border-left-success" style="border-left: 3px solid #28a745;">
                 <span class="mini-label text-success">Ventas</span>
                 <span class="mini-value">S/ {{ number_format($totalVentas, 2) }}</span>
             </div>
         </div>
 
-        <div class="col-md-2 mb-2">
+        <div class="col-6 col-md-2 mb-2">
             <div class="mini-card shadow-sm border-left-primary" style="border-left: 3px solid #007bff;">
                 <span class="mini-label text-primary">Teórico</span>
                 <span class="mini-value">S/ {{ number_format($saldoTeorico, 2) }}</span>
@@ -233,7 +309,7 @@ $obsCierre = $partesObs[1] ?? null;
         </div>
 
         {{-- CARD AUDITORÍA (CONDICIONAL) --}}
-        <div class="col-md-3 mb-2">
+        <div class="col-12 col-md-3 mb-2">
             <div class="audit-box shadow-sm">
                 @if(!$isOpen)
                 {{-- SI ESTÁ CERRADA: MUESTRA DATOS REALES --}}
@@ -285,8 +361,8 @@ $obsCierre = $partesObs[1] ?? null;
                 <thead>
                     <tr>
                         <th class="pl-3">Comprobante</th>
-                        <th>Hora</th>
-                        <th>Cliente</th>
+                        <th class="d-none d-sm-table-cell">Hora</th>
+                        <th class="d-none d-md-table-cell">Cliente</th>
                         <th>Pago</th>
                         <th class="text-right">Total</th>
                         <th></th>
@@ -299,8 +375,8 @@ $obsCierre = $partesObs[1] ?? null;
                             <span class="font-weight-bold">{{ $venta->tipo_comprobante }}</span>
                             <span class="small opacity-50 ml-1">{{ $venta->serie }}-{{ $venta->numero }}</span>
                         </td>
-                        <td class="small">{{ $venta->fecha_emision->format('h:i A') }}</td>
-                        <td class="small">{{ Str::limit($venta->cliente->nombre ?? 'Público', 20) }}</td>
+                        <td class="small d-none d-sm-table-cell">{{ $venta->fecha_emision->format('h:i A') }}</td>
+                        <td class="small d-none d-md-table-cell">{{ Str::limit($venta->cliente->nombre ?? 'Público', 20) }}</td>
                         <td><span class="badge badge-light border font-weight-normal">{{ $venta->medio_pago }}</span></td>
                         <td class="text-right font-weight-bold">S/ {{ number_format($venta->total_neto, 2) }}</td>
                         <td class="text-right pr-3">
@@ -308,7 +384,8 @@ $obsCierre = $partesObs[1] ?? null;
                                 data-toggle="modal"
                                 data-target="#modalDetalleVenta"
                                 data-detalles="{{ $venta->detalles->toJson() }}"
-                                data-venta-info="{{ $venta->serie }}-{{ $venta->numero }}">
+                                data-venta-info="{{ $venta->serie }}-{{ $venta->numero }}"
+                                title="Ver Venta">
                                 <i class="far fa-eye text-info"></i>
                             </button>
                         </td>

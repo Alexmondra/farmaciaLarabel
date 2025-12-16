@@ -52,7 +52,6 @@
         color: #ff6b6b;
     }
 
-    /* Rojo brillante */
     .dark-mode .text-diff-pos {
         color: #54a0ff;
     }
@@ -68,21 +67,35 @@
     .dark-mode .table-hover tbody tr:hover {
         background-color: rgba(255, 255, 255, 0.05) !important;
     }
+
+    /* Pequeños ajustes para la tabla en móvil */
+    @media (max-width: 767.98px) {
+        .table-responsive.p-0 {
+            padding: 0 !important;
+        }
+
+        .table-hover td,
+        .table-hover th {
+            padding: 0.4rem 0.5rem !important;
+            /* Reduce padding */
+            font-size: 0.8rem;
+        }
+    }
 </style>
 
 {{-- FILTROS --}}
 <div class="card mb-3 shadow-sm border-0">
     <div class="card-body p-3">
         <form method="GET" action="{{ route('cajas.index') }}" class="form-row align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <label class="small font-weight-bold mb-1">Usuario</label>
                 <input type="text" name="q" class="form-control form-control-sm" value="{{ request('q') }}" placeholder="Nombre...">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <label class="small font-weight-bold mb-1">Fecha</label>
                 <input type="date" name="filtro_fecha" class="form-control form-control-sm" value="{{ request('filtro_fecha') }}">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 col-sm-6 mt-2 mt-sm-0">
                 <label class="small font-weight-bold mb-1">Resultado</label>
                 <select name="filtro_cuadre" class="form-control form-control-sm">
                     <option value="">-- Todos --</option>
@@ -91,11 +104,11 @@
                     <option value="exacto" {{ request('filtro_cuadre') == 'exacto' ? 'selected' : '' }}>Exacto</option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 col-sm-3 mt-3 mt-md-0">
                 <button type="submit" class="btn btn-sm btn-info btn-block"><i class="fas fa-filter"></i> Filtrar</button>
             </div>
             @if(request()->anyFilled(['q', 'filtro_fecha', 'filtro_cuadre']))
-            <div class="col-md-2">
+            <div class="col-md-2 col-sm-3 mt-3 mt-md-0">
                 <a href="{{ route('cajas.index') }}" class="btn btn-sm btn-outline-secondary btn-block">Limpiar</a>
             </div>
             @endif
@@ -109,14 +122,14 @@
         <table class="table table-hover mb-0 align-middle text-nowrap">
             <thead class="bg-dark">
                 <tr>
-                    <th class="text-center" style="width:50px">#</th>
+                    <th class="text-center d-none d-sm-table-cell" style="width:50px">#</th>
                     <th>Usuario</th>
-                    <th>Sucursal</th>
-                    <th class="text-center">Estado</th>
+                    <th class="d-none d-md-table-cell">Sucursal</th>
+                    <th class="text-center d-none d-sm-table-cell">Estado</th>
                     <th>Apertura / Cierre</th>
-                    <th>Inicial</th>
+                    <th class="d-none d-sm-table-cell">Inicial</th>
                     <th>Resultado</th>
-                    <th class="text-right pr-4">Acciones</th>
+                    <th class="text-right pr-4" style="width:120px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -131,11 +144,11 @@
 
                     <tr class="fila-caja {{ $clase }}" data-href="{{ route('cajas.show', $caja->id) }}" style="cursor: pointer;">
 
-                        <td class="text-center text-muted font-weight-bold">{{ $cajas->firstItem() + $loop->index }}</td>
-                        <td class="font-weight-bold">{{ $caja->usuario->name ?? 'N/A' }}</td>
-                        <td><small class="text-muted">{{ $caja->sucursal->nombre ?? 'N/A' }}</small></td>
+                        <td class="text-center text-muted font-weight-bold d-none d-sm-table-cell">{{ $cajas->firstItem() + $loop->index }}</td>
+                        <td class="font-weight-bold text-wrap">{{ $caja->usuario->name ?? 'N/A' }}</td>
+                        <td class="d-none d-md-table-cell"><small class="text-muted">{{ $caja->sucursal->nombre ?? 'N/A' }}</small></td>
 
-                        <td class="text-center">
+                        <td class="text-center d-none d-sm-table-cell">
                             <span class="badge {{ $caja->estado === 'ABIERTO' ? 'badge-success' : 'badge-secondary' }} px-2">
                                 {{ $caja->estado }}
                             </span>
@@ -150,7 +163,7 @@
                             </div>
                         </td>
 
-                        <td>S/ {{ number_format($caja->saldo_inicial, 2) }}</td>
+                        <td class="d-none d-sm-table-cell">S/ {{ number_format($caja->saldo_inicial, 2) }}</td>
 
                         {{-- RESULTADO DEL CUADRE --}}
                         <td>

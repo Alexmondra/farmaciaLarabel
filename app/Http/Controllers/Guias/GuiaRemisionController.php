@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log; // <--- FALTABA ESTO
+use Illuminate\Support\Facades\Log;
 use App\Models\Ventas\Venta;
 use App\Models\Guias\GuiaRemision;
 use App\Models\Guias\DetalleGuiaRemision;
@@ -16,6 +16,7 @@ use App\Models\Configuracion;
 use App\Services\SucursalResolver;
 use App\Models\Inventario\Lote;
 use App\Services\GuiaService;
+use App\Services\ComprobanteService;
 
 // --- FALTABAN ESTAS IMPORTACIONES ---
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -74,30 +75,44 @@ class GuiaRemisionController extends Controller
         // 4. Búsqueda y Fechas
         if ($request->filled('search_q')) {
             $q = $request->search_q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('numero', 'like', "%$q%")
-                    ->orWhere('serie', 'like', "%$q%")
+
+            $partes = explode('-', $q);
+
+            $query->where(function ($sub) use ($q, $partes) {
+                $sub->where('serie', 'like', "%$q%")
                     ->orWhereHas('cliente', function ($c) use ($q) {
                         $c->where('razon_social', 'like', "%$q%")
                             ->orWhere('nombre', 'like', "%$q%");
                     });
+
+                if (count($partes) === 2) {
+                    $serie = trim($partes[0]);
+                    $numeroInput = (int) trim($partes[1]);
+
+                    $sub->orWhere(function ($qDoc) use ($serie, $numeroInput) {
+                        $qDoc->where('serie', $serie)
+                            ->where('numero', $numeroInput); // Compara como entero
+                    });
+                }
             });
+
+            // NOTA: Si hay búsqueda de texto, ignoramos el filtro de fechas para mostrar lo que se busca.
+            $desde = null;
+            $hasta = null;
         } else {
-            // CORRECCIÓN DE FECHAS:
-            // Por defecto: Desde el 1ro del mes actual hasta hoy.
-            // Antes tenías solo 'now()', por eso salía vacío si la guía era de ayer.
+            // Si NO hay búsqueda de texto, aplicamos el filtro de fechas por defecto
             $desde = $request->get('fecha_desde', now()->startOfMonth()->format('Y-m-d'));
             $hasta = $request->get('fecha_hasta', now()->format('Y-m-d'));
 
             $query->whereBetween('fecha_emision', ["$desde 00:00:00", "$hasta 23:59:59"]);
         }
 
+
         $guias = $query->paginate(15);
 
-        // Pasamos variables extra para que la vista mantenga el filtro de fecha visible
         return view('guias.index', compact('guias', 'sucursalOrigen', 'permiteCrear'))
-            ->with('fecha_desde', $request->get('fecha_desde', now()->startOfMonth()->format('Y-m-d')))
-            ->with('fecha_hasta', $request->get('fecha_hasta', now()->format('Y-m-d')));
+            ->with('fecha_desde', $desde)
+            ->with('fecha_hasta', $hasta);
     }
 
 
@@ -166,21 +181,34 @@ class GuiaRemisionController extends Controller
     public function recibir(GuiaRequest $request, $id)
     {
         try {
+            $user = Auth::user();
             $data = $request->validated();
 
-            // $this->guiaService->recepcionarGuia($id, $data);
+            $guia = $this->guiaService->recepcionarGuia($id, $data, $user);
 
-            return back()->with('success', 'Guía recepcionada correctamente.');
+            return back()->with('success', "Guía N° {$guia->serie}-{$guia->numero} recepcionada exitosamente. Stock actualizado.");
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return back()->with('error', "Fallo al recibir guía: " . $e->getMessage());
         }
     }
     public function anular(GuiaRequest $request, $id)
     {
-        $motivo = $request->input('motivo_anulacion');
-        return back()->with('success', 'Anulada.');
-    }
+        try {
+            $user = Auth::user();
+            $motivo = $request->input('motivo_anulacion');
 
+            $guia = $this->guiaService->anularGuia($id, $motivo, $user);
+
+            return back()->with('success', "Guía N° {$guia->serie}-{$guia->numero} anulada exitosamente. Stock revertido.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Si hay error de validación (e.g., fecha_recepcion < fecha_traslado),
+            // Laravel lo maneja automáticamente, pero si el flujo está roto, esto ayuda.
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            // Para errores lógicos de negocio (e.g., stock insuficiente, guía ya recibida)
+            return back()->with('error', "Fallo al recibir guía: " . $e->getMessage());
+        }
+    }
 
     private function obtenerSucursalOrigen($user)
     {
@@ -189,42 +217,26 @@ class GuiaRemisionController extends Controller
         return null;
     }
 
-    public function imprimir($id)
+
+
+    /// pdf aqui 
+
+    public function verPdf($id, ComprobanteService $pdfService)
     {
-        // 1. Buscamos la guía con todas sus relaciones
-        $guia = GuiaRemision::with(['sucursal', 'cliente', 'detalles', 'usuario'])->findOrFail($id);
+        try {
+            // 1. Cargar la Guía con las relaciones necesarias
+            $guia = GuiaRemision::with([
+                'detalles.lote', // Si los detalles tienen relación a lote
+                'cliente',
+                'sucursal',
+                'usuario',
+            ])->findOrFail($id);
 
-        // 2. Datos de configuración (Empresa)
-        $config = Configuracion::first();
-
-        // 3. Generación del QR para SUNAT
-        $rucEmisor = $config->empresa_ruc ?? '20600000001';
-        $tipoDoc   = '09'; // Código de Guía de Remisión
-        $fecha     = $guia->fecha_emision->format('Y-m-d');
-        $docDestino = $guia->doc_destinatario ?? '00000000';
-        $tipoDocDestino = strlen($docDestino) == 11 ? '6' : '1';
-
-        $qrData = "{$rucEmisor}|{$tipoDoc}|{$guia->serie}|{$guia->numero}|0.00|0.00|{$fecha}|{$tipoDocDestino}|{$docDestino}|";
-        $qrBase64 = base64_encode(QrCode::format('svg')->size(150)->generate($qrData));
-
-        // 4. Logo (opcional)
-        $logoBase64 = null;
-        $rutaLogo = public_path($config->ruta_logo ?? 'vendor/adminlte/dist/img/AdminLTELogo.png');
-        if (file_exists($rutaLogo)) {
-            $type = pathinfo($rutaLogo, PATHINFO_EXTENSION);
-            $data = file_get_contents($rutaLogo);
-            $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+            return $pdfService->generarGuiaPdf($guia, 'stream');
+        } catch (Exception $e) {
+            return back()->with('error', "Fallo al generar el PDF: " . $e->getMessage());
         }
-
-        // 5. Cargar la vista PDF (Asegúrate de tener creada la vista 'guias.pdf.a4')
-        $pdf = Pdf::loadView('guias.pdf.a4', compact('guia', 'config', 'qrBase64', 'logoBase64'));
-
-        // 6. Mostrar en el navegador (stream)
-        return $pdf->stream("GUIA-{$guia->serie}-{$guia->numero}.pdf");
     }
-
-
-
 
 
 
