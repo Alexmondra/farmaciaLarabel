@@ -3,7 +3,7 @@
 @section('title', 'Historial de Lotes')
 
 @section('content_header')
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 historial-title-box">
     <div>
         <h1 class="text-dark font-weight-bold" style="font-size: 1.8rem;">Historial de Lotes</h1>
         <p class="text-muted mb-0">
@@ -76,7 +76,6 @@
 </div>
 
 {{-- TABLA DE RESULTADOS --}}
-{{-- TABLA DE RESULTADOS --}}
 <div class="card shadow-sm border-0">
     {{-- Agregamos 'table-responsive' para evitar desbordes y 'table-sm' para compactar --}}
     <div class="card-body p-0 table-responsive">
@@ -87,7 +86,7 @@
                     <th class="py-3 border-top-0">Estado</th>
 
                     {{-- Ocultamos estas columnas en móvil (d-none) y las mostramos en MD para arriba (d-md-table-cell) --}}
-                    <th class="py-3 border-top-0 d-none d-md-table-cell">Vencimiento</th>
+                    <th class="py-3 border-top-0 d-none d-sm-table-cell">Vencimiento</th>
                     <th class="text-center py-3 border-top-0 d-none d-md-table-cell">Inicial</th>
 
                     <th class="text-center py-3 border-top-0">Stock</th>
@@ -134,13 +133,13 @@
                             @endif
                         </td>
 
-                        {{-- COLUMNA 3: VENCIMIENTO (SOLO PC) --}}
-                        <td class="d-none d-md-table-cell">
+                        {{-- COLUMNA 3: VENCIMIENTO (Solo Tablet/PC) --}}
+                        <td class="d-none d-sm-table-cell">
                             @if($vence)
                             <span class="font-weight-bold {{ $esVencido ? 'text-danger' : 'text-dark' }}">
                                 {{ $vence->format('d/m/Y') }}
                             </span>
-                            <br><small class="text-muted">{{ $vence->diffForHumans() }}</small>
+                            <br><small class="text-muted d-none d-md-block">{{ $vence->diffForHumans() }}</small>
                             @else
                             <span class="text-muted">—</span>
                             @endif
@@ -184,7 +183,9 @@
 @endsection
 
 @section('css')
+@include('inventario.medicamentos.css')
 <style>
+    /* Estilos específicos de historial.blade.php */
     .opacity-50 {
         opacity: 0.5;
     }

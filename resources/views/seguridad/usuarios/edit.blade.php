@@ -77,14 +77,14 @@
 
         <div class="card-body pt-0">
 
-          <!-- SECCIÓN SUCURSALES -->
           <div class="form-group bg-light p-3 rounded">
             <label class="mb-2 text-primary">
               <i class="fas fa-store mr-1"></i> Sucursales Permitidas
             </label>
+            {{-- CAMBIO: Usar col-12 en móvil, col-md-6 en escritorio --}}
             <div class="row" style="max-height: 200px; overflow-y: auto;">
               @foreach($sucursales as $s)
-              <div class="col-md-6">
+              <div class="col-12 col-md-6">
                 <div class="custom-control custom-checkbox mb-2">
                   <input type="checkbox" class="custom-control-input" id="suc_{{$s->id}}" name="sucursales[]" value="{{$s->id}}"
                     {{ in_array($s->id, $userSucursales) ? 'checked' : '' }}>
@@ -131,4 +131,45 @@
     </div>
   </div>
 </div>
+@stop
+
+@section('css')
+<style>
+  /* === MODO OSCURO PARA EDIT === */
+  @media (prefers-color-scheme: dark) {
+
+    /* Tarjetas */
+    .card,
+    .card-primary.card-outline {
+      background-color: #343a40 !important;
+      color: #d1d9e0 !important;
+      border-color: #495057 !important;
+    }
+
+    /* Headers */
+    .card-header.bg-white {
+      background-color: #3e444a !important;
+      border-bottom-color: #495057 !important;
+    }
+
+    /* Footer */
+    .card-footer.bg-white {
+      background-color: #3e444a !important;
+      border-top-color: #495057 !important;
+    }
+
+    /* Sección de Permisos */
+    .form-group.bg-light.p-3 {
+      background-color: #3e444a !important;
+    }
+
+    .text-muted {
+      color: #9da5af !important;
+    }
+
+    .text-dark {
+      color: #d1d9e0 !important;
+    }
+  }
+</style>
 @stop

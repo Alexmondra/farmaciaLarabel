@@ -18,6 +18,7 @@
     <div class="col-md-4">
         <div class="card card-primary card-outline shadow-sm">
             <div class="card-body box-profile">
+                {{-- ... (Contenido del perfil, se adapta automáticamente) ... --}}
                 <div class="text-center mb-4">
                     @if($medicamento->imagen_url)
                     <img class="img-fluid rounded shadow-sm" style="max-height: 200px; object-fit: contain;"
@@ -48,10 +49,10 @@
                     <li class="list-group-item">
                         <b>Presentación</b> <a class="float-right text-dark">{{ $medicamento->presentacion ?? '—' }}</a>
                     </li>
-                    <li class="list-group-item">
+                    <li class="list-group-item d-none d-sm-block"> {{-- Ocultar en móvil --}}
                         <b>Concentración</b> <a class="float-right text-dark">{{ $medicamento->concentracion ?? '—' }}</a>
                     </li>
-                    <li class="list-group-item">
+                    <li class="list-group-item d-none d-sm-block"> {{-- Ocultar en móvil --}}
                         <b>Unidades x Envase</b> <a class="float-right text-dark">{{ $medicamento->unidades_por_envase }}</a>
                     </li>
                 </ul>
@@ -72,6 +73,7 @@
     <div class="col-md-8">
         @forelse($sucursalesDetalle as $item)
         @php
+        // ... (Lógica PHP existente) ...
         /** @var \App\Models\Sucursal $sucursal */
         $sucursal = $item['sucursal'];
 
@@ -134,9 +136,9 @@
                         <thead class="bg-light text-muted small text-uppercase">
                             <tr>
                                 <th>Lote</th>
-                                <th>Vencimiento</th>
+                                <th class="d-none d-sm-table-cell">Vencimiento</th>
                                 <th>Stock</th>
-                                <th>Ubicación</th>
+                                <th class="d-none d-md-table-cell">Ubicación</th>
                                 <th>Precios</th>
                             </tr>
                         </thead>
@@ -150,7 +152,7 @@
                                 <tr>
                                 <td class="align-middle font-weight-bold">{{ $lote->codigo_lote }}</td>
 
-                                <td class="align-middle">
+                                <td class="align-middle d-none d-sm-table-cell">
                                     @if($vence)
                                     <span class="badge {{ $porVencer ? 'badge-warning' : 'badge-light border' }}">
                                         {{ $vence->format('d/m/Y') }}
@@ -169,7 +171,7 @@
                                     </span>
                                 </td>
 
-                                <td class="align-middle text-muted small">{{ $lote->ubicacion ?? '—' }}</td>
+                                <td class="align-middle text-muted small d-none d-md-table-cell">{{ $lote->ubicacion ?? '—' }}</td>
 
                                 <td class="align-middle">
                                     @if($lote->precio_oferta > 0)
@@ -230,28 +232,12 @@
 @endsection
 
 @section('css')
+@include('inventario.medicamentos.css')
+
 <style>
+    /* Estilos específicos de show.blade.php */
     .opacity-50 {
         opacity: 0.5;
-    }
-
-    /* Animación simple si no usas Animate.css completo */
-    @keyframes pulse-red {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.05);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .animate__pulse {
-        animation: pulse-red 2s infinite;
     }
 </style>
 @endsection

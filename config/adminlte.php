@@ -215,7 +215,7 @@ return [
         // 1. DASHBOARD (Limpio, sin etiquetas de colores)
         [
             'text' => 'Dashboard',
-            'url'  => 'dashboard',
+            'url'  => '/',
             'icon' => 'fas fa-tachometer-alt',
         ],
 
@@ -284,18 +284,7 @@ return [
                     'can'  => 'categorias.ver',
                     'icon' => 'fas fa-tags',
                 ],
-                [
-                    'text' => 'Lotes y Vencimientos',
-                    'url'  => 'inventario/lotes',
-                    'can'  => 'vencimiento.ver',
-                    'icon' => 'fas fa-calendar-alt',
-                ],
-                [
-                    'text' => 'Ajustes de Stock',
-                    'url'  => 'inventario/ajustes',
-                    'can'  => 'stock.ajustar',
-                    'icon' => 'fas fa-sliders-h',
-                ],
+
             ],
         ],
 
@@ -347,7 +336,6 @@ return [
                     'submenu' => [
                         ['text' => 'Lotes por Vencer',  'url' => 'reportes/vencimientos', 'icon' => 'far fa-circle text-danger'],
                         ['text' => 'Stock Bajo/Reponer', 'url' => 'reportes/stock-bajo',   'icon' => 'far fa-circle text-warning'],
-                        ['text' => 'Productos Top',     'url' => 'reportes/mas-vendidos', 'icon' => 'far fa-circle'],
                     ],
                 ],
             ],

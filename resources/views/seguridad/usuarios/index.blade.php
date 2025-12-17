@@ -11,11 +11,11 @@
 <div class="card card-outline card-primary">
   <div class="card-body">
 
-    <div class="d-flex justify-content-between mb-3">
-      <!-- BUSCADOR TIEMPO REAL -->
-      <div class="input-group" style="width: 300px;">
+    {{-- CABECERA RESPONSIVE --}}
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+      <div class="input-group mb-2 mb-md-0 w-100" style="max-width: 300px;">
         <div class="input-group-prepend">
-          <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+          <span class="input-group-text bg-white" id="search-addon"><i class="fas fa-search text-muted"></i></span>
         </div>
         <input type="text" id="liveSearchInput" class="form-control border-left-0" placeholder="Buscar empleado...">
       </div>
@@ -28,10 +28,11 @@
     </div>
 
     <div class="table-responsive">
-      <table class="table table-hover table-striped align-middle">
+      {{-- AÑADIMOS UNA CLASE IDENTIFICADORA PARA EL CSS RESPONSIVE --}}
+      <table class="table table-hover table-striped align-middle responsive-table" id="userTable">
         <thead class="bg-light">
           <tr>
-            <th style="width: 60px" class="text-center"><i class="fas fa-image text-muted"></i></th>
+            <th style="width: 60px" class="text-center"></th>
             <th>Empleado</th>
             <th>Sucursales</th>
             <th>Rol</th>
@@ -42,8 +43,7 @@
         <tbody id="userTableBody">
           @forelse($users as $u)
           <tr>
-            <!-- FOTO -->
-            <td class="text-center align-middle">
+            <td class="text-center align-middle" data-label="Foto">
               @if($u->imagen_perfil)
               <img src="{{ route('seguridad.usuarios.imagen', $u->id) }}"
                 alt="{{ $u->name }}"
@@ -60,14 +60,12 @@
               @endif
             </td>
 
-            <!-- DATOS -->
-            <td class="align-middle">
+            <td class="align-middle" data-label="Empleado">
               <span class="font-weight-bold d-block text-dark">{{ $u->name }}</span>
               <small class="text-muted"><i class="fas fa-envelope mr-1"></i> {{ $u->email }}</small>
             </td>
 
-            <!-- SUCURSALES -->
-            <td class="align-middle">
+            <td class="align-middle" data-label="Sucursales">
               @forelse($u->sucursales as $s)
               <span class="badge badge-info font-weight-normal mb-1">{{ $s->nombre }}</span>
               @empty
@@ -75,8 +73,7 @@
               @endforelse
             </td>
 
-            <!-- ROLES -->
-            <td class="align-middle">
+            <td class="align-middle" data-label="Rol">
               @forelse($u->roles as $r)
               <span class="badge badge-dark">{{ $r->name }}</span>
               @empty
@@ -84,8 +81,7 @@
               @endforelse
             </td>
 
-            <!-- ESTADO -->
-            <td class="text-center align-middle">
+            <td class="text-center align-middle" data-label="Estado">
               @if($u->activo)
               <span class="badge badge-success px-2 py-1">ACTIVO</span>
               @else
@@ -93,8 +89,7 @@
               @endif
             </td>
 
-            <!-- ACCIONES -->
-            <td class="align-middle">
+            <td class="align-middle" data-label="Acciones">
               @can('usuarios.editar')
               <a href="{{ route('seguridad.usuarios.edit', $u) }}" class="btn btn-sm btn-outline-warning" title="Editar / Reset Clave">
                 <i class="fas fa-edit"></i>
@@ -113,18 +108,8 @@
             </td>
           </tr>
           @empty
-          <tr id="noRecordsRow">
-            <td colspan="6" class="text-center text-muted py-4">No hay usuarios registrados</td>
-          </tr>
+          {{-- ... filas vacías ... --}}
           @endforelse
-
-          <!-- FILA OCULTA BÚSQUEDA -->
-          <tr id="noResultsFound" style="display: none;">
-            <td colspan="6" class="text-center text-muted py-4">
-              <i class="fas fa-search mb-2 d-block" style="font-size: 24px; opacity: 0.5;"></i>
-              No se encontraron coincidencias.
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
@@ -157,4 +142,153 @@
     }
   });
 </script>
+@stop
+
+@section('css')
+<style>
+  /* === RESPONSIVIDAD: TABLA TRANSFORMADA A TARJETA EN MÓVIL === */
+  /* Breakpoint de 768px para activar la transformación (típico móvil/tablet pequeño) */
+  @media screen and (max-width: 768px) {
+    .responsive-table thead {
+      /* Oculta la cabecera tradicional de la tabla */
+      display: none;
+    }
+
+    .responsive-table tr {
+      /* Cada fila se convierte en un bloque con margen */
+      display: block;
+      margin-bottom: 0.8rem;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .responsive-table tbody tr:last-child {
+      margin-bottom: 0;
+    }
+
+    .responsive-table td {
+      /* Cada celda se convierte en un bloque de lista */
+      display: block;
+      text-align: right !important;
+      padding: 0.5rem 1rem;
+      border: none;
+      /* Elimina los bordes internos de celda */
+      word-break: break-word;
+      /* Evita desbordamiento de texto */
+    }
+
+    /* Pseudo-elemento para mostrar la etiqueta de la columna */
+    .responsive-table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      color: #6c757d;
+      /* Texto gris de Bootstrap */
+      padding-right: 10px;
+    }
+
+    /* Alineación especial para la primera columna (Foto/Datos de Empleado) */
+    .responsive-table tr td:first-child {
+      display: flex;
+      /* Para alinear la foto a la izquierda y el label */
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0;
+    }
+
+    /* Ajustes específicos para la celda de la foto/datos */
+    .responsive-table tr td:nth-child(2) {
+      text-align: left !important;
+      /* Ocultamos el label 'Empleado' ya que el contenido es evidente */
+      padding-top: 0;
+    }
+
+    .responsive-table tr td:nth-child(2)::before {
+      display: none;
+    }
+
+    /* Alineación para la celda de Acciones */
+    .responsive-table tr td:last-child {
+      text-align: left !important;
+      border-top: 1px solid #dee2e6;
+      /* Separador */
+    }
+  }
+
+
+  /* === MODO OSCURO PARA INDEX === */
+  @media (prefers-color-scheme: dark) {
+    .card-outline.card-primary {
+      background-color: #343a40 !important;
+      border-top-color: #007bff !important;
+    }
+
+    .card-body,
+    .card-header,
+    h1 {
+      color: #d1d9e0 !important;
+    }
+
+    /* Buscador */
+    .input-group-text {
+      background-color: #3e444a !important;
+      color: #d1d9e0 !important;
+      border-color: #495057 !important;
+    }
+
+    #liveSearchInput {
+      background-color: #2b3035;
+      color: #d1d9e0;
+      border-color: #495057;
+    }
+
+    #liveSearchInput::placeholder {
+      color: #9da5af;
+    }
+
+    /* Tabla en modo oscuro (transformada a tarjeta) */
+    .responsive-table tr {
+      background-color: #3e444a;
+      /* Fondo de la "tarjeta" */
+      border-color: #495057;
+    }
+
+    .responsive-table td::before {
+      color: #a0aec0;
+      /* Color de la etiqueta */
+    }
+
+    .responsive-table tr td:last-child {
+      border-top-color: #495057;
+      /* Separador */
+    }
+
+    /* Tabla normal (escritorio) */
+    .table {
+      color: #e9ecef;
+    }
+
+    .table thead th {
+      color: #fff;
+      background-color: #495057 !important;
+      border-color: #5d6874;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .table-hover tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .text-dark {
+      color: #d1d9e0 !important;
+    }
+  }
+</style>
 @stop

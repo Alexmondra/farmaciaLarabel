@@ -46,7 +46,7 @@ class Medicamento extends Model
     public function sucursales()
     {
         return $this->belongsToMany(\App\Models\Sucursal::class, 'medicamento_sucursal')
-            ->withPivot('precio_venta', 'deleted_at')
+            ->withPivot('precio_venta', 'stock_minimo', 'deleted_at')
             ->wherePivot('deleted_at', null)
             ->withTimestamps();
     }
@@ -73,5 +73,26 @@ class Medicamento extends Model
             'medicamento_sucursal'
         )->withPivot(['precio_venta', 'deleted_at'])
             ->withTimestamps();
+    }
+
+
+    public function scopeConStockBajo($query, $sucursalId = null)
+    {
+        $query->when($sucursalId, function ($q) use ($sucursalId) {
+            $q->where('sucursal_id', $sucursalId);
+        });
+
+        $query->where('activo', true);
+        return $query->whereRaw(
+            '(SELECT COALESCE(SUM(stock_actual), 0) 
+              FROM lotes 
+              WHERE lotes.medicamento_id = medicamento_sucursal.medicamento_id 
+              AND lotes.sucursal_id = medicamento_sucursal.sucursal_id) <= medicamento_sucursal.stock_minimo'
+        )->whereRaw(
+            '(SELECT COALESCE(SUM(stock_actual), 0) 
+              FROM lotes 
+              WHERE lotes.medicamento_id = medicamento_sucursal.medicamento_id 
+              AND lotes.sucursal_id = medicamento_sucursal.sucursal_id) > 0'
+        );
     }
 }

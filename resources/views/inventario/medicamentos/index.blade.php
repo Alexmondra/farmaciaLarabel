@@ -68,7 +68,6 @@
 </div>
 
 {{-- MODAL PRECIO --}}
-{{-- Solo renderizamos el HTML del modal si tiene permiso de editar, por seguridad --}}
 @can('medicamentos.editar')
 <div class="modal fade" id="modalPrecio" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -90,6 +89,44 @@
                 </div>
                 <div class="modal-footer p-1 justify-content-center">
                     <button type="submit" class="btn btn-primary btn-sm btn-block">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
+
+@can('medicamentos.editar')
+<div class="modal fade" id="modalStockMin" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light py-2">
+                <h6 class="modal-title font-weight-bold">
+                    <i class="fas fa-sliders-h mr-1 text-muted"></i> Stock Mínimo
+                </h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="formUpdateStockMin" onsubmit="guardarStockMin(event)">
+                <div class="modal-body">
+                    <p id="lblNombreMedStock" class="small text-muted mb-2 text-center"></p>
+                    <input type="hidden" id="medIdStockHidden">
+
+                    <div class="form-group mb-0">
+                        <label class="small text-muted">Avisar cuando quede menos de:</label>
+                        <div class="input-group">
+                            <input type="number" step="1" min="0"
+                                class="form-control text-center font-weight-bold"
+                                id="inputNuevoStockMin" required>
+                            <div class="input-group-append">
+                                <span class="input-group-text">Unid.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer p-1 justify-content-center">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block">Guardar Configuración</button>
                 </div>
             </form>
         </div>
@@ -246,6 +283,71 @@ $permisosJS = [
                 ToastCentro.fire({
                     icon: 'success',
                     title: '¡Precio actualizado!'
+                });
+            },
+            error: function(xhr) {
+                let msj = xhr.responseJSON ? xhr.responseJSON.error : 'Error al guardar.';
+                ToastCentro.fire({
+                    icon: 'error',
+                    title: msj
+                });
+            }
+        });
+    }
+
+    // ==========================================
+    // LÓGICA STOCK MÍNIMO
+    // ==========================================
+
+    function abrirModalStockMin(id, nombre, stockActual) {
+        if (!userPermissions.canEdit) return;
+
+        $('#medIdStockHidden').val(id);
+        $('#lblNombreMedStock').text(nombre);
+        $('#inputNuevoStockMin').val(stockActual);
+
+        $('#modalStockMin').modal('show');
+
+        // Enfocar input automáticamente
+        setTimeout(() => {
+            $('#inputNuevoStockMin').select();
+        }, 500);
+    }
+
+    function guardarStockMin(e) {
+        e.preventDefault();
+
+        if (!userPermissions.canEdit) return;
+
+        let medId = $('#medIdStockHidden').val();
+        let nuevoStock = $('#inputNuevoStockMin').val();
+        let sucursalId = "{{ $sucursalSeleccionada ? $sucursalSeleccionada->id : '' }}";
+
+        if (!sucursalId) {
+            ToastCentro.fire({
+                icon: 'error',
+                title: 'Error de sucursal.'
+            });
+            return;
+        }
+
+        // Reutilizamos la MISMA ruta que usas para el precio
+        $.ajax({
+            url: "/inventario/medicamentos/" + medId + "/sucursales/" + sucursalId,
+            type: "PUT",
+            data: {
+                _token: "{{ csrf_token() }}",
+                stock_minimo: nuevoStock // <--- Aquí enviamos la clave que espera el Controller
+            },
+            success: function(response) {
+                $('#modalStockMin').modal('hide');
+
+                // Actualizar valor visualmente en la tabla
+                $('#min-display-' + medId).text(nuevoStock);
+
+                ToastCentro.fire({
+                    icon: 'success',
+                    title: 'Stock mínimo actualizado'
                 });
             },
             error: function(xhr) {

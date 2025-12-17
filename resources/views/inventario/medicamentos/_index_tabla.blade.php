@@ -4,18 +4,18 @@
     <table class="table table-hover align-middle">
         <thead class="bg-light">
             <tr>
-                <th width="5%" class="text-center"><i class="fas fa-image text-muted"></i></th>
-                <th width="35%">Producto</th>
-                <th width="20%">Categoría</th>
-                <th width="20%">Stock y Precio</th>
+                <th width="5%" class="text-center d-none d-sm-table-cell"><i class="fas fa-image text-muted"></i></th>
+                <th width="40%">Producto</th>
+                <th width="15%" class="d-none d-sm-table-cell">Categoría</th>
+                <th width="30%">Stock y Precio</th>
                 <th width="10%" class="text-right">Acciones</th>
             </tr>
         </thead>
         <tbody>
             @forelse($medicamentos as $m)
             <tr>
-                {{-- FOTO --}}
-                <td class="align-middle text-center">
+                {{-- FOTO (Ocultar en XS) --}}
+                <td class="align-middle text-center d-none d-sm-table-cell">
                     @if($m->imagen_url)
                     <img src="{{ $m->imagen_url }}" class="img-circle elevation-1" style="width: 40px; height: 40px; object-fit: cover;">
                     @else
@@ -36,41 +36,71 @@
                     </small>
                 </td>
 
-                {{-- CATEGORÍA --}}
-                <td class="align-middle">
+                {{-- CATEGORÍA (Ocultar en XS) --}}
+                <td class="align-middle d-none d-sm-table-cell">
                     <span class="badge badge-light border">{{ $m->categoria->nombre ?? 'General' }}</span>
                 </td>
 
                 {{-- STOCK Y PRECIO --}}
                 <td class="align-middle">
                     @if($sucursalSeleccionada)
-                    {{-- MODO SUCURSAL --}}
-                    <div class="d-flex flex-column">
-                        <span class="font-weight-bold {{ $m->stock_unico <= 5 ? 'text-danger' : 'text-success' }}">
-                            {{ $m->stock_unico }} un.
-                        </span>
+                    {{-- MODO SUCURSAL: Mostramos Stock Real, Minimo y Precio --}}
 
+                    @php
+                    // Obtenemos los datos del pivot (tabla intermedia) de forma segura
+                    $pivot = $m->sucursales->find($sucursalSeleccionada->id)->pivot ?? null;
+                    $stockMin = $pivot ? $pivot->stock_minimo : 0;
+                    // Usamos tu accessor existente para el precio o el pivot directo
+                    $precio = $m->precio_v ?? ($pivot ? $pivot->precio_venta : 0);
+                    @endphp
+
+                    <div class="d-flex flex-column">
+
+                        {{-- 1. Stock Real --}}
+                        <div class="mb-1">
+                            <span class="font-weight-bold {{ $m->stock_unico <= $stockMin ? 'text-danger animate__animated animate__pulse' : 'text-success' }}" style="font-size: 1.1rem;">
+                                {{ $m->stock_unico }} un.
+                            </span>
+                        </div>
+
+                        {{-- 2. Stock Mínimo (NUEVO) --}}
+                        <div class="d-flex align-items-center mb-1 text-muted" style="font-size: 0.85rem;">
+                            <i class="fas fa-arrow-down mr-1 text-secondary" style="font-size: 0.7rem;"></i> Min:
+                            <strong class="mx-1" id="min-display-{{ $m->id }}">{{ $stockMin }}</strong>
+
+                            @can('medicamentos.editar')
+                            <a href="#"
+                                class="text-secondary ml-1"
+                                onclick="abrirModalStockMin({{ $m->id }}, '{{ addslashes($m->nombre) }}', {{ $stockMin }}); return false;">
+                                <i class="fas fa-pencil-alt" style="font-size: 0.7rem;"></i>
+                            </a>
+                            @endcan
+                        </div>
+
+                        {{-- 3. Precio --}}
                         <div class="d-flex align-items-center">
-                            @if($m->precio_v)
-                            <small class="text-dark font-weight-bold mr-2" id="price-display-{{ $m->id }}">
-                                S/ {{ number_format($m->precio_v, 2) }}
-                            </small>
+                            @if($precio)
+                            <span class="text-dark font-weight-bold mr-2 small" id="price-display-{{ $m->id }}">
+                                S/ {{ number_format($precio, 2) }}
+                            </span>
                             @else
                             <small class="text-muted mr-2" id="price-display-{{ $m->id }}">Sin precio</small>
                             @endif
 
                             @can('medicamentos.editar')
                             <button type="button"
-                                class="btn btn-xs btn-outline-secondary rounded-circle"
-                                onclick="abrirModalPrecio({{ $m->id }}, '{{ addslashes($m->nombre) }}', '{{ $m->precio_v ?? 0 }}')"
-                                title="Cambiar Precio Rápido">
+                                class="btn btn-xs btn-outline-secondary rounded-circle border-0 p-0"
+                                style="width: 20px; height: 20px;"
+                                onclick="abrirModalPrecio({{ $m->id }}, '{{ addslashes($m->nombre) }}', '{{ $precio }}')"
+                                title="Cambiar Precio">
                                 <i class="fas fa-pencil-alt" style="font-size: 0.7rem;"></i>
                             </button>
                             @endcan
                         </div>
                     </div>
+
                     @else
-                    {{-- MODO GLOBAL --}}
+                    {{-- MODO GLOBAL (Sin cambios, muestra resumen) --}}
                     @php $lista = $m->stock_por_sucursal ?? collect(); @endphp
                     @if($lista->isEmpty())
                     <span class="badge badge-danger">Sin Stock</span>
@@ -87,7 +117,6 @@
                     @endif
                     @endif
                 </td>
-
                 {{-- ACCIONES --}}
                 <td class="align-middle text-right">
                     <div class="btn-group">

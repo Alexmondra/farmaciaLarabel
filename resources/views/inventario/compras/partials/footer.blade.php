@@ -3,7 +3,7 @@
         <div class="row align-items-center">
             {{-- TOTAL GENERAL --}}
             <div class="col-md-6">
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center justify-content-center justify-content-md-start">
                     <span class="text-muted mr-3 font-weight-bold text-uppercase" style="letter-spacing: 1px;">
                         Total a Pagar:
                     </span>

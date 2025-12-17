@@ -10,9 +10,9 @@
 <div class="card">
   <div class="card-body">
 
-    <div class="d-flex justify-content-between mb-3">
-
-      <div class="input-group" style="width: 250px;">
+    {{-- CABECERA RESPONSIVE --}}
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+      <div class="input-group mb-2 mb-md-0" style="max-width: 250px;">
         <div class="input-group-prepend">
           <span class="input-group-text"><i class="fas fa-search"></i></span>
         </div>
@@ -27,7 +27,7 @@
     </div>
 
     <div class="table-responsive">
-      <table class="table table-sm table-striped align-middle">
+      <table class="table table-sm table-striped align-middle responsive-table">
         <thead>
           <tr>
             <th style="width: 50px;">Img</th>
@@ -42,29 +42,29 @@
         <tbody id="tablaSucursales">
           @forelse($sucursales as $s)
           <tr>
-            <td>
+            <td data-label="Imagen">
               @if($s->imagen_sucursal)
               <img src="{{ asset('storage/'.$s->imagen_sucursal) }}" class="rounded-circle" style="width: 30px; height: 30px; object-fit: cover;">
               @else
               <i class="fas fa-store text-muted fa-lg"></i>
               @endif
             </td>
-            <td class="font-weight-bold">{{ $s->codigo }}</td>
-            <td>
+            <td class="font-weight-bold" data-label="Cód. SUNAT">{{ $s->codigo }}</td>
+            <td data-label="Nombre">
               {{ $s->nombre }} <br>
               <small class="text-muted">{{ $s->direccion }}</small>
             </td>
-            <td>
+            <td data-label="Ubicación">
               {{ $s->distrito }} <br>
               <small class="text-muted">{{ $s->ubigeo }}</small>
             </td>
-            <td>{{ $s->impuesto_porcentaje }}%</td>
-            <td>
+            <td data-label="Impuesto">{{ $s->impuesto_porcentaje }}%</td>
+            <td data-label="Estado">
               <span class="badge badge-{{ $s->activo ? 'success' : 'secondary' }}">
                 {{ $s->activo ? 'Activa' : 'Inactiva' }}
               </span>
             </td>
-            <td>
+            <td data-label="Acciones">
               @can('sucursales.editar')
               <button class="btn btn-xs btn-warning" onclick="abrirModalEditar({{ $s }})">
                 <i class="fas fa-edit"></i>
@@ -124,6 +124,9 @@
     const checkActivo = $('#checkActivo');
     const labelActivo = $('#labelActivo');
 
+    // VARIABLE PARA CONSTRUIR LA RUTA DE STORAGE
+    const storagePath = "{{ asset('storage') }}";
+
     // VARIABLES DE SUGERENCIA (Vienen del controlador)
     const sugerencias = {
       boleta: @json($sugerenciaBoleta ?? 'B001'),
@@ -144,6 +147,7 @@
       methodField.html(''); // Quita el método PUT (será POST por defecto)
 
       modalTitulo.html('<i class="fas fa-plus-circle mr-2"></i> Registrar Nueva Sucursal');
+      // Usar la imagen de avatar o una por defecto al crear
       previewImg.attr('src', 'https://ui-avatars.com/api/?name=Nueva&background=cccccc&color=fff&size=128');
 
       // Estado por defecto: Activo
@@ -156,16 +160,18 @@
       $('input[name="serie_factura"]').val(sugerencias.factura);
       $('input[name="serie_ticket"]').val(sugerencias.ticket);
 
-      // Aquí llenamos las nuevas para que no queden vacías al crear
       $('input[name="serie_nc_factura"]').val(sugerencias.nc_factura);
       $('input[name="serie_nc_boleta"]').val(sugerencias.nc_boleta);
       $('input[name="serie_guia"]').val(sugerencias.guia);
+
+      // Resetear campo file por si acaso
+      $('#customFile').val('');
 
       modal.modal('show');
     }
 
     // ---------------------------------------------------------
-    // 3. FUNCIÓN PARA ABRIR MODAL "EDITAR" (Aquí estaba el fallo)
+    // 3. FUNCIÓN PARA ABRIR MODAL "EDITAR"
     // ---------------------------------------------------------
     window.abrirModalEditar = function(data) {
       form[0].reset(); // Limpiamos primero
@@ -178,7 +184,7 @@
 
       modalTitulo.html('<i class="fas fa-edit mr-2"></i> Editar: ' + data.nombre);
 
-      // --- LLENADO DE DATOS (Usando name para asegurar que los encuentra) ---
+      // --- LLENADO DE DATOS ---
       $('input[name="codigo"]').val(data.codigo);
       $('input[name="nombre"]').val(data.nombre);
 
@@ -194,25 +200,26 @@
       $('input[name="telefono"]').val(data.telefono);
       $('input[name="impuesto_porcentaje"]').val(data.impuesto_porcentaje);
 
-      // --- SERIES (Aquí corregimos para que cargue lo que tiene la BD) ---
-      $('input[name="serie_boleta"]').val(data.serie_boleta);
-      $('input[name="serie_factura"]').val(data.serie_factura);
-      $('input[name="serie_ticket"]').val(data.serie_ticket);
+      // --- SERIES ---
+      // Aseguramos que se carguen de la BD, o se queden vacías si son null (el form no permite vacíos ya que tienen required)
+      $('input[name="serie_boleta"]').val(data.serie_boleta || sugerencias.boleta);
+      $('input[name="serie_factura"]').val(data.serie_factura || sugerencias.factura);
+      $('input[name="serie_ticket"]').val(data.serie_ticket || sugerencias.ticket);
 
-      // ¡ESTO ES LO QUE FALTABA!
-      // Si la BD tiene null, ponle vacío o una sugerencia, pero intenta cargar 'data'
-      $('input[name="serie_nc_factura"]').val(data.serie_nc_factura);
-      $('input[name="serie_nc_boleta"]').val(data.serie_nc_boleta);
-      $('input[name="serie_guia"]').val(data.serie_guia);
+      $('input[name="serie_nc_factura"]').val(data.serie_nc_factura || sugerencias.nc_factura);
+      $('input[name="serie_nc_boleta"]').val(data.serie_nc_boleta || sugerencias.nc_boleta);
+      $('input[name="serie_guia"]').val(data.serie_guia || sugerencias.guia);
 
       // Imagen y Estado
       checkActivo.prop('checked', data.activo == 1).trigger('change');
+      $('#customFile').val(''); // Resetear campo file
 
       if (data.imagen_sucursal) {
-        previewImg.attr('src', "/storage/" + data.imagen_sucursal);
+        // Usar la variable JS del asset para construir la ruta, más seguro que concatenar la ruta PHP en JS
+        previewImg.attr('src', storagePath + "/" + data.imagen_sucursal);
       } else {
         // Generar avatar con iniciales si no hay foto
-        let nombreClean = data.nombre.replace(/[^a-zA-Z ]/g, "").substring(0, 2);
+        let nombreClean = data.nombre ? data.nombre.replace(/[^a-zA-Z ]/g, "").substring(0, 2) : 'S';
         previewImg.attr('src', 'https://ui-avatars.com/api/?name=' + nombreClean + '&background=20c997&color=fff&size=128');
       }
 
@@ -254,4 +261,71 @@
 
   });
 </script>
+@stop
+
+
+@section('css')
+<style>
+  /* === RESPONSIVIDAD: TABLA TRANSFORMADA A TARJETA EN MÓVIL === */
+  @media screen and (max-width: 768px) {
+    .responsive-table thead {
+      display: none;
+    }
+
+    .responsive-table tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .responsive-table td {
+      display: block;
+      text-align: right !important;
+      padding: 0.5rem 1rem;
+      border: none;
+    }
+
+    .responsive-table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      color: #6c757d;
+      padding-right: 10px;
+    }
+
+    .responsive-table tr td:first-child {
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .responsive-table tr td:last-child {
+      text-align: left !important;
+      border-top: 1px solid #dee2e6;
+    }
+  }
+
+  /* === MODO OSCURO (Solo se activa si el sistema lo prefiere) === */
+  body.dark-mode {
+    /* no pongas nada aquí */
+  }
+
+  /* y antepone body.dark-mode a cada regla */
+  body.dark-mode .card {
+    background-color: #343a40 !important;
+    color: #d1d9e0 !important;
+  }
+
+  body.dark-mode .table {
+    color: #e9ecef;
+  }
+
+  body.dark-mode .table thead th {
+    background-color: #495057 !important;
+    color: #fff;
+  }
+</style>
 @stop

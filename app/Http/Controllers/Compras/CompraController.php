@@ -205,14 +205,18 @@ class CompraController extends Controller
 
                 // C. MEDICAMENTO_SUCURSAL (ACTUALIZAR PRECIO VENTA)
                 // Usamos firstOrNew para buscar si existe. Si no, crea instancia vacía.
-                $medSucursal = MedicamentoSucursal::firstOrNew([
+                $medSucursal = MedicamentoSucursal::withTrashed()->firstOrNew([
                     'medicamento_id' => $item['medicamento_id'],
                     'sucursal_id'    => $sucursalSeleccionada->id
                 ]);
 
-                // Asignamos el precio que viene del formulario
-                $medSucursal->precio_venta = $item['precio_venta'];
+                if ($medSucursal->trashed()) {
+                    $medSucursal->restore();
+                }
 
+                $medSucursal->precio_venta = $item['precio_venta'];
+                $medSucursal->activo       = true;
+                $medSucursal->updated_by   = $user->id;
                 // Si es nuevo registro, definimos stock mínimo por defecto
                 if (!$medSucursal->exists) {
                     $medSucursal->stock_minimo = 10;

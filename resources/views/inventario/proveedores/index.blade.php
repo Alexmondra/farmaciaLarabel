@@ -10,10 +10,12 @@
 
 <div class="card shadow-sm">
     <div class="card-header bg-white">
+        {{-- CAMBIO: Usar d-flex, flex-column, y flex-md-row para responsividad --}}
         <div class="d-flex align-items-center flex-wrap w-100">
 
             {{-- BUSCADOR --}}
-            <form method="GET" action="{{ route('inventario.proveedores.index') }}" class="input-group" style="max-width: 420px;">
+            {{-- ELIMINAMOS 'style="max-width: 420px;"' para que ocupe todo el ancho en móvil --}}
+            <form method="GET" action="{{ route('inventario.proveedores.index') }}" class="input-group flex-grow-1 mr-md-2" style="max-width: 420px;">
                 <div class="input-group-prepend">
                     <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
                 </div>
@@ -36,7 +38,8 @@
                 </div>
             </form>
 
-            <div class="ml-auto mt-2 mt-md-0">
+            {{-- CAMBIO: Usar ms-auto y flex-shrink-0 para que el botón de 'Nuevo Proveedor' se alinee correctamente y no se encoja --}}
+            <div class="ml-auto mt-2 mt-md-0 flex-shrink-0">
                 {{-- PERMISO: CREAR --}}
                 @can('proveedores.crear')
                 <a href="{{ route('inventario.proveedores.create') }}" class="btn btn-primary">
@@ -154,11 +157,130 @@
 
 @section('css')
 <style>
+    /* Estilos existentes */
     .toast-center {
         position: fixed;
         top: 20px;
         right: 20px;
         z-index: 1080;
+    }
+
+    /* === RESPONSIVIDAD === */
+    /* Asegura que el contenedor de acciones no se desborde y que los botones quepan */
+    #proveedores-table .btn-group {
+        flex-wrap: nowrap;
+    }
+
+    /* Oculta columnas de baja prioridad en móvil (ej. Email y Teléfono) */
+    @media (max-width: 767.98px) {
+
+        /* Oculta Teléfono y Email en pantallas pequeñas */
+        #proveedores-table thead th:nth-child(3),
+        #proveedores-table tbody td:nth-child(3),
+        #proveedores-table thead th:nth-child(4),
+        #proveedores-table tbody td:nth-child(4) {
+            display: none;
+        }
+
+        /* Ajusta el ancho de RUC y Estado para dar espacio a Razón Social */
+        #proveedores-table thead th:nth-child(1),
+        #proveedores-table tbody td:nth-child(1) {
+            width: 25% !important;
+            /* RUC */
+        }
+
+        #proveedores-table thead th:nth-child(5),
+        #proveedores-table tbody td:nth-child(5) {
+            width: 25% !important;
+            /* Estado */
+        }
+
+        #proveedores-table thead th:nth-child(6),
+        #proveedores-table tbody td:nth-child(6) {
+            width: 25% !important;
+            /* Acciones */
+        }
+    }
+
+    /* === MODO OSCURO (Activado por la clase AdminLTE 'dark-mode' en el body) === */
+    body.dark-mode .card.shadow-sm {
+        background-color: #343a40 !important;
+        /* Color de fondo oscuro */
+        border-color: #495057 !important;
+    }
+
+    body.dark-mode .card-header.bg-white,
+    body.dark-mode .card-footer.bg-white {
+        background-color: #3e444a !important;
+        /* Un tono más claro para cabecera/pie */
+        border-bottom-color: #495057 !important;
+        border-top-color: #495057 !important;
+    }
+
+    /* Texto dentro de la card */
+    body.dark-mode .card,
+    body.dark-mode .card-body,
+    body.dark-mode .card-header,
+    body.dark-mode .card-footer {
+        color: #d1d9e0 !important;
+    }
+
+    /* Tabla oscura */
+    body.dark-mode #proveedores-table {
+        color: #e9ecef;
+    }
+
+    body.dark-mode #proveedores-table .thead-light th {
+        color: #fff;
+        background-color: #495057;
+        border-color: #5d6874;
+    }
+
+    body.dark-mode #proveedores-table .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+        /* Rayado suave */
+    }
+
+    body.dark-mode #proveedores-table .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Input Group - Buscador */
+    body.dark-mode .input-group-text.bg-light {
+        background-color: #495057 !important;
+        color: #d1d9e0 !important;
+        border-color: #5d6874 !important;
+    }
+
+    body.dark-mode .form-control {
+        background-color: #2b3035;
+        color: #d1d9e0;
+        border-color: #5d6874;
+    }
+
+    /* Modal de Borrado */
+    body.dark-mode .modal-content {
+        background-color: #343a40 !important;
+        color: #d1d9e0 !important;
+    }
+
+    body.dark-mode .modal-header {
+        border-bottom-color: #495057 !important;
+    }
+
+    body.dark-mode .modal-footer {
+        border-top-color: #495057 !important;
+    }
+
+    body.dark-mode .btn-outline-secondary {
+        color: #adb5bd;
+        border-color: #adb5bd;
+    }
+
+    body.dark-mode .btn-outline-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+        color: #fff;
     }
 </style>
 @stop

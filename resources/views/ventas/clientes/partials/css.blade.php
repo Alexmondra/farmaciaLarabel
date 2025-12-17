@@ -253,4 +253,116 @@
     .dark-mode .avatar-ruc {
         background-color: rgba(255, 152, 0, 0.25);
     }
+
+
+    /* todo lo que es para moviles*/
+
+    @media (max-width: 991.98px) {
+
+        /* Encabezado */
+        .container-fluid.pt-4 {
+            padding-top: 1rem !important;
+        }
+
+        .btn-new-client {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+
+        /* KPIS / FILTROS */
+        .filter-card {
+            padding: 10px 15px;
+        }
+
+        .filter-title {
+            font-size: 0.8rem;
+        }
+
+        .filter-count {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+        }
+
+        .bonus-card {
+            /* Asegura que el contenido quede centrado y visible */
+            padding: 15px 15px !important;
+        }
+
+        /* Buscador */
+        .search-input {
+            height: 45px;
+            font-size: 1rem;
+            padding-left: 45px;
+        }
+
+        .search-icon {
+            left: 15px;
+            top: 14px;
+            font-size: 1rem;
+        }
+
+        /* TABLA MÓVIL (Compresión extrema) */
+        .table-hover td {
+            padding: 0.4rem 0.5rem !important;
+            vertical-align: middle;
+            font-size: 0.85rem;
+        }
+
+        /* Ocultar columnas menos críticas */
+        .table-hover thead th:nth-child(2),
+        .table-hover tbody td:nth-child(2) {
+            /* Documento - Se oculta el texto del documento para ahorrar espacio */
+            display: none !important;
+        }
+
+        .table-hover thead th:nth-child(3),
+        .table-hover tbody td:nth-child(3) {
+            /* Contacto - Se oculta el email para solo dejar el teléfono */
+            padding-right: 0.25rem !important;
+        }
+
+        .table-hover thead th:nth-child(4),
+        .table-hover tbody td:nth-child(4) {
+            /* Puntos */
+            padding-left: 0.25rem !important;
+            padding-right: 0.25rem !important;
+        }
+
+        .table-hover thead th:nth-child(1) {
+            /* Cliente */
+            width: 50% !important;
+        }
+
+        .table-hover thead th:nth-child(5) {
+            /* Acciones */
+            width: 20% !important;
+        }
+
+        /* Ajuste de avatar */
+        .avatar-circle {
+            width: 35px;
+            height: 35px;
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+
+        .font-weight-bold.text-dark {
+            font-size: 0.9rem !important;
+        }
+
+        .text-muted small {
+            font-size: 0.7rem;
+        }
+
+        /* Contacto: Ocultar email para solo mostrar teléfono */
+        .table-hover tbody td:nth-child(3) .small {
+            display: none;
+        }
+
+        /* Paginación */
+        .pagination {
+            justify-content: flex-end;
+            /* Mover paginación a la derecha */
+        }
+    }
 </style>

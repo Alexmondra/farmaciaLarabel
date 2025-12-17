@@ -11,23 +11,23 @@
 
     {{-- ========================================================== --}}
     {{-- COLUMNA IZQUIERDA: LISTA DE ROLES --}}
-    {{-- CAMBIO: Usar 'col-12' para ocupar todo el ancho en móvil, luego 'col-md-4' --}}
     {{-- ========================================================== --}}
-    <div class="col-12 col-md-4 mb-3 mb-md-0">
+    <div class="col-md-4">
         <div class="card card-primary card-outline">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-user-tag mr-2"></i> Roles del Sistema</h3>
             </div>
             <div class="card-body p-0">
-                <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                <ul class="list-group list-group-flush">
                     @forelse($roles as $r)
-                    <li class="list-group-item d-flex justify-content-between align-items-center {{ $selectedRole && $selectedRole->id === $r->id ? 'bg-light font-weight-bold selected-role-item' : '' }}">
-                        {{-- Se ajusta el ancho a 65% para dar espacio a los botones/badges --}}
-                        <a href="{{ route('seguridad.roles.index', ['role' => $r->id]) }}" class="text-dark" style="text-decoration: none; width: 65%;">
+                    <li class="list-group-item d-flex justify-content-between align-items-center {{ $selectedRole && $selectedRole->id === $r->id ? 'bg-light font-weight-bold' : '' }}">
+
+                        {{-- Solo mostramos enlace si tiene permiso de ver --}}
+                        <a href="{{ route('seguridad.roles.index', ['role' => $r->id]) }}" class="text-dark" style="text-decoration: none; width: 70%;">
                             <i class="fas fa-user-shield mr-2 text-primary"></i> {{ $r->name }}
                         </a>
 
-                        <div class="d-flex align-items-center flex-shrink-0">
+                        <div class="d-flex align-items-center">
                             @if($r->name !== 'Administrador')
                             @can('roles.eliminar')
                             <form method="POST" action="{{ route('seguridad.roles.destroy', $r) }}"
@@ -74,23 +74,20 @@
 
     {{-- ========================================================== --}}
     {{-- COLUMNA DERECHA: GESTIÓN DE PERMISOS --}}
-    {{-- CAMBIO: Usar 'col-12' para ocupar todo el ancho en móvil, luego 'col-md-8' --}}
     {{-- ========================================================== --}}
     @can('permisos.ver')
-    <div class="col-12 col-md-8">
+    <div class="col-md-8">
         <div class="card">
-            <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                {{-- CAMBIO: Añadir margen inferior en móvil --}}
+            <div class="card-header bg-white">
                 @if($selectedRole)
-                <h3 class="card-title mt-1 mb-2 mb-md-0">
+                <h3 class="card-title mt-1">
                     Permisos para: <span class="text-primary font-weight-bold">{{ $selectedRole->name }}</span>
                 </h3>
                 @else
-                <span class="text-muted mb-2 mb-md-0">Selecciona un rol a la izquierda</span>
+                <span class="text-muted">Selecciona un rol a la izquierda</span>
                 @endif
-                {{-- CAMBIO: El input-group en card-tools ocupa el 100% del ancho en móvil --}}
-                <div class="card-tools w-100 w-md-auto">
-                    <div class="input-group input-group-sm">
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width: 200px;">
                         <input type="text" id="permissionSearchInput" class="form-control" placeholder="Buscar permiso..." {{ !$selectedRole ? 'disabled' : '' }}>
                         <div class="input-group-append">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -114,12 +111,10 @@
             {{-- FORMULARIO DE SINCRONIZACIÓN (ASIGNAR) --}}
             <form method="POST" action="{{ route('seguridad.roles.permisos.sync', $selectedRole->id) }}">
                 @csrf
-                {{-- CAMBIO: Aplicar un max-height y scroll --}}
                 <div class="card-body p-3" id="permissionsContainer" style="max-height: 70vh; overflow-y: auto;">
-                    {{-- CAMBIO: Usar col-12 en móvil, col-md-6 en escritorio --}}
                     <div class="row">
                         @foreach($grouped as $grupo => $lista)
-                        <div class="col-12 col-md-6">
+                        <div class="col-md-6">
                             <div class="card card-outline card-secondary mb-3 shadow-none border">
                                 <div class="card-header py-1 px-3 bg-light">
                                     <strong class="text-uppercase text-xs text-muted">{{ $grupo }}</strong>
@@ -140,9 +135,9 @@
                                     }
                                     @endphp
 
-                                    <div class="d-flex justify-content-between align-items-center mb-1 px-1 rounded hover-bg permission-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-1 px-1 rounded hover-bg">
                                         {{-- CHECKBOX (ASIGNAR) --}}
-                                        <div class="custom-control custom-checkbox flex-grow-1">
+                                        <div class="custom-control custom-checkbox">
                                             <input
                                                 type="checkbox"
                                                 class="custom-control-input"
@@ -166,7 +161,7 @@
                                         <button
                                             type="submit"
                                             form="{{ $formId }}"
-                                            class="btn btn-xs btn-default text-danger border-0 flex-shrink-0"
+                                            class="btn btn-xs btn-default text-danger border-0"
                                             title="Revocar permiso"
                                             onclick="return confirm('¿Quitar {{ $perm->name }} de {{ $selectedRole->name }}?')">
                                             <i class="fas fa-trash-alt"></i>
@@ -222,19 +217,16 @@
         const permissionsContainer = document.getElementById('permissionsContainer');
 
         if (permissionSearchInput && permissionsContainer) {
-            const permissionCards = permissionsContainer.querySelectorAll('.col-12'); // Contenedores de grupos (col-12)
+            const permissionCards = permissionsContainer.querySelectorAll('.card'); // Tarjetas de grupos
 
             permissionSearchInput.addEventListener('keyup', function(event) {
                 const searchTerm = event.target.value.toLowerCase();
 
-                permissionCards.forEach(col => {
-                    const groupCard = col.querySelector('.card-body');
-                    if (!groupCard) return;
-
-                    const permissionItems = groupCard.querySelectorAll('.permission-item');
+                permissionCards.forEach(card => {
+                    const checkboxes = card.querySelectorAll('.d-flex'); // Contenedores de cada permiso
                     let hasVisible = false;
 
-                    permissionItems.forEach(box => {
+                    checkboxes.forEach(box => {
                         const label = box.querySelector('label').textContent.toLowerCase();
                         if (label.includes(searchTerm)) {
                             box.style.display = 'flex'; // Usamos flex para mantener alineación
@@ -246,11 +238,19 @@
                         }
                     });
 
-                    // Ocultar o mostrar la columna completa si todos los permisos del grupo están ocultos
-                    col.style.display = hasVisible ? '' : 'none';
+                    if (hasVisible) {
+                        card.parentElement.style.display = '';
+                    } else {
+                        card.parentElement.style.display = 'none';
+                    }
                 });
             });
         }
     });
 </script>
+<style>
+    .hover-bg:hover {
+        background-color: #f4f6f9;
+    }
+</style>
 @stop

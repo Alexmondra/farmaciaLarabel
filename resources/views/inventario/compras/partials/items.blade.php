@@ -43,6 +43,22 @@
         font-weight: bold;
         color: #28a745;
     }
+
+    /* MODO OSCURO (Aseguramos que los estilos Dark Mode del archivo principal se apliquen) */
+    body.dark-mode .search-results {
+        background-color: #3f474e;
+        border-color: #6c757d;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    body.dark-mode .search-item {
+        color: #fff;
+        border-bottom: 1px solid #4b545c;
+    }
+
+    body.dark-mode .search-item:hover {
+        background-color: #454d55;
+    }
 </style>
 
 <div class="card border-0 shadow-none" style="background: transparent;">

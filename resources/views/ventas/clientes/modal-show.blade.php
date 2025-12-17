@@ -14,7 +14,8 @@
             <div class="modal-body p-0">
                 <div class="row no-gutters">
 
-                    <div class="col-md-4 bg-light text-center p-4 border-right profile-sidebar">
+                    {{-- PERFIL (col-12 en móvil, col-md-4 en desktop) --}}
+                    <div class="col-12 col-md-4 bg-light text-center p-4 border-right profile-sidebar">
                         <div class="mb-3">
                             <div id="show_avatar" class="d-flex align-items-center justify-content-center mx-auto shadow-sm"
                                 style="width: 100px; height: 100px; border-radius: 50%; background: #e0f7fa; color: #00bcd4; font-size: 2.5rem; font-weight: bold; border: 4px solid #fff;">
@@ -43,7 +44,8 @@
                         </div>
                     </div>
 
-                    <div class="col-md-8 bg-white p-0">
+                    {{-- TABS (col-12 en móvil, col-md-8 en desktop) --}}
+                    <div class="col-12 col-md-8 bg-white p-0">
                         <ul class="nav nav-tabs nav-justified" id="clienteTabs" role="tablist">
                             <li class="nav-item">
                                 <a class="nav-link active py-3 font-weight-bold" id="info-tab" data-toggle="tab" href="#info" role="tab">Información</a>
@@ -90,37 +92,42 @@
 </div>
 
 <style>
-    .dark-mode .profile-sidebar {
-        background-color: #3f474e !important;
-        border-right: 1px solid #56606a !important;
-    }
+    /* ... (Estilos Dark Mode existentes) ... */
 
-    .dark-mode #modalShowCliente .bg-white {
-        background-color: #343a40 !important;
-        color: #fff !important;
-    }
-
-    .dark-mode #show_nombre,
-    .dark-mode #show_puntos,
-    .dark-mode p.text-dark {
-        color: #fff !important;
-    }
-
-    .dark-mode .nav-tabs .nav-link.active {
-        background-color: #343a40;
-        color: #00d2d3;
+    .dark-mode .nav-tabs .nav-link:not(.active) {
+        color: #adb5bd;
+        /* Hace que el tab inactivo sea legible en dark mode */
+        background-color: #3f474e;
         border-color: #56606a;
     }
 
-    .dark-mode #modalShowCliente .card {
-        background-color: #454d55 !important;
+    .dark-mode .nav-tabs {
+        border-bottom-color: #56606a;
     }
 
-    .dark-mode .text-muted {
-        color: #adb5bd !important;
+    @media (max-width: 767.98px) {
+
+        /* Fuerza padding reducido en móvil para el contenido */
+        .tab-content.p-4 {
+            padding: 1.5rem !important;
+        }
+
+        .profile-sidebar {
+            border-right: none !important;
+            border-bottom: 1px solid #e9ecef;
+            /* Separador cuando se apila */
+        }
+
+        .dark-mode .profile-sidebar {
+            border-bottom-color: #56606a !important;
+        }
+
+        .modal-body .row .col-md-6,
+        .modal-body .row .col-md-12 {
+            margin-bottom: 0.75rem !important;
+        }
     }
 </style>
-
 <script>
     // Esta función es global: Puedes llamarla desde CUALQUIER botón en tu sistema
     function openShowModal(id) {

@@ -14,8 +14,8 @@ use App\Http\Controllers\Configuracion\ConfiguracionController;
 use App\Http\Controllers\PublicoController;
 use App\Http\Controllers\Reportes\ReporteVentasController;
 use App\Http\Controllers\Guias\GuiaRemisionController;
-
-
+use App\Http\Controllers\Reportes\ReporteInventarioController;
+use App\Http\Controllers\DashboardController;
 // =========================================================================
 // 1. RUTAS PÚBLICAS
 // =========================================================================
@@ -41,9 +41,7 @@ Route::get('/descargar-publico/{id}', [PublicoController::class, 'descargar'])->
 Route::middleware(['auth'])->group(function () {
 
     // --- Dashboard y Perfil Base ---
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'edit')->name('profile.edit');
@@ -197,4 +195,14 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('reportes/venta/{id}/pdf', [ReporteVentasController::class, 'descargarPdf'])
         ->name('reportes.venta.pdf');
+
+
+
+    // de aqui las de inventario 
+
+    Route::get('reportes/vencimientos', [ReporteInventarioController::class, 'vencimientos'])
+        ->name('reportes.vencimientos');
+
+    Route::get('reportes/stock-bajo', [ReporteInventarioController::class, 'stockBajo'])
+        ->name('reportes.stock_bajo');
 });

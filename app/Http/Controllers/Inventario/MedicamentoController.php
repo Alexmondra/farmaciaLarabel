@@ -50,7 +50,6 @@ class MedicamentoController extends Controller
             'idsFiltroSucursales'  => $ctx['ids_filtro'],
         ];
 
-        // 5. Respuesta AJAX (Solo Tabla) o Full (Página entera)
         if ($request->ajax()) {
             return view('inventario.medicamentos._index_tabla', $data)->render();
         }

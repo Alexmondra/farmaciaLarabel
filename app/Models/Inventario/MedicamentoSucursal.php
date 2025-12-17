@@ -3,40 +3,36 @@
 namespace App\Models\Inventario;
 
 use App\Models\Sucursal;
-
+use App\Models\User; // Agregamos User para la relación updated_by
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Inventario\Medicamento;   // 👈 AÑADIR ESTA LÍNEA
+use Illuminate\Database\Eloquent\SoftDeletes; // Tu migración tiene deleted_at, así que esto es útil
 
 class MedicamentoSucursal extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes; // Agregamos SoftDeletes para manejar el deleted_at
 
     protected $table = 'medicamento_sucursal';
 
-
-
+    // 1. FILLABLE: Ajustado EXACTAMENTE a tu migración
     protected $fillable = [
         'medicamento_id',
         'sucursal_id',
-        'stock_total',
+        'stock_minimo',
         'precio_venta',
-        'deleted_at',
+        'activo',
+        'updated_by',
     ];
-
 
     protected $casts = [
-        'deleted_at' => 'datetime',
+        'stock_minimo' => 'integer',
+        'precio_venta' => 'decimal:2',
+        'activo'       => 'boolean',
+        'deleted_at'   => 'datetime',
     ];
 
-    public function isActive()
-    {
-        return is_null($this->deleted_at);
-    }
     /* ===================== RELACIONES ===================== */
 
-    // Un registro pertenece a una sucursal
     public function medicamento()
     {
         return $this->belongsTo(Medicamento::class);
@@ -47,27 +43,52 @@ class MedicamentoSucursal extends Model
         return $this->belongsTo(Sucursal::class);
     }
 
-    // Un medicamento en una sucursal tiene muchos lotes
+    public function usuarioActualizacion()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    // Relación con los Lotes (para calcular el stock real)
     public function lotes()
     {
         return $this->hasMany(Lote::class, 'medicamento_id', 'medicamento_id')
             ->where('sucursal_id', $this->sucursal_id);
     }
 
-    /* ===================== SCOPES ===================== */
+    /* ===================== SCOPES (Lógica de Negocio) ===================== */
+    /* ===================== SCOPES RECUPERADOS (ESENCIALES PARA VENTAS) ===================== */
 
-    // Solo activos
+    // 1. scopeActivos: Usado en VentaController@lookupMedicamentos
     public function scopeActivos($query)
     {
         return $query->where('activo', true);
     }
 
-    // Buscar por nombre del medicamento o código
-    public function scopeBuscar($query, $texto)
+    // 2. scopeBuscar: Usado para filtrar por nombre/código en el buscador de Ventas
+    public function scopeBuscar($query, $term)
     {
-        return $query->whereHas('medicamento', function ($q) use ($texto) {
-            $q->where('nombre', 'like', "%$texto%")
-                ->orWhere('codigo', 'like', "%$texto%");
+        return $query->whereHas('medicamento', function ($sub) use ($term) {
+            $sub->where('nombre', 'LIKE', "%{$term}%")
+                ->orWhere('codigo', 'LIKE', "%{$term}%")
+                ->orWhere('laboratorio', 'LIKE', "%{$term}%");
         });
+    }
+
+    /* ===================== SCOPE DE ALERTAS (EL NUEVO) ===================== */
+    public function scopeConStockBajo($query, $sucursalId = null)
+    {
+        $sqlStockReal = '(SELECT COALESCE(SUM(stock_actual), 0) 
+                          FROM lotes 
+                          WHERE lotes.medicamento_id = medicamento_sucursal.medicamento_id 
+                          AND lotes.sucursal_id = medicamento_sucursal.sucursal_id)';
+
+        $query->select('medicamento_sucursal.*');
+        $query->selectRaw("{$sqlStockReal} as stock_computado");
+        $query->when($sucursalId, function ($q) use ($sucursalId) {
+            $q->where('sucursal_id', $sucursalId);
+        });
+        $query->where('activo', true);
+
+        return $query->whereRaw("{$sqlStockReal} <= medicamento_sucursal.stock_minimo");
     }
 }

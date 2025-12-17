@@ -141,7 +141,12 @@
         }
     }
 
+    /* =========================================================
+       RESPONSIVE PARA MÓVILES (Menor a 992px)
+       ========================================================= */
     @media (max-width: 992px) {
+
+        /* TABLA MODERN (de tabla a tarjeta) */
         .table-modern thead {
             display: none;
         }
@@ -175,6 +180,14 @@
             background-color: #f8fafc;
         }
 
+        /* Contenido de la fila (items.blade.php) */
+        .table-modern td .g-2>div {
+            /* Asegura que los campos de Lote, Vencimiento, etc. tomen todo el ancho en móvil */
+            flex-basis: 100%;
+            max-width: 100%;
+        }
+
+        /* BARRA INFERIOR FIJA */
         .barra-inferior-fija {
             left: 0 !important;
             padding: 10px 15px;
@@ -198,6 +211,32 @@
             width: 100%;
             margin-bottom: 5px;
             display: block;
+        }
+
+        /* TABLA DE LISTADO (index.blade.php) */
+        .table:not(.table-modern) th,
+        .table:not(.table-modern) td {
+            white-space: normal !important;
+            padding: 0.5rem !important;
+            font-size: 0.9rem;
+        }
+
+        /* Ocultar columnas menos críticas en index */
+        .table:not(.table-modern) thead th:nth-child(2),
+        .table:not(.table-modern) tbody td:nth-child(2) {
+            /* Ocultar Documento/RUC */
+            display: none !important;
+        }
+
+        .table:not(.table-modern) thead th:nth-child(4),
+        .table:not(.table-modern) tbody td:nth-child(4) {
+            /* Ocultar Sucursal */
+            display: none !important;
+        }
+
+        /* Detalle de Compra (show.blade.php) - Apilar Cards */
+        .row .col-md-6 {
+            margin-bottom: 1rem;
         }
     }
 
@@ -343,6 +382,27 @@
         }
     }
 
+    /* 1b. TABLA DE LISTADO EN MODO OSCURO (index.blade.php) */
+    body.dark-mode .table {
+        color: #f8f9fa;
+    }
+
+    body.dark-mode .table thead.bg-light th {
+        background-color: #3f474e !important;
+        color: #ced4da;
+    }
+
+    body.dark-mode .table-hover tbody tr:hover {
+        background-color: #3f474e !important;
+    }
+
+    body.dark-mode .bg-secondary,
+    body.dark-mode .bg-warning {
+        /* Fuerza la legibilidad de Badges */
+        color: #fff !important;
+    }
+
+
     /* 2. INPUTS Y FORMULARIOS */
     body.dark-mode .input-modern,
     body.dark-mode .input-enhanced,
@@ -373,11 +433,41 @@
         color: #ced4da;
     }
 
+    body.dark-mode .form-label-icon i {
+        color: #17a2b8;
+        /* Mantiene el color del icono */
+    }
+
+
     body.dark-mode .group-box {
         background-color: #343a40;
         /* Fondo de caja agrupada */
         border: 1px solid #4b545c;
     }
+
+    /* 2b. MODALES EN MODO OSCURO (create.blade.php) */
+    body.dark-mode .modal-content {
+        background-color: #343a40;
+        color: #fff;
+        border: 1px solid #4b545c;
+    }
+
+    body.dark-mode .modal-header.bg-info,
+    body.dark-mode .modal-header.bg-primary {
+        background-color: #17a2b8 !important;
+        /* Usar color AdminLTE */
+        color: #fff;
+    }
+
+    body.dark-mode .modal-header .close {
+        color: #fff;
+        opacity: 1;
+    }
+
+    body.dark-mode .modal-body .text-muted {
+        color: #adb5bd !important;
+    }
+
 
     /* 3. BARRA INFERIOR FIJA */
     body.dark-mode .barra-inferior-fija {
@@ -387,8 +477,23 @@
     }
 
     /* 4. RESULTADOS DE BÚSQUEDA */
-    body.dark-mode .search-item.active-keyboard {
+    body.dark-mode .search-results {
         background-color: #3f474e;
+        border-color: #6c757d;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    body.dark-mode .search-item {
+        color: #fff;
+        border-bottom: 1px solid #4b545c;
+    }
+
+    body.dark-mode .search-item:hover {
+        background-color: #454d55;
+    }
+
+    body.dark-mode .search-item.active-keyboard {
+        background-color: #17a2b8;
         /* Fondo activo oscuro */
         border-left: 4px solid #17a2b8;
         /* Borde cyan */

@@ -16,18 +16,18 @@
                         <label class="d-block small text-muted font-weight-bold mb-2">Regla de Acumulación</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text border-0 bg-light">S/ 1.00 Venta =</span>
+                                <span class="input-group-text border-0 bg-light-fix">S/ 1.00 Venta =</span>
                             </div>
                             {{-- Nota: Usamos null coalesce (??) para evitar error si $config no existe --}}
                             <input type="number"
                                 step="1"
                                 min="0"
                                 name="puntos_por_moneda"
-                                class="form-control font-weight-bold text-center border-0 bg-light h-auto py-2"
+                                class="form-control font-weight-bold text-center border-0 bg-light-fix h-auto py-2"
                                 value="{{ $config->puntos_por_moneda ?? 1 }}"
                                 oninput="if(this.value < 0) this.value = 0;">
                             <div class="input-group-append">
-                                <span class="input-group-text border-0 bg-light">Puntos</span>
+                                <span class="input-group-text border-0 bg-light-fix">Puntos</span>
                             </div>
                         </div>
                         <small class="text-info mt-1 d-block">
@@ -41,18 +41,18 @@
                         <label class="d-block small text-muted font-weight-bold mb-2">Valor del Canje (Descuento)</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text border-0 bg-light">1 Punto =</span>
+                                <span class="input-group-text border-0 bg-light-fix">1 Punto =</span>
                             </div>
                             <input type="number"
                                 step="0.0001"
                                 min="0"
                                 name="valor_punto_canje"
                                 id="conf_valor"
-                                class="form-control font-weight-bold text-center border-0 bg-light h-auto py-2"
+                                class="form-control font-weight-bold text-center border-0 bg-light-fix h-auto py-2"
                                 value="{{ $config->valor_punto_canje ?? 0.02 }}"
                                 oninput="if(this.value < 0) this.value = 0;">
                             <div class="input-group-append">
-                                <span class="input-group-text border-0 bg-light">Soles</span>
+                                <span class="input-group-text border-0 bg-light-fix">Soles</span>
                             </div>
                         </div>
                         <small class="text-info mt-1 d-block">
@@ -61,7 +61,7 @@
                     </div>
 
                 </div>
-                <div class="modal-footer p-2 bg-light justify-content-center">
+                <div class="modal-footer p-2 bg-light-fix justify-content-center">
                     <button type="submit" class="btn btn-primary btn-block rounded-pill font-weight-bold">
                         Actualizar Reglas
                     </button>
@@ -70,3 +70,21 @@
         </div>
     </div>
 </div>
+<style>
+    /* Usamos una clase auxiliar para forzar el color de fondo en dark mode */
+    .dark-mode .bg-light-fix,
+    .dark-mode .modal-content {
+        background-color: #3f474e !important;
+        color: white !important;
+        border-color: #6c757d;
+    }
+
+    .dark-mode .bg-light-fix.input-group-text {
+        border-color: #6c757d !important;
+    }
+
+    .dark-mode input.bg-light-fix {
+        color: #fff !important;
+        border-color: #6c757d !important;
+    }
+</style>

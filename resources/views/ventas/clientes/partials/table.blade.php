@@ -3,7 +3,7 @@
         <thead class="bg-light" style="/* En dark mode esto se ajusta solo con AdminLTE */">
             <tr>
                 <th width="35%" class="border-0">CLIENTE / RAZÓN SOCIAL</th>
-                <th width="20%" class="border-0">DOCUMENTO</th>
+                <th width="20%" class="border-0 d-none d-md-table-cell">DOCUMENTO</th>
                 <th width="20%" class="border-0">CONTACTO</th>
                 <th width="10%" class="text-center border-0">PUNTOS</th>
                 <th width="15%" class="text-right border-0">ACCIONES</th>
@@ -12,7 +12,7 @@
         <tbody>
             @forelse($clientes as $cliente)
             <tr>
-                <td class="align-middle">
+                <td class="align-middle text-wrap"> {{-- APLICAR TEXT-WRAP --}}
                     <div class="d-flex align-items-center">
                         <div class="avatar-circle {{ $cliente->tipo_documento == 'RUC' ? 'avatar-ruc' : '' }}">
                             {{ substr($cliente->nombre_completo, 0, 1) }}
@@ -31,7 +31,7 @@
                         </div>
                     </div>
                 </td>
-                <td class="align-middle">
+                <td class="align-middle d-none d-md-table-cell"> {{-- OCULTAR EN SM/XS --}}
                     <div class="d-flex flex-column">
                         <span class="font-weight-bold text-secondary">{{ $cliente->tipo_documento }}</span>
                         <span class="text-dark">{{ $cliente->documento }}</span>
@@ -50,9 +50,9 @@
                 </td>
                 <td class="text-center align-middle">
                     @if($cliente->puntos > 0)
-                    <span class="badge badge-success px-3 py-2 rounded-pill">{{ $cliente->puntos }} pts</span>
+                    <span class="badge badge-success px-3 py-2 rounded-pill" style="font-size:0.75rem;">{{ $cliente->puntos }} pts</span>
                     @else
-                    <span class="badge badge-light px-3 py-2 rounded-pill text-muted">0 pts</span>
+                    <span class="badge badge-light px-3 py-2 rounded-pill text-muted" style="font-size:0.75rem;">0 pts</span>
                     @endif
                 </td>
                 <td class="text-right align-middle">
@@ -82,10 +82,10 @@
 </div>
 
 <div class="d-flex justify-content-between align-items-center px-3 py-3">
-    <div class="text-muted small">
+    <div class="text-muted small d-none d-sm-block">
         Mostrando {{ $clientes->firstItem() }} - {{ $clientes->lastItem() }} de {{ $clientes->total() }} registros
     </div>
-    <div>
+    <div class="w-100 w-sm-auto">
         {!! $clientes->links() !!}
     </div>
 </div>

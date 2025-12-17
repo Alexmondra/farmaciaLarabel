@@ -101,4 +101,12 @@ class Lote extends Model
     {
         return $query->where('stock_actual', '>', 0);
     }
+
+    public function scopePorVencer($query, $sucursalId = null)
+    {
+        return $query->where('stock_actual', '>', 0)
+            ->whereDate('fecha_vencimiento', '>=', Carbon::today())
+            ->whereDate('fecha_vencimiento', '<=', now()->addDays(30))
+            ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId));
+    }
 }
