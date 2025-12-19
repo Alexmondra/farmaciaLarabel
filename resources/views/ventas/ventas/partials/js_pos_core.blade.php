@@ -797,5 +797,50 @@
         });
 
         $('.close, [data-dismiss="modal"]').on('click', () => $('.modal').modal('hide'));
+
+        // ==========================================
+        // 7. VALIDACIONES SUNAT (FACTURA Y BOLETA > 700)
+        // ==========================================
+        $('#form-venta').on('submit', function(e) {
+
+
+            let total = obtenerTotalActual();
+            let tipoComprobante = $('#tipo_comprobante').val();
+            let clienteId = $('#cliente_id_hidden').val(); // Si está vacío es "Cliente General"
+
+            // REGLA 1: FACTURAS SIEMPRE REQUIEREN CLIENTE
+            if (tipoComprobante === 'FACTURA') {
+                if (!clienteId || clienteId === '') {
+                    e.preventDefault(); // Detiene el envío
+                    toastr.error('ERROR: Para emitir una FACTURA es obligatorio seleccionar un cliente con RUC.', 'Falta Cliente');
+
+                    // Efecto visual: Resaltar la caja del cliente y subir
+                    $('.card-cliente-pos').addClass('border-danger shadow-lg');
+                    $('html, body').animate({
+                        scrollTop: $(".card-cliente-pos").offset().top - 100
+                    }, 500);
+                    setTimeout(() => $('.card-cliente-pos').removeClass('border-danger shadow-lg'), 2000);
+
+                    return false;
+                }
+            }
+
+            // REGLA 2: BOLETAS MAYORES A 700 SOLES
+            if (tipoComprobante === 'BOLETA' && total >= 700) {
+                if (!clienteId || clienteId === '') {
+                    e.preventDefault(); // Detiene el envío
+                    toastr.error('NORMA SUNAT: Las boletas de venta que superan los S/ 700 requieren identificar al cliente (DNI).', 'Monto Alto');
+
+                    // Efecto visual
+                    $('.card-cliente-pos').addClass('border-danger shadow-lg');
+                    $('html, body').animate({
+                        scrollTop: $(".card-cliente-pos").offset().top - 100
+                    }, 500);
+                    setTimeout(() => $('.card-cliente-pos').removeClass('border-danger shadow-lg'), 2000);
+
+                    return false;
+                }
+            }
+        });
     });
 </script>

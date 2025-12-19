@@ -36,7 +36,7 @@ class RolePermissionController extends Controller
         ));
     }
 
-    public function storeRole(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('roles', 'name')],
@@ -50,7 +50,7 @@ class RolePermissionController extends Controller
             ->with('success', 'Rol creado. Ahora asígnale permisos.');
     }
 
-    public function destroyRole(Role $role)
+    public function destroy(Role $role)
     {
         if ($role->name === 'Administrador') {
             return back()->with('error', 'El rol Administrador es intocable.');

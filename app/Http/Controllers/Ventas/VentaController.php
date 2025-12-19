@@ -116,6 +116,8 @@ class VentaController extends Controller
             return back()->withErrors('El carrito está vacío o es inválido.');
         }
 
+
+
         // 2. DELEGAR AL SERVICIO
         try {
             // Toda la magia ocurre aquí dentro
@@ -140,8 +142,13 @@ class VentaController extends Controller
 
         // 2. Permisos
         if (!$user->hasRole('Administrador')) {
-            if ($venta->sucursal_id !== $user->sucursal_id) {
-                abort(403, 'Esta venta pertenece a otra sucursal.');
+            $tieneAcceso = \DB::table('sucursal_user')
+                ->where('user_id', $user->id)
+                ->where('sucursal_id', $venta->sucursal_id)
+                ->exists();
+
+            if (!$tieneAcceso) {
+                abort(403, 'Esta venta pertenece a otra sucursal y no tienes asignado acceso.');
             }
         }
 
@@ -209,30 +216,51 @@ class VentaController extends Controller
 
     public function create(Request $request)
     {
-        $user = Auth::user();
-        $ctx = $this->sucursalResolver->resolverPara($user);
-
-        // 1. Verificar si hay caja abierta (requisito indispensable)
-        $cajaAbierta = CajaSesion::where('user_id', $user->id)
-            ->where('estado', 'ABIERTO')
-            ->when($ctx['ids_filtro'], function ($q) use ($ctx) {
-                $q->whereIn('sucursal_id', $ctx['ids_filtro']);
-            })
-            ->first();
-
-        // 2. Si no hay caja, redirigir al index (que le mostrará el modal)
-        if (!$cajaAbierta) {
-            return redirect()->route('ventas.index')
-                ->with('error', 'Debes abrir una caja antes de poder registrar una venta.');
+        // 1. BLOQUEO DE SEGURIDAD: ¿Hay sucursal seleccionada en la barra superior?
+        if (!session()->has('sucursal_id')) {
+            return redirect()->route('cajas.index')
+                ->with('error', '⛔ ACCESO DENEGADO: Por favor, selecciona una sucursal en la parte superior antes de vender.');
         }
 
-        // 3. Cargar clientes para el dropdown
+        $user = Auth::user();
+        $sucursalActualId = session('sucursal_id');
+
+        // 2. BUSQUEDA ESTRICTA:
+        // Buscamos una caja que sea MÍA, esté ABIERTA y sea DE LA SUCURSAL ACTUAL.
+        $cajaAbierta = CajaSesion::where('user_id', $user->id)
+            ->where('estado', 'ABIERTO')
+            ->where('sucursal_id', $sucursalActualId) // <--- ESTA ES LA CLAVE (Filtro Geográfico)
+            ->first();
+
+        // 3. SI NO SE ENCUENTRA CAJA VÁLIDA PARA ESTA SUCURSAL
+        if (!$cajaAbierta) {
+
+            // Verificamos si tiene una caja abierta "perdida" en OTRA sucursal
+            // para darle un mensaje de error más útil.
+            $cajaEnOtroLado = CajaSesion::where('user_id', $user->id)
+                ->where('estado', 'ABIERTO')
+                ->with('sucursal')
+                ->first();
+
+            if ($cajaEnOtroLado) {
+                // CASO A: Tiene caja abierta, PERO NO AQUÍ.
+                $nombreOtraSucursal = $cajaEnOtroLado->sucursal->nombre ?? 'otra ubicación';
+
+                return redirect()->route('cajas.index')
+                    ->with('error', "⚠️ ALERTA: Tienes una caja abierta en '{$nombreOtraSucursal}'. No puedes vender aquí hasta que cierres esa caja o cambies de sucursal.");
+            }
+
+            // CASO B: No tiene ninguna caja abierta en ningún lado.
+            return redirect()->route('cajas.index')
+                ->with('info', '👋 Hola. Para empezar a registrar ventas en esta sucursal, primero debes abrir tu caja.');
+        }
+
+        // 4. SI PASÓ TODAS LAS VALIDACIONES: Cargar datos y mostrar vista
         $categorias = Categoria::select('id', 'nombre')->orderBy('nombre')->get();
 
-        // 4. Mandar a la vista
         return view('ventas.ventas.create', [
             'cajaAbierta' => $cajaAbierta,
-            'categorias'    => $categorias,
+            'categorias'  => $categorias,
         ]);
     }
 

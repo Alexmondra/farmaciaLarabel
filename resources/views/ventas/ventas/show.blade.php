@@ -67,7 +67,9 @@
     {{-- ======================================================= --}}
     <div id="wrapper-ticket" class="d-flex justify-content-center view-container">
         <div class="ticket-box elevation-3">
-
+            @if($venta->estado == 'ANULADO')
+            <div class="watermark">ANULADO</div>
+            @endif
             {{-- CABECERA --}}
             <div class="text-center mb-2">
                 @if(isset($logoBase64))
@@ -159,7 +161,9 @@
     {{-- ======================================================= --}}
     <div id="wrapper-a4" class="d-none justify-content-center view-container">
         <div class="a4-box bg-white elevation-3 position-relative">
-
+            @if($venta->estado == 'ANULADO')
+            <div class="watermark">ANULADO</div>
+            @endif
             {{-- HEADER A4 --}}
             <table class="w-100 mb-4">
                 <tr>
@@ -439,8 +443,8 @@
     /* === MODO IMPRESIÓN (CROSS-BROWSER FIJO) === */
     @media print {
         @page {
-            size: A4 portrait;
-            margin: 0;
+            size: auto;
+            margin: 0mm;
         }
 
         body {
@@ -527,6 +531,51 @@
         .col-4 {
             width: 33.333333% !important;
         }
+    }
+
+    /* lo del anulado  */
+
+    .watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+
+        /* Estilo del texto */
+        font-weight: 900;
+        text-transform: uppercase;
+        color: rgba(0, 0, 0, 0.2);
+        /* Negro al 20% de opacidad (gris suave) */
+        border: 4px dashed rgba(0, 0, 0, 0.2);
+        padding: 10px 50px;
+        z-index: 0;
+        /* Detrás del texto si es posible, o encima con transparencia */
+        pointer-events: none;
+        /* Permite hacer clic a través de ella */
+        white-space: nowrap;
+    }
+
+    /* Ajuste específico para el TICKET (más pequeño) */
+    .ticket-box .watermark {
+        font-size: 1.5rem;
+        /* Tamaño letra ticket */
+        padding: 5px 20px;
+        border-width: 3px;
+    }
+
+    /* Ajuste específico para A4 (más grande) */
+    .a4-box .watermark {
+        font-size: 5rem;
+        /* Tamaño letra A4 gigante */
+        opacity: 0.5;
+        /* Un poco más visible en A4 */
+    }
+
+    /* Asegurar que los contenedores permitan posicionamiento absoluto */
+    .ticket-box,
+    .a4-box {
+        position: relative !important;
+        z-index: 1;
     }
 </style>
 @stop

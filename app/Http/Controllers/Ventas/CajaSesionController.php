@@ -27,24 +27,36 @@ class CajaSesionController extends Controller
         $user = Auth::user();
         $ctx = $this->sucursalResolver->resolverPara($user);
 
-        // 1. Verificar caja abierta (para bloquear botón)
-        $tieneCajaAbierta = CajaSesion::where('user_id', $user->id)
-            ->where('estado', 'ABIERTO')->exists();
+        // 1. CAPTURAR SUCURSAL ACTUAL
+        $sucursalActualId = session('sucursal_id');
 
-        // 2. Query Base con Suma Automática
+        // 2. VALIDAR SI TIENE CAJA ABIERTA **SOLO EN ESTA SUCURSAL**
+        // Si tienes caja en Lima pero estás mirando Arequipa, esto dará FALSE
+        // y el botón "Abrir Caja" se activará.
+        $tieneCajaAbierta = false;
+
+        if ($sucursalActualId) {
+            $tieneCajaAbierta = CajaSesion::where('user_id', $user->id)
+                ->where('estado', 'ABIERTO')
+                ->where('sucursal_id', $sucursalActualId) // <--- FILTRO ESTRICTO
+                ->exists();
+        }
+
+        // 3. (El resto del código de la tabla sigue igual...)
         $query = CajaSesion::query()
             ->with(['sucursal', 'usuario'])
             ->withSum('ventas', 'total_neto')
             ->orderBy('fecha_apertura', 'desc');
 
-        // 3. Filtros Inteligentes
         if (!$ctx['es_admin']) {
             $query->where('user_id', $user->id);
         }
         if ($ctx['ids_filtro']) {
             $query->whereIn('sucursal_id', $ctx['ids_filtro']);
         }
-        if ($request->filled('q')) { // Buscador de Nombre
+
+        // ... (Tus filtros de búsqueda y fecha siguen igual) ...
+        if ($request->filled('q')) {
             $query->whereHas('usuario', fn($q) => $q->where('name', 'LIKE', "%{$request->q}%"));
         }
         if ($request->filled('filtro_fecha')) {
@@ -53,8 +65,6 @@ class CajaSesionController extends Controller
         if ($request->filled('filtro_user_id')) {
             $query->where('user_id', $request->filtro_user_id);
         }
-
-        // Filtro de Cuadre (Faltante/Sobrante)
         if ($request->filled('filtro_cuadre')) {
             $fc = $request->filtro_cuadre;
             $query->where('estado', 'CERRADO');
@@ -63,9 +73,7 @@ class CajaSesionController extends Controller
             if ($fc === 'exacto')   $query->where('diferencia', '=', 0);
         }
 
-        // 4. Datos Auxiliares (SOLUCIÓN ERROR)
         $usuariosFiltro = $ctx['es_admin'] ? User::orderBy('name')->get() : collect();
-
         $sucursalesParaApertura = $ctx['es_admin']
             ? Sucursal::orderBy('nombre')->get()
             : $user->sucursales()->orderBy('nombre')->get();
@@ -74,10 +82,11 @@ class CajaSesionController extends Controller
             'cajas'                  => $query->paginate(20),
             'esAdmin'                => $ctx['es_admin'],
             'tieneCajaAbierta'       => $tieneCajaAbierta,
-            'usuariosFiltro'         => $usuariosFiltro, // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+            'usuariosFiltro'         => $usuariosFiltro,
             'sucursalesParaApertura' => $sucursalesParaApertura,
         ]);
     }
+
     public function show($id)
     {
         $user = Auth::user();
@@ -113,12 +122,11 @@ class CajaSesionController extends Controller
         return view('ventas.cajas.show', compact('cajaSesion'));
     }
 
-    //--- TU MÉTODO STORE (QUE YA ESTÁ BIEN EN LÓGICA PERO LE FALTABA EL 'use DB') ---
     public function store(Request $request)
     {
         $user = Auth::user();
 
-        // 1. Validación (Sin cambios)
+        // 1. Validaciones básicas
         $data = $request->validate([
             'sucursal_id'   => ['required', 'integer', 'exists:sucursales,id'],
             'saldo_inicial' => ['required', 'numeric', 'min:0'],
@@ -127,30 +135,27 @@ class CajaSesionController extends Controller
 
         $sucursalId = (int)$data['sucursal_id'];
 
-        // 2. Permiso de Sucursal (Sin cambios)
+        // 2. Permisos (Sin cambios)
         if (!$user->hasRole('Administrador')) {
-            $permitidas = $user->sucursales()->pluck('sucursales.id')->toArray();
-            if (!in_array($sucursalId, $permitidas, true)) {
-                return back()->withErrors([
-                    'sucursal_id' => 'No tienes permiso para abrir caja en esta sucursal.'
-                ])->withInput();
+            if (!$user->tieneSucursal($sucursalId)) {
+                return back()->withErrors(['sucursal_id' => 'No tienes acceso a esta sucursal.']);
             }
         }
 
-        // 3. *** CORRECCIÓN DE LÓGICA 1 ***
-        // Comprobar si ya existe una caja 'ABIERTO' (en mayúsculas)
-        $existeAbierta = CajaSesion::where('user_id', $user->id)
-            ->where('sucursal_id', $sucursalId)
-            ->where('estado', 'ABIERTO') // <-- CORREGIDO
+        // 3. VALIDACIÓN CORREGIDA (SOLO UNA POR SUCURSAL)
+        // Ya NO buscamos globalmente. Solo buscamos si ya tiene una abierta EN ESTA sucursal.
+        $existeEnEstaSucursal = CajaSesion::where('user_id', $user->id)
+            ->where('estado', 'ABIERTO')
+            ->where('sucursal_id', $sucursalId) // <--- CLAVE
             ->exists();
 
-        if ($existeAbierta) {
+        if ($existeEnEstaSucursal) {
             return back()->withErrors([
-                'sucursal_id' => 'Ya tienes una caja abierta en esta sucursal. Debes cerrarla antes de abrir una nueva.'
+                'sucursal_id' => 'Ya tienes una caja abierta en ESTA sucursal.'
             ])->withInput();
         }
 
-        // 4. Crear la sesión
+        // 4. Crear la sesión (Igual que antes)
         try {
             DB::transaction(function () use ($data, $user, $sucursalId) {
                 CajaSesion::create([
@@ -158,29 +163,18 @@ class CajaSesionController extends Controller
                     'user_id'        => $user->id,
                     'fecha_apertura' => now(),
                     'saldo_inicial'  => $data['saldo_inicial'],
-
-                    // *** CORRECCIÓN DE LÓGICA 2 ***
-                    'estado'         => 'ABIERTO', // <-- CORREGIDO
-
+                    'estado'         => 'ABIERTO',
                     'observaciones'  => $data['observaciones'] ?? null,
-
-                    // (Esto sigue siendo una buena idea para evitar errores
-                    // si la migración no tuviera nullable, lo dejamos)
                     'saldo_teorico'  => $data['saldo_inicial'],
                     'saldo_real'     => 0,
                     'diferencia'     => 0,
                 ]);
             });
         } catch (\Exception $e) {
-            // Si sigue fallando, muéstrame el error real:
-            return back()->withErrors([
-                'general' => $e->getMessage() // Mostramos el error real
-            ])->withInput();
+            return back()->withErrors(['general' => $e->getMessage()])->withInput();
         }
 
-        // 5. Redirigir (Sin cambios)
-        return redirect()->route('cajas.index')
-            ->with('success', '¡Caja abierta exitosamente!');
+        return redirect()->route('cajas.index')->with('success', '¡Caja abierta exitosamente!');
     }
 
     public function update(Request $request, $id)
