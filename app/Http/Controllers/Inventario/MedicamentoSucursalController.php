@@ -11,6 +11,7 @@ use App\Models\Inventario\Lote;
 use App\Services\SucursalResolver;
 use App\Models\Sucursal;
 use Illuminate\Support\Facades\DB;
+use App\Models\Inventario\MovimientoInventario;
 
 
 class MedicamentoSucursalController extends Controller
@@ -219,5 +220,61 @@ class MedicamentoSucursalController extends Controller
             ->paginate(20)
             ->withQueryString();
         return view('inventario.medicamentos.historial', compact('medicamento', 'sucursal', 'lotes'));
+    }
+
+
+    // =========================================================================
+    //  NUEVA FUNCIÓN: REGISTRAR BAJA / SALIDA DE STOCK
+    // =========================================================================
+    public function storeSalida(Request $request)
+    {
+        // 1. Validamos que nos envíen el ID DEL LOTE (no solo el medicamento)
+        $request->validate([
+            'lote_id'        => 'required|exists:lotes,id', // <--- CLAVE
+            'cantidad'       => 'required|integer|min:1',
+            'motivo'         => 'required|string',
+            'observacion'    => 'nullable|string|max:255',
+        ]);
+
+        $user = Auth::user();
+
+        DB::beginTransaction();
+        try {
+            // 2. Buscamos el lote y bloqueamos la fila para evitar errores simultáneos
+            $lote = Lote::lockForUpdate()->find($request->lote_id);
+
+            // 3. Validar Stock
+            if ($lote->stock_actual < $request->cantidad) {
+                return response()->json([
+                    'error' => "Stock insuficiente en el lote {$lote->codigo_lote}. Tienes {$lote->stock_actual}, intentas sacar {$request->cantidad}."
+                ], 422);
+            }
+
+            // 4. Calcular nuevo stock
+            $nuevoStock = $lote->stock_actual - $request->cantidad;
+
+            // 5. Registrar en el Kardex (MovimientoInventario)
+            MovimientoInventario::create([
+                'tipo'           => 'SALIDA',
+                'medicamento_id' => $lote->medicamento_id,
+                'sucursal_id'    => $lote->sucursal_id,
+                'lote_id'        => $lote->id,
+                'cantidad'       => $request->cantidad,
+                'motivo'         => $request->motivo,     // Ej: VENCIMIENTO, MERMA
+                'referencia'     => $request->observacion,
+                'user_id'        => $user->id,
+                'stock_final'    => $nuevoStock
+            ]);
+
+            // 6. Actualizar el Lote real
+            $lote->stock_actual = $nuevoStock;
+            $lote->save();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Baja registrada correctamente.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error en el servidor: ' . $e->getMessage()], 500);
+        }
     }
 }

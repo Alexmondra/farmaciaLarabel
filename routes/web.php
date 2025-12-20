@@ -115,6 +115,9 @@ Route::middleware(['auth'])->group(function () {
             Route::put('medicamentos/{medicamento}/sucursales/{sucursal}', 'update')->name('medicamentos.updateSucursal');
         });
 
+        Route::post('movimientos/salida', [MedicamentoSucursalController::class, 'storeSalida'])
+            ->name('movimientos.store_salida');
+
         Route::resource('medicamentos', MedicamentoController::class);
     });
 
