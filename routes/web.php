@@ -30,8 +30,8 @@ require __DIR__ . '/auth.php';
 // =========================================================================
 
 // Rutas Públicas (fuera del middleware auth)
-Route::view('/consulta-comprobante', 'publico.buscar')->name('publico.buscar_vista');
-Route::post('/consulta-comprobante', [PublicoController::class, 'buscar'])->name('publico.buscar_post');
+Route::view('/consultar', 'publico.buscar')->name('publico.buscar_vista');
+Route::post('/consultar', [PublicoController::class, 'buscar'])->name('publico.buscar_post');
 Route::get('/descargar-comprobante/{id}', [PublicoController::class, 'descargar'])
     ->name('publico.descargar')
     ->middleware('signed');
