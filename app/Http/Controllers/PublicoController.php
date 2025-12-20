@@ -3,50 +3,52 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Ventas\Venta; // Tu modelo
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Ventas\Venta;
 use Illuminate\Support\Facades\URL;
+use App\Services\ComprobanteService;
 
 class PublicoController extends Controller
 {
-    // 1. Procesar la búsqueda del cliente
     public function buscar(Request $request)
     {
         $request->validate([
-            'tipo' => 'required',
-            'serie' => 'required',
-            'numero' => 'required|numeric',
-            'total' => 'required|numeric',
-            'fecha' => 'required|date'
+            'tipo'   => 'required',
+            'serie'  => 'required',
+            'numero' => 'required', // Quitamos 'numeric' estricto para limpiarlo nosotros
+            'total'  => 'required|numeric',
+            'fecha'  => 'required|date'
         ]);
 
-        // Buscamos coincidencia EXACTA
+        // LOGICA INTELIGENTE:
+        // 1. Convertimos el numero a entero (00008 pasa a ser 8)
+        $numeroLimpio = (int) $request->numero;
+
+        // 2. Buscamos
         $venta = Venta::where('tipo_comprobante', $request->tipo)
-            ->where('serie', $request->serie)
-            ->where('numero', $request->numero)
-            ->where('total_neto', $request->total) // O total_bruto, según lo que imprimas
+            ->where('serie', strtoupper($request->serie)) // Forzamos mayúsculas
+            ->where('numero', $numeroLimpio)              // Usamos el número limpio
+            ->where('total_neto', $request->total)        // Aceptará 32.4 o 32.40
             ->whereDate('fecha_emision', $request->fecha)
             ->first();
 
         if (!$venta) {
-            return back()->with('error', 'No se encontró ningún comprobante con esos datos. Verifique su ticket.');
+            return back()->with('error', 'No se encontró el comprobante. Verifique la fecha y el monto exacto.');
         }
 
-        // Si existe, generamos un LINK SEGURO (Signed URL) temporal
-        // Esto evita que tengamos que exponer el ID real en la vista
-        $urlDescarga = URL::signedRoute('publico.descargar', ['id' => $venta->id]);
+        // 3. Generamos Link Seguro
+        $urlDescarga = URL::temporarySignedRoute(
+            'publico.descargar',
+            now()->addMinutes(30),
+            ['id' => $venta->id]
+        );
 
         return back()->with('exito', true)->with('url_descarga', $urlDescarga);
     }
 
-    // 2. Generar el PDF (Solo si el link es válido)
-    public function descargar(Request $request, $id)
+    public function descargar(Request $request, $id, ComprobanteService $pdfService)
     {
-        // El middleware 'signed' ya verificó que el link es seguro
-        $venta = Venta::findOrFail($id);
-
-        // Cargar vista PDF
-        $pdf = PDF::loadView('comprobante_pdf', compact('venta'));
-        return $pdf->stream('comprobante.pdf');
+        $venta = Venta::with(['detalles.medicamento', 'cliente', 'sucursal'])->findOrFail($id);
+        // 'stream' permite que el navegador lo muestre en lugar de bajarlo directo
+        return $pdfService->generarPdf($venta, 'stream');
     }
 }

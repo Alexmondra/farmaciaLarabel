@@ -255,7 +255,7 @@ class MedicamentoSucursalController extends Controller
 
             // 5. Registrar en el Kardex (MovimientoInventario)
             MovimientoInventario::create([
-                'tipo'           => 'SALIDA',
+                'tipo'           => 'ajuste',
                 'medicamento_id' => $lote->medicamento_id,
                 'sucursal_id'    => $lote->sucursal_id,
                 'lote_id'        => $lote->id,
@@ -275,6 +275,83 @@ class MedicamentoSucursalController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Error en el servidor: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    //  NUEVA FUNCIÓN: REGISTRAR INGRESO / AJUSTE POSITIVO (+)
+    // =========================================================================
+    public function storeIngreso(Request $request)
+    {
+        $request->validate([
+            'medicamento_id' => 'required|exists:medicamentos,id',
+            'cantidad'       => 'required|integer|min:1',
+            'codigo_lote'    => 'required|string|max:50',  // El usuario escribe el lote
+            'vencimiento'    => 'nullable|date',           // Opcional para ingresos rápidos
+            'motivo'         => 'required|string',
+            'observacion'    => 'nullable|string|max:255',
+        ]);
+
+        $user = Auth::user();
+
+        // Resolver sucursal
+        $ctx = $this->sucursalResolver->resolverPara($user);
+        $sucursal = $ctx['sucursal_seleccionada'];
+
+        if (!$sucursal) {
+            return response()->json(['error' => 'Selecciona una sucursal.'], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Buscamos si el lote YA EXISTE en esta sucursal para este producto
+            $lote = Lote::where('medicamento_id', $request->medicamento_id)
+                ->where('sucursal_id', $sucursal->id)
+                ->where('codigo_lote', trim($request->codigo_lote))
+                ->first();
+
+            if ($lote) {
+                // A) EL LOTE EXISTE: Aumentamos stock
+                $lote->stock_actual += $request->cantidad;
+                // Opcional: Si el usuario manda nueva fecha, ¿actualizamos? 
+                // Mejor mantenemos la original para no mezclar, o actualizamos si estaba null.
+                if (!$lote->fecha_vencimiento && $request->filled('vencimiento')) {
+                    $lote->fecha_vencimiento = $request->vencimiento;
+                }
+                $lote->save();
+            } else {
+                // B) LOTE NUEVO: Lo creamos desde cero
+                $lote = new Lote();
+                $lote->medicamento_id    = $request->medicamento_id;
+                $lote->sucursal_id       = $sucursal->id;
+                $lote->codigo_lote       = trim($request->codigo_lote);
+                $lote->stock_actual      = $request->cantidad;
+                $lote->fecha_vencimiento = $request->vencimiento;
+
+                // Si quieres copiar el precio de compra del medicamento base (opcional)
+                // $lote->precio_compra = ... 
+
+                $lote->save();
+            }
+
+            // 2. Registrar en Kardex (Historial)
+            MovimientoInventario::create([
+                'tipo'           => 'entrada', // Importante: Tipo INGRESO
+                'medicamento_id' => $request->medicamento_id,
+                'sucursal_id'    => $sucursal->id,
+                'lote_id'        => $lote->id,
+                'cantidad'       => $request->cantidad,
+                'motivo'         => $request->motivo,
+                'referencia'     => $request->observacion,
+                'user_id'        => $user->id,
+                'stock_final'    => $lote->stock_actual // Stock después de sumar
+            ]);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Ingreso registrado correctamente.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }

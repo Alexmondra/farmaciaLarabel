@@ -282,8 +282,7 @@ class VentaController extends Controller
 
         $query = MedicamentoSucursal::with('medicamento')
             ->where('sucursal_id', $request->sucursal_id)
-            ->activos() // scopeActivos del modelo MedicamentoSucursal
-            // 🔹 Solo medicamentos con al menos un lote disponible en esa sucursal
+            ->activos()
             ->whereExists(function ($sub) use ($request, $hoy) {
                 $sub->selectRaw(1)
                     ->from('lotes')
@@ -297,8 +296,27 @@ class VentaController extends Controller
             });
 
         if ($request->filled('q')) {
-            // scopeBuscar: busca por nombre o código del medicamento
-            $query->buscar($request->q);
+            $term = $request->q;
+
+            $query->whereHas('medicamento', function ($sub) use ($term) {
+
+                // LÓGICA INTELIGENTE:
+                // ¿Es un número y tiene longitud de código de barras (8 o más dígitos)?
+                if (is_numeric($term) && strlen($term) >= 8) {
+                    // ENTONCES: Búsqueda EXACTA (Prioridad al código de barras)
+                    $sub->where(function ($q) use ($term) {
+                        $q->where('codigo_barra', $term)
+                            ->orWhere('codigo', $term);
+                    });
+                } else {
+                    $sub->where(function ($q) use ($term) {
+                        $q->where('nombre', 'LIKE', "%{$term}%")
+                            ->orWhere('codigo', 'LIKE', "%{$term}%")
+                            ->orWhere('laboratorio', 'LIKE', "%{$term}%")
+                            ->orWhere('codigo_barra', 'LIKE', "%{$term}%");
+                    });
+                }
+            });
         }
 
         if ($request->filled('categoria_id')) {
