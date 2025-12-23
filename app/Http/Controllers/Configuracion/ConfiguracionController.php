@@ -101,6 +101,7 @@ class ConfiguracionController extends Controller
         }
 
         $config->update($data);
+        \Illuminate\Support\Facades\Cache::forget('datos_empresa_config');
 
         return redirect()->route('configuracion.general.index')
             ->with('success', 'Configuración actualizada. ¡Listo para facturar!');

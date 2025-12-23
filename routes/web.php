@@ -16,6 +16,7 @@ use App\Http\Controllers\Reportes\ReporteVentasController;
 use App\Http\Controllers\Guias\GuiaRemisionController;
 use App\Http\Controllers\Reportes\ReporteInventarioController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SunatVerificacion\FacturacionController;
 // =========================================================================
 // 1. RUTAS PÚBLICAS
 // =========================================================================
@@ -166,6 +167,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/general', [ConfiguracionController::class, 'index'])->name('general.index');
         Route::put('/general', [ConfiguracionController::class, 'update'])->name('general.update');
+    });
+
+    Route::prefix('facturacion')->name('facturacion.')->group(function () {
+
+        Route::get('/pendientes', [FacturacionController::class, 'indexPendientes'])->name('pendientes');
+        Route::post('/reenviar/{id}', [FacturacionController::class, 'reenviar'])->name('reenviar');
     });
 
 

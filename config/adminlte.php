@@ -173,7 +173,7 @@ return [
     */
 
     'use_route_url' => false,
-    'dashboard_url' => 'home',
+    'dashboard_url' => '/',
     'logout_url' => 'logout',
     'login_url' => 'login',
     'register_url' => 'register',
@@ -213,11 +213,7 @@ return [
         // --- INICIO DEL MENÚ LATERAL ---
 
         // 1. DASHBOARD (Limpio, sin etiquetas de colores)
-        [
-            'text' => 'Dashboard',
-            'url'  => '/',
-            'icon' => 'fas fa-tachometer-alt',
-        ],
+
 
         ['header' => 'OPERACIONES COMERCIALES'],
 
@@ -267,6 +263,49 @@ return [
             ],
         ],
 
+        // 3.5 
+
+        ['header' => 'FACTURACIÓN ELECTRÓNICA (SUNAT)'],
+
+        // 3.5 - 1. MONITOR DE ENVÍOS (Aquí es donde corriges los errores)
+        [
+            'text'    => 'Monitor de Envíos',
+            'icon'    => 'fas fa-satellite-dish',
+            'icon_color' => 'orange', // Color de alerta
+            'submenu' => [
+                [
+                    'text' => 'Pendientes y Errores', // <--- AQUÍ ENTRA TU FUNCIÓN
+                    'url'  => 'facturacion/pendientes',
+                    'icon' => 'fas fa-exclamation-triangle',
+                    'label'       => 'Acción Req.',
+                    'label_color' => 'danger',
+                ],
+            ],
+        ],
+
+        // 3.5 - 2. CONTABILIDAD / SIRE (Lo que hablamos antes para el contador)
+        [
+            'text'    => 'Libros Electrónicos',
+            'icon'    => 'fas fa-book-open',
+            'submenu' => [
+                [
+                    'text' => 'Reporte Ventas (SIRE)',
+                    'url'  => 'contabilidad/sire-ventas',
+                    'icon' => 'fas fa-file-excel',
+                ],
+                [
+                    'text' => 'Reporte Compras (SIRE)',
+                    'url'  => 'contabilidad/sire-compras',
+                    'icon' => 'fas fa-file-excel',
+                ],
+            ],
+        ],
+
+
+        ['header' => 'ADMINISTRACIÓN Y GESTIÓN'],
+
+        // 5. LOGÍSTICA (Compras y Proveedores juntos)
+
         // 4. INVENTARIO FARMACÉUTICO (Todo lo de productos aquí)
         [
             'text' => 'Inventario',
@@ -288,9 +327,6 @@ return [
             ],
         ],
 
-        ['header' => 'ADMINISTRACIÓN Y GESTIÓN'],
-
-        // 5. LOGÍSTICA (Compras y Proveedores juntos)
         [
             'text' => 'Logística / Compras',
             'icon' => 'fas fa-truck-loading',

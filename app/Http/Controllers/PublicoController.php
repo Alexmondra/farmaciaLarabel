@@ -48,7 +48,6 @@ class PublicoController extends Controller
     public function descargar(Request $request, $id, ComprobanteService $pdfService)
     {
         $venta = Venta::with(['detalles.medicamento', 'cliente', 'sucursal'])->findOrFail($id);
-        // 'stream' permite que el navegador lo muestre en lugar de bajarlo directo
         return $pdfService->generarPdf($venta, 'stream');
     }
 }
