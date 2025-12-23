@@ -284,22 +284,6 @@ return [
         ],
 
         // 3.5 - 2. CONTABILIDAD / SIRE (Lo que hablamos antes para el contador)
-        [
-            'text'    => 'Libros Electrónicos',
-            'icon'    => 'fas fa-book-open',
-            'submenu' => [
-                [
-                    'text' => 'Reporte Ventas (SIRE)',
-                    'url'  => 'contabilidad/sire-ventas',
-                    'icon' => 'fas fa-file-excel',
-                ],
-                [
-                    'text' => 'Reporte Compras (SIRE)',
-                    'url'  => 'contabilidad/sire-compras',
-                    'icon' => 'fas fa-file-excel',
-                ],
-            ],
-        ],
 
 
         ['header' => 'ADMINISTRACIÓN Y GESTIÓN'],
