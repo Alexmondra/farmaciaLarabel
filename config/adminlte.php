@@ -267,18 +267,25 @@ return [
 
         ['header' => 'FACTURACIÓN ELECTRÓNICA (SUNAT)'],
 
-        // 3.5 - 1. MONITOR DE ENVÍOS (Aquí es donde corriges los errores)
         [
-            'text'    => 'Monitor de Envíos',
-            'icon'    => 'fas fa-satellite-dish',
-            'icon_color' => 'orange', // Color de alerta
+            'text'    => 'Control SUNAT', // Título del menú desplegable
+            'icon'    => 'fas fa-university', // Ícono de institución/gobierno
             'submenu' => [
+                // 1. MONITOR DE ENVÍOS
                 [
-                    'text' => 'Pendientes y Errores', // <--- AQUÍ ENTRA TU FUNCIÓN
-                    'url'  => 'facturacion/pendientes',
-                    'icon' => 'fas fa-exclamation-triangle',
-                    'label'       => 'Acción Req.',
-                    'label_color' => 'danger',
+                    'text'       => 'Monitor de Envíos',
+                    'url'        => 'facturacion/pendientes',
+                    'icon'       => 'fas fa-satellite-dish',
+                    'icon_color' => 'orange', // Se mantiene la alerta naranja
+                ],
+
+                // 2. REPOSITORIO XML / CDR / PDF
+                [
+                    'text'        => 'Archivos y Auditoría',
+                    'url'         => 'facturacion/comprobantes',
+                    'icon'        => 'fas fa-file-archive',
+                    'label'       => 'XML/CDR',
+                    'label_color' => 'info',
                 ],
             ],
         ],

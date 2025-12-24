@@ -17,6 +17,8 @@ use App\Http\Controllers\Guias\GuiaRemisionController;
 use App\Http\Controllers\Reportes\ReporteInventarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SunatVerificacion\FacturacionController;
+
+use App\Http\Controllers\SunatVerificacion\SunatArchivosController;
 // =========================================================================
 // 1. RUTAS PÚBLICAS
 // =========================================================================
@@ -173,6 +175,25 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/pendientes', [FacturacionController::class, 'indexPendientes'])->name('pendientes');
         Route::post('/reenviar/{id}', [FacturacionController::class, 'reenviar'])->name('reenviar');
+
+        Route::get('/clientes/buscar', [FacturacionController::class, 'buscarClienteVenta'])
+            ->name('clientes.buscar');
+
+        Route::get('/editar/{id}', [FacturacionController::class, 'edit'])->name('edit');
+
+        Route::put('/rectificar/{id}', [FacturacionController::class, 'rectificar'])->name('rectificar');
+
+
+        // lo de los cdr y xlm 
+
+        Route::get('/comprobantes', [SunatArchivosController::class, 'index'])
+            ->name('comprobantes.index');
+
+        Route::get('/download-xml/{venta}', [SunatArchivosController::class, 'descargarXml'])
+            ->name('download.xml');
+
+        Route::get('/download-cdr/{venta}', [SunatArchivosController::class, 'descargarCdr'])
+            ->name('download.cdr');
     });
 
 

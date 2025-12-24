@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 use App\Listeners\AgregarAlertasMenu;
 use App\Models\Configuracion;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,7 +21,9 @@ class AppServiceProvider extends ServiceProvider
 
 
     public function boot()
+
     {
+        Paginator::useBootstrap();
         if (Schema::hasTable('configuraciones')) {
 
             $empresa = Cache::remember('datos_empresa_config', 1440, function () {
