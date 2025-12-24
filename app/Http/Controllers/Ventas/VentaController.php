@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Luecano\NumeroALetras\NumeroALetras;
 use Illuminate\Support\Str;
+use App\Mail\ComprobanteMailable;
+use Illuminate\Support\Facades\Mail;
+
+
 
 class VentaController extends Controller
 {
@@ -31,10 +35,24 @@ class VentaController extends Controller
         $this->ventaService     = $ventaService;
     }
 
-    /**
-     * Muestra el índice de Ventas.
-     * Solo muestra ventas si hay una caja ABIERTA.
-     */
+    public function enviarEmail($id)
+    {
+        try {
+            $venta = Venta::with('cliente')->findOrFail($id);
+
+            if (!$venta->cliente->email) {
+                return response()->json(['message' => 'El cliente no tiene email.'], 400);
+            }
+
+            Mail::to($venta->cliente->email)->send(new ComprobanteMailable($venta));
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+
     public function index(Request $request)
     {
         $user = Auth::user();

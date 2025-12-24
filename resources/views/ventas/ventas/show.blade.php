@@ -40,14 +40,48 @@
                 </div>
 
                 <div class="col-md-8 text-right">
-                    {{-- Botón Enviar (Nuevo) --}}
+                    {{-- Botón Enviar Inteligente --}}
                     <div class="btn-group mr-2">
                         <button type="button" class="btn btn-info shadow-sm dropdown-toggle" data-toggle="dropdown">
-                            <i class="fab fa-whatsapp mr-1"></i> Enviar
+                            <i class="fas fa-share-alt mr-1"></i> Enviar
                         </button>
                         <div class="dropdown-menu dropdown-menu-right">
-                            <a class="dropdown-item" href="#"><i class="fab fa-whatsapp text-success mr-2"></i> Enviar por WhatsApp</a>
-                            <a class="dropdown-item" href="#"><i class="fas fa-envelope text-primary mr-2"></i> Enviar por Correo</a>
+                            @php
+                            $telefono = preg_replace('/[^0-9]/', '', $venta->cliente->telefono);
+                            $tieneWsp = !empty($telefono) && strlen($telefono) >= 9;
+                            @endphp
+
+                            @if($tieneWsp)
+                            {{-- AQUI ESTA EL CAMBIO CLAVE: Usamos URL::signedRoute --}}
+                            <button type="button" class="dropdown-item"
+                                onclick="enviarWhatsApp(
+                                        '{{ $telefono }}', 
+                                        '{{ $venta->cliente->nombre_completo }}', 
+                                        '{{ URL::signedRoute('publico.descargar', ['id' => $venta->id]) }}'
+                                    )">
+                                <i class="fab fa-whatsapp text-success mr-2"></i> Enviar a WhatsApp
+                            </button>
+                            @else
+                            <a href="#" class="dropdown-item disabled text-muted" title="El cliente no tiene teléfono registrado">
+                                <i class="fab fa-whatsapp text-secondary mr-2"></i> WhatsApp (Sin Número)
+                            </a>
+                            @endif
+
+                            <div class="dropdown-divider"></div>
+                            @php
+                            $email = $venta->cliente->email;
+                            $tieneEmail = !empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL);
+                            @endphp
+
+                            @if($tieneEmail)
+                            <button type="button" class="dropdown-item" onclick="enviarCorreo('{{ $venta->id }}', '{{ $email }}')">
+                                <i class="fas fa-envelope text-primary mr-2"></i> Enviar a Correo
+                            </button>
+                            @else
+                            <a href="#" class="dropdown-item disabled text-muted" title="El cliente no tiene email registrado">
+                                <i class="fas fa-envelope text-secondary mr-2"></i> Correo (Sin Email)
+                            </a>
+                            @endif
                         </div>
                     </div>
 
@@ -312,6 +346,68 @@
             $('#btn-ticket').removeClass('active-view').addClass('btn-outline-dark').removeClass('btn-dark');
             $('#btn-a4').addClass('active-view').removeClass('btn-outline-dark').addClass('btn-dark');
         }
+    }
+
+    // 3. FUNCIONES DE ENVÍO (WHATSAPP Y CORREO)
+
+    function enviarWhatsApp(numero, nombre, urlPdf) {
+        // Código de país (51 Perú). Si tu sistema es multi-país, esto debería venir de la BD.
+        let codigoPais = '51';
+
+        // Mensaje personalizado
+        let mensaje = `Hola *${nombre}*, gracias por tu compra.\n\nPuedes descargar tu comprobante electrónico aquí:\n${urlPdf}`;
+
+        // Codificar para URL
+        let textoEncode = encodeURIComponent(mensaje);
+
+        // Abrir WhatsApp
+        let url = `https://wa.me/${codigoPais}${numero}?text=${textoEncode}`;
+        window.open(url, '_blank');
+    }
+
+    function enviarCorreo(ventaId, emailDestino) {
+        Swal.fire({
+            title: '¿Enviar comprobante?',
+            text: `Se enviará al correo: ${emailDestino}`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, enviar ahora',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                // Mostrar Loading
+                Swal.fire({
+                    title: 'Enviando...',
+                    text: 'Conectando con el servidor de correo',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading()
+                    }
+                });
+
+                // Petición AJAX al servidor
+                $.ajax({
+                    url: `/ventas/${ventaId}/enviar-email`, // Ruta que crearemos abajo
+                    method: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        Swal.fire('¡Enviado!', 'El correo ha sido enviado correctamente.', 'success');
+                    },
+                    error: function(xhr) {
+                        let msg = 'Ocurrió un error al enviar.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        }
+                        Swal.fire('Error', msg, 'error');
+                    }
+                });
+            }
+        });
     }
 </script>
 @stop

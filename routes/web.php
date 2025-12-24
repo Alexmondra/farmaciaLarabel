@@ -158,6 +158,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('ventas', VentaController::class);
     Route::post('/ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
 
+    Route::post('/ventas/{id}/enviar-email', [VentaController::class, 'enviarEmail'])
+        ->name('ventas.email');
 
     Route::get('clientes/check-documento', [ClienteController::class, 'checkDocumento'])->name('clientes.check');
     Route::get('clientes/search', [ClienteController::class, 'search'])->name('clientes.search');
