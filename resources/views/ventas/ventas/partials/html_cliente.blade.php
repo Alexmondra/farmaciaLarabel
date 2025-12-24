@@ -9,7 +9,6 @@
                 <select name="tipo_comprobante" id="tipo_comprobante" class="form-control form-control-sm font-weight-bold">
                     <option value="BOLETA">DNI / BOL</option>
                     <option value="FACTURA">RUC / FACT</option>
-                    <option value="TICKET">TICKET</option>
                 </select>
             </div>
             <div class="col-8">

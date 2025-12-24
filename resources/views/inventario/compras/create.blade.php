@@ -214,8 +214,13 @@
                     {{-- FILA 1 --}}
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label class="label-mini">CÓDIGO INTERNO *</label>
-                            <input type="text" name="codigo" class="form-control input-enhanced" required>
+                            <label class="label-mini text-primary font-weight-bold">
+                                <i class="fas fa-barcode mr-1"></i> CÓDIGO (AUTO)
+                            </label>
+                            <input type="text" name="codigo" id="crear_codigo"
+                                class="form-control input-enhanced font-weight-bold text-center"
+                                style="background-color: #e9ecef; color: #495057; letter-spacing: 1px;"
+                                readonly>
                         </div>
                         <div class="col-md-4">
                             <label class="label-mini">CÓDIGO BARRAS</label>

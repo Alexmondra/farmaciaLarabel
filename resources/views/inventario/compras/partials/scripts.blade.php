@@ -21,6 +21,8 @@
     $(document).ready(function() {
         bsCustomFileInput.init();
 
+        let sufijoAleatorio = "";
+
         // 1. PROVEEDORES
         $('.select2-proveedor').select2({
             theme: 'bootstrap-5',
@@ -100,6 +102,23 @@
         });
 
         // E. Botón Acción Medicamento (Ojo / Más)
+
+        // === MAGIA: CÓDIGO DINÁMICO AL ESCRIBIR NOMBRE EN COMPRAS ===
+        $('#formNuevoMedicamentoRapid input[name="nombre"]').on('input', function() {
+            let texto = $(this).val().toUpperCase();
+
+            // Limpiamos caracteres raros
+            let limpio = texto.replace(/[^A-Z0-9]/g, '');
+
+            // Tomamos los primeros 6 caracteres
+            let prefijo = limpio.substring(0, 6);
+
+            if (prefijo.length === 0) prefijo = "NEW";
+
+            // Actualizamos el input gris
+            $('#crear_codigo').val(prefijo + '-' + sufijoAleatorio);
+        });
+
         $(document).on('click', '.btn-accion-med', function() {
             // [IMPORTANTE] Guardamos referencia al botón que se clickeó para actualizarlo luego
             window.btnAccionActivo = $(this);
@@ -142,8 +161,6 @@
                 $('#modalVerMedicamento').modal('show');
 
             } else {
-                // === MODO CREAR ===
-                // (Para crear nuevo, limpiamos la referencia porque no estamos editando un botón existente)
                 window.btnAccionActivo = null;
 
                 let group = $(this).closest('.input-group');
@@ -152,7 +169,12 @@
 
                 $('#formNuevoMedicamentoRapid')[0].reset();
                 $('#crear_med_igv').prop('checked', true);
+                sufijoAleatorio = Math.floor(Math.random() * 900) + 100; // Genera 3 dígitos al azar
+                $('#crear_codigo').val('NEW-' + sufijoAleatorio); // Código inicial
                 $('#modalCrearMedicamento').modal('show');
+                setTimeout(() => {
+                    $('input[name="nombre"]').focus();
+                }, 500);
             }
         });
 

@@ -803,44 +803,96 @@
         // ==========================================
         $('#form-venta').on('submit', function(e) {
 
-
             let total = obtenerTotalActual();
             let tipoComprobante = $('#tipo_comprobante').val();
             let clienteId = $('#cliente_id_hidden').val(); // Si está vacío es "Cliente General"
 
-            // REGLA 1: FACTURAS SIEMPRE REQUIEREN CLIENTE
+            // ---------------------------------------------------------
+            // REGLA 1: FACTURAS SIEMPRE REQUIEREN CLIENTE CON RUC
+            // ---------------------------------------------------------
             if (tipoComprobante === 'FACTURA') {
                 if (!clienteId || clienteId === '') {
-                    e.preventDefault(); // Detiene el envío
-                    toastr.error('ERROR: Para emitir una FACTURA es obligatorio seleccionar un cliente con RUC.', 'Falta Cliente');
+                    e.preventDefault();
 
-                    // Efecto visual: Resaltar la caja del cliente y subir
-                    $('.card-cliente-pos').addClass('border-danger shadow-lg');
-                    $('html, body').animate({
-                        scrollTop: $(".card-cliente-pos").offset().top - 100
-                    }, 500);
-                    setTimeout(() => $('.card-cliente-pos').removeClass('border-danger shadow-lg'), 2000);
-
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Falta Cliente (RUC)',
+                        html: `
+                <p style="font-size: 1.1em; color: #555;">
+                    Para emitir una <b>FACTURA</b>, es obligatorio seleccionar una empresa con RUC válido.
+                </p>
+            `,
+                        confirmButtonText: '<i class="fas fa-search mr-1"></i> Buscar Cliente',
+                        confirmButtonColor: '#17a2b8', // Color Info
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            irASeccionCliente();
+                        }
+                    });
                     return false;
                 }
             }
 
-            // REGLA 2: BOLETAS MAYORES A 700 SOLES
+            // ---------------------------------------------------------
+            // REGLA 2: BOLETAS MAYORES A S/ 700 (NORMA SUNAT)
+            // ---------------------------------------------------------
             if (tipoComprobante === 'BOLETA' && total >= 700) {
                 if (!clienteId || clienteId === '') {
-                    e.preventDefault(); // Detiene el envío
-                    toastr.error('NORMA SUNAT: Las boletas de venta que superan los S/ 700 requieren identificar al cliente (DNI).', 'Monto Alto');
+                    e.preventDefault();
 
-                    // Efecto visual
-                    $('.card-cliente-pos').addClass('border-danger shadow-lg');
-                    $('html, body').animate({
-                        scrollTop: $(".card-cliente-pos").offset().top - 100
-                    }, 500);
-                    setTimeout(() => $('.card-cliente-pos').removeClass('border-danger shadow-lg'), 2000);
+                    // VENTANA ELEGANTE
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Identificación Requerida',
+                        html: `
+                            <div class="text-left mt-2">
+                                <p style="font-size: 1.2em; color: #3dc1d3; font-weight: bold; margin-bottom: 10px;">
+                                    El monto de la venta es S/ ${total.toFixed(2)}.
+                                </p>
+                                
+                                <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; border-radius: 4px;">
+                                    <h6 style="color: #856404; font-weight: bold; margin-bottom: 5px;">
+                                        <i class="fas fa-exclamation-circle mr-1"></i> Normativa SUNAT:
+                                    </h6>
+                                    <small style="color: #856404;">
+                                        Las boletas de venta que superan los <b>S/ 700.00</b> requieren obligatoriamente identificar al cliente con su <b>DNI</b> y <b>Nombre Completo</b>.
+                                    </small>
+                                </div>
+                            </div>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fas fa-user-check mr-1"></i> Ingresar Cliente',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#28a745', // Verde éxito
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true,
+                        allowOutsideClick: false,
+                        focusConfirm: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            irASeccionCliente();
+                        }
+                    });
 
                     return false;
                 }
             }
         });
+
+        function irASeccionCliente() {
+            $('html, body').animate({
+                scrollTop: $(".card-cliente-pos").offset().top - 100
+            }, 600);
+
+            // Efecto visual (borde rojo parpadeante)
+            $('.card-cliente-pos').addClass('border-danger shadow-lg');
+            $('#busqueda_cliente').focus().addClass('is-invalid');
+
+            setTimeout(() => {
+                $('.card-cliente-pos').removeClass('border-danger shadow-lg');
+                $('#busqueda_cliente').removeClass('is-invalid');
+            }, 2500);
+        }
     });
 </script>

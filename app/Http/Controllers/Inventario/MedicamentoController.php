@@ -57,6 +57,28 @@ class MedicamentoController extends Controller
         return view('inventario.medicamentos.index', $data);
     }
 
+    public function indexGeneral(Request $request)
+    {
+        $q = trim($request->get('q'));
+
+        $query = Medicamento::with('categoria');
+
+        // BÚSQUEDA TOTAL (Lo que pediste: busca por lo que sea)
+        if ($q) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nombre', 'LIKE', "%$q%")
+                    ->orWhere('codigo', 'LIKE', "%$q%")
+                    ->orWhere('codigo_barra', 'LIKE', "%$q%")
+                    ->orWhere('laboratorio', 'LIKE', "%$q%")
+                    ->orWhere('presentacion', 'LIKE', "%$q%")
+                    ->orWhere('descripcion', 'LIKE', "%$q%");
+            });
+        }
+        $medicamentos = $query->orderBy('nombre', 'asc')->paginate(20);
+
+        return view('inventario.medicamentos.general.general', compact('medicamentos', 'q'));
+    }
+
 
     public function show($id)
     {

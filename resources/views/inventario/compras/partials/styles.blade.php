@@ -538,4 +538,19 @@
     body.dark-mode .btn-addon-right {
         border-color: #6c757d;
     }
+
+    /* El buscador tiene z-index 2000, así que el fondo negro del modal debe ser mayor */
+    .modal-backdrop {
+        z-index: 2040 !important;
+    }
+
+    /* Y el modal mismo debe estar encima del fondo */
+    .modal {
+        z-index: 2050 !important;
+    }
+
+    /* Opcional: Si usas SweetAlert2, asegúrate que esté aún más arriba */
+    .swal2-container {
+        z-index: 2100 !important;
+    }
 </style>

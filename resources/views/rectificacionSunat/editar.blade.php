@@ -201,7 +201,6 @@
 
     /* --- MODO OSCURO: CORRECCIONES VISUALES --- */
 
-    /* Input principal */
     body.dark-mode .select2-container--bootstrap4 .select2-selection--single {
         background-color: #343a40 !important;
         border-color: #6c757d !important;
@@ -212,32 +211,25 @@
     body.dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
         color: #fff !important;
         line-height: 2.25rem;
-        /* Centrar texto verticalmente */
     }
 
-    /* Dropdown (La lista desplegable) */
     body.dark-mode .select2-container--bootstrap4 .select2-dropdown {
         background-color: #343a40 !important;
         border-color: #6c757d;
     }
 
-    /* Caja de búsqueda dentro de la lista */
     body.dark-mode .select2-search__field {
         background-color: #3f474e !important;
         color: #fff !important;
         border-color: #6c757d !important;
     }
 
-    /* Texto base de las opciones */
     body.dark-mode .select2-results__option {
         color: #fff !important;
     }
 
-    /* --- [IMPORTANTE] EFECTO DE NAVEGACIÓN CON TECLADO (FLECHAS) --- */
-    /* Esto hace que cuando bajes con la flecha, se ponga morado para que sepas dónde estás */
     body.dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
         background-color: #6f42c1 !important;
-        /* MORADO BRILLANTE */
         color: #ffffff !important;
         font-weight: bold;
     }

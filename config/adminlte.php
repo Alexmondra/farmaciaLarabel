@@ -303,7 +303,7 @@ return [
             'icon' => 'fas fa-boxes',
             'submenu' => [
                 [
-                    'text' => 'Medicamentos',
+                    'text' => 'Medicamentos (Local)', // El que ya tienes (Filtrado por sucursal)
                     'url'  => 'inventario/medicamentos',
                     'can'  => 'medicamentos.ver',
                     'icon' => 'fas fa-pills',
@@ -314,7 +314,13 @@ return [
                     'can'  => 'categorias.ver',
                     'icon' => 'fas fa-tags',
                 ],
-
+                // --- NUEVO ÍTEM ---
+                [
+                    'text' => 'Catálogo General', // Nombre claro: son TODOS los productos
+                    'url'  => 'inventario/medicamentos-general',
+                    'icon' => 'fas fa-globe-americas', // Ícono global
+                    'active' => ['inventario/medicamentos-general*'],
+                ],
             ],
         ],
 

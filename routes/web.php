@@ -98,6 +98,8 @@ Route::middleware(['auth'])->group(function () {
 
         Route::resource('categorias', CategoriaController::class);
 
+        Route::get('medicamentos-general', [MedicamentoController::class, 'indexGeneral'])
+            ->name('medicamentos.general');
         // Medicamentos: Rutas Custom
         Route::controller(MedicamentoController::class)->group(function () {
             Route::get('medicamentos/buscar', 'lookup')->name('medicamentos.lookup');
