@@ -2,62 +2,105 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Inventario\Categoria;
 use Illuminate\Support\Facades\DB;
-
+use Carbon\Carbon;
 
 class CategoriasSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        DB::unprepared("
-       INSERT INTO categorias (nombre, descripcion, activo, created_at, updated_at) VALUES
-('Analgésicos no opioides', 'Medicamentos para dolor leve a moderado sin opioides (paracetamol, metamizol, etc.).', 1, NOW(), NOW()),
-('Analgésicos opioides', 'Medicamentos para dolor moderado a severo que contienen opioides.', 1, NOW(), NOW()),
-('Antiinflamatorios no esteroideos (AINEs)', 'Medicamentos para inflamación y dolor, como ibuprofeno, naproxeno, diclofenaco.', 1, NOW(), NOW()),
-('Antipiréticos', 'Medicamentos utilizados para reducir la fiebre.', 1, NOW(), NOW()),
-('Antibióticos sistémicos', 'Antibióticos de uso oral o inyectable para infecciones sistémicas.', 1, NOW(), NOW()),
-('Antibióticos tópicos', 'Antibióticos en crema, ungüento, gel o gotas para uso local.', 1, NOW(), NOW()),
-('Antivirales', 'Medicamentos empleados para el tratamiento de infecciones virales.', 1, NOW(), NOW()),
-('Antifúngicos sistémicos', 'Medicamentos para infecciones por hongos que requieren tratamiento sistémico.', 1, NOW(), NOW()),
-('Antifúngicos tópicos', 'Medicamentos para micosis superficiales en piel, uñas o mucosas.', 1, NOW(), NOW()),
-('Antiparasitarios intestinales', 'Medicamentos utilizados para tratar parásitos intestinales.', 1, NOW(), NOW()),
-('Antiparasitarios sistémicos', 'Medicamentos para tratar parásitos que afectan otros órganos o de forma sistémica.', 1, NOW(), NOW()),
-('Antihistamínicos sistémicos', 'Medicamentos orales o inyectables para el manejo de alergias.', 1, NOW(), NOW()),
-('Antialérgicos tópicos (nasales/oftálmicos/cutáneos)', 'Productos locales para rinitis, conjuntivitis y alergias cutáneas.', 1, NOW(), NOW()),
-('Antigripales y combinados para resfrío', 'Combinaciones para aliviar síntomas de gripe y resfrío.', 1, NOW(), NOW()),
-('Antitusivos y expectorantes', 'Medicamentos para tos seca o tos con flema.', 1, NOW(), NOW()),
-('Respiratorios (broncodilatadores, corticoides inhalados, etc.)', 'Medicamentos para asma, EPOC y otros trastornos respiratorios.', 1, NOW(), NOW()),
-('Gastrointestinales (antiácidos, protectores gástricos)', 'Medicamentos para acidez, reflujo y protección de la mucosa gástrica.', 1, NOW(), NOW()),
-('Antiespasmódicos / digestivos', 'Medicamentos para cólicos, espasmos y molestias digestivas.', 1, NOW(), NOW()),
-('Antieméticos', 'Medicamentos para náuseas y vómitos.', 1, NOW(), NOW()),
-('Laxantes y antidiarreicos', 'Medicamentos para tratar estreñimiento o diarrea.', 1, NOW(), NOW()),
-('Cardiovasculares (antianginosos, antiarrítmicos, etc.)', 'Medicamentos para patologías del corazón y circulación.', 1, NOW(), NOW()),
-('Antihipertensivos y diuréticos', 'Medicamentos para el manejo de la presión arterial y eliminación de líquidos.', 1, NOW(), NOW()),
-('Hipolipemiantes (colesterol/triglicéridos)', 'Medicamentos para disminuir colesterol y triglicéridos.', 1, NOW(), NOW()),
-('Antidiabéticos orales', 'Medicamentos orales para el tratamiento de la diabetes mellitus.', 1, NOW(), NOW()),
-('Insulinas', 'Preparados de insulina para el control de la diabetes.', 1, NOW(), NOW()),
-('Neurológicos / anticonvulsivantes', 'Medicamentos para epilepsia y otros trastornos neurológicos.', 1, NOW(), NOW()),
-('Psiquiátricos / psicofármacos', 'Medicamentos para trastornos de ansiedad, depresión, psicosis y otros.', 1, NOW(), NOW()),
-('Hormonas y endocrinología (tiroides, corticoides sistémicos, etc.)', 'Medicamentos hormonales para tiroides, suprarrenales y otros trastornos endocrinos.', 1, NOW(), NOW()),
-('Ginecológicos', 'Medicamentos ginecológicos locales como óvulos, cremas y reguladores tópicos.', 1, NOW(), NOW()),
-('Anticonceptivos (orales, inyectables, implantes)', 'Productos hormonales y otros métodos farmacológicos para anticoncepción.', 1, NOW(), NOW()),
-('Urológicos', 'Medicamentos para próstata, vías urinarias y alteraciones de la micción.', 1, NOW(), NOW()),
-('Reumatológicos / inmunomoduladores', 'Medicamentos para artritis, enfermedades autoinmunes y reumatológicas.', 1, NOW(), NOW()),
-('Vitaminas', 'Suplementos vitamínicos de una o múltiples vitaminas.', 1, NOW(), NOW()),
-('Suplementos minerales', 'Suplementos de hierro, calcio, magnesio y otros minerales.', 1, NOW(), NOW()),
-('Sueros y rehidratantes orales', 'Soluciones para rehidratación oral y reposición de electrolitos.', 1, NOW(), NOW()),
-('Pediátricos de uso frecuente', 'Formulaciones y combinaciones de uso habitual en población pediátrica.', 1, NOW(), NOW()),
-('Dermatológicos', 'Medicamentos y productos específicos para afecciones de la piel.', 1, NOW(), NOW()),
-('Oftálmicos', 'Gotas, ungüentos y soluciones para uso ocular.', 1, NOW(), NOW()),
-('Otológicos', 'Gotas y preparados para el oído.', 1, NOW(), NOW()),
-('Productos naturales / fitoterápicos', 'Productos de origen natural utilizados con fines terapéuticos.', 1, NOW(), NOW());
+        $path = base_path('database/seeders/data/CATALOGO_GTIN_v4.csv');
 
-    ");
+        if (!file_exists($path)) {
+            $this->command->error("No se encontró el CSV en: {$path}");
+            return;
+        }
+
+        $now = Carbon::now();
+
+        // Detecta delimitador automáticamente (, o ;)
+        $delimiter = $this->detectDelimiter($path);
+
+        $file = new \SplFileObject($path);
+        $file->setFlags(\SplFileObject::READ_CSV | \SplFileObject::SKIP_EMPTY);
+        $file->setCsvControl($delimiter);
+
+        // 1) Leer encabezados
+        $headers = $file->fgetcsv();
+        if (!$headers || count($headers) < 2) {
+            $this->command->error("CSV inválido o sin encabezados: {$path}");
+            return;
+        }
+
+        $headers = array_map(fn($h) => strtoupper(trim((string)$h)), $headers);
+
+        $idxTipo = array_search('TIPOPRODUCTO', $headers, true);
+        $idxSit  = array_search('SITUACION', $headers, true); // si existe
+
+        if ($idxTipo === false) {
+            $this->command->error("No existe la columna TIPOPRODUCTO en el CSV.");
+            return;
+        }
+
+        // 2) Recolectar categorías únicas (TODAS)
+        $categorias = []; // key: nombre normalizado
+
+        while (!$file->eof()) {
+            $row = $file->fgetcsv();
+            if (!$row || $row === [null]) continue;
+
+            $tipo = strtoupper(trim((string)($row[$idxTipo] ?? '')));
+            if ($tipo === '') continue;
+
+            // Si existe SITUACION, puedes elegir incluir también INACTIVOS.
+            // Aquí cargamos igual la categoría, pero puedes marcar activo si hay ACTIVO/INACTIVO:
+            $sit = $idxSit !== false ? strtoupper(trim((string)($row[$idxSit] ?? ''))) : '';
+
+            // Guardar en el set
+            // Nota: guardamos la versión original en mayúsculas por consistencia
+            $categorias[$tipo] = [
+                'nombre' => $tipo,
+                'activo' => ($sit === 'ACTIVO' || $sit === '') ? 1 : 1, // categorías siempre activas (recomendado)
+            ];
+        }
+
+        if (empty($categorias)) {
+            $this->command->warn("No se encontraron categorías (TIPOPRODUCTO) para precargar.");
+            return;
+        }
+
+        // 3) Insertar/Actualizar categorías (sin requerir UNIQUE)
+        DB::beginTransaction();
+        try {
+            $count = 0;
+
+            foreach ($categorias as $cat) {
+                DB::table('categorias')->updateOrInsert(
+                    ['nombre' => $cat['nombre']],
+                    [
+                        'descripcion' => 'Auto import desde CATALOGO_GTIN_v4.csv',
+                        'activo'      => 1,
+                        'created_at'  => $now, // si existe, no pasa nada grave; si quieres preservar created_at, dímelo
+                        'updated_at'  => $now,
+                    ]
+                );
+                $count++;
+            }
+
+            DB::commit();
+            $this->command->info("CategoriasSeeder OK. Categorías cargadas/actualizadas: {$count}");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            $this->command->error("Error en CategoriasSeeder: " . $e->getMessage());
+        }
+    }
+
+    private function detectDelimiter(string $path): string
+    {
+        $sample = file_get_contents($path, false, null, 0, 4096) ?: '';
+        $commas = substr_count($sample, ',');
+        $semis  = substr_count($sample, ';');
+        return $semis > $commas ? ';' : ',';
     }
 }

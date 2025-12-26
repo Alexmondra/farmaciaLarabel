@@ -9,6 +9,7 @@ use App\Models\User;
 
 class RolesPermisosSeeder extends Seeder
 {
+
     public function run(): void
     {
         // Limpia cache de permisos
@@ -16,65 +17,93 @@ class RolesPermisosSeeder extends Seeder
 
         // === LISTA LIMPIA DE PERMISOS PARA FARMACIA ===
         $permisos = [
-            // 1. VENTAS Y POS
-            'ventas.ver',       // Ver historial y dashboard de ventas
-            'ventas.crear',     // Acceso al POS / Registrar venta
-            'ventas.anular',    // Permitir anular una venta
-            'cajas.ver',        // Ver estado de cajas
-            'cajas.abrir',      // Abrir/Cerrar caja
-            'clientes.ver',     // Ver lista de clientes
-            'clientes.crear',   // Registrar clientes
-            'clientes.editar',   // Registrar clientes
-            'clientes.eliminar',   // Registrar clientes
+            // 1. VENTAS
+            'ventas.ver',
+            'ventas.crear',
+            'ventas.anular',
 
+            // 2. CAJAS
+            'cajas.ver',
+            'cajas.abrir',
+            'cajas.cerrar',
 
-            // 2. INVENTARIO (Medicamentos)
-            'medicamentos.ver',     // Ver lista y stock
-            'medicamentos.crear',   // Agregar nuevos productos 
-            'medicamentos.editar',  // Editar precios/datos
-            'medicamentos.eliminar', // Borrar productos
-            'categorias.ver',       // Gestionar categorías
+            // 3. GUÍAS DE REMISIÓN
+            'guias.ver',
+            'guias.crear',
+
+            // 4. FACTURACIÓN SUNAT
+            'sunat.monitor',
+            'sunat.archivos',
+
+            // 5. REPORTES
+            'reportes.ver',
+            'reportes.ventas',
+            'reportes.inventario',
+
+            //5.5. Ajustes
+            'lotes.ver',
+            'stock.ajustar',
+
+            // 6. CLIENTES
+            'clientes.ver',
+            'clientes.crear',
+            'clientes.editar',
+            'clientes.eliminar',
+
+            // 7. MEDICAMENTOS (INVENTARIO)
+            'medicamentos.ver',
+            'medicamentos.crear',
+            'medicamentos.editar',
+            'medicamentos.eliminar',
+            'medicamentos.global',
+
+            // 8. CATEGORÍAS
+            'categorias.ver',
             'categorias.crear',
             'categorias.editar',
             'categorias.eliminar',
-            'lotes.ver',            // Ver vencimientos y lotes no usa
-            'stock.ajustar',        // Hacer ajustes manuales de stock (pérdidas, etc) no usa
+
+            // 9. VENCIMIENTOS
             'vencimiento.ver',
 
-
-            // 3. COMPRAS (Proveedores)
-            'compras.ver',          // Ver historial de compras
-            'compras.crear',        // Registrar ingreso de mercadería
-            'compras.editar',        // editar ingreso de mercadería
+            // 10. COMPRAS
+            'compras.ver',
+            'compras.crear',
+            'compras.editar',
             'compras.anular',
-            'proveedores.ver',      // Ver proveedores
-            'proveedores.crear',    // Gestionar proveedores
+
+            // 11. PROVEEDORES
+            'proveedores.ver',
+            'proveedores.crear',
             'proveedores.editar',
             'proveedores.eliminar',
-            // 4. SEGURIDAD (Usuarios y Roles)
+
+            // 12. USUARIOS
             'usuarios.ver',
             'usuarios.crear',
             'usuarios.editar',
             'usuarios.eliminar',
-            'roles.ver',            // Ver panel de roles
-            'roles.crear',          // Crear nuevos roles
-            'roles.editar',         // Asignar permisos a roles
+
+            // 13. ROLES
+            'roles.ver',
+            'roles.crear',
+            'roles.editar',
             'roles.eliminar',
+
+            // 14. PERMISOS
             'permisos.ver',
             'permisos.asignar',
             'permisos.revocar',
-            // 5. REPORTES Y CONFIGURACIÓN
 
-            'reportes.ver',         // Acceso general a reportes
-            'config.ver',           // Ver configuración del sistema
-            'config.editar',        // Editar datos de la empresa/impresora
-
-            // 6. COMPRAS (sucursales)
+            // 15. SUCURSALES
             'sucursales.ver',
             'sucursales.crear',
             'sucursales.editar',
             'sucursales.eliminar',
 
+            // 16. CONFIGURACIÓN GENERAL
+            'config.ver',
+            'config.editar',
         ];
 
         foreach ($permisos as $p) {

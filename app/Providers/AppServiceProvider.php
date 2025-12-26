@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
-use App\Listeners\AgregarAlertasMenu;
+use Illuminate\Support\Facades\Gate;
 use App\Models\Configuracion;
 use Illuminate\Pagination\Paginator;
 
@@ -61,5 +61,44 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
         }
+
+        // Define aquí tus "Super Permisos" (CORREGIDO)
+
+        // 1. Operaciones
+        Gate::define(
+            'ver_operaciones',
+            fn($u) =>
+            $u->can('ventas.crear') ||
+                $u->can('cajas.ver') ||
+                $u->can('ventas.ver') ||
+                $u->can('guias.ver') ||
+                $u->can('clientes.ver')
+        );
+
+        // 2. Sunat
+        Gate::define(
+            'ver_sunat',
+            fn($u) =>
+            $u->can('sunat.monitor') ||
+                $u->can('sunat.archivos')
+        );
+
+        // 3. Gestión y Administración (Incluye todos los submenús de esa sección)
+        Gate::define(
+            'ver_gestion',
+            fn($u) =>
+            $u->can('medicamentos.ver') ||
+                $u->can('categorias.ver') ||
+                $u->can('medicamentos.global') ||
+                $u->can('compras.crear') ||
+                $u->can('compras.ver') ||
+                $u->can('proveedores.ver') ||
+                $u->can('reportes.ventas') ||
+                $u->can('reportes.inventario') ||
+                $u->can('usuarios.ver') ||
+                $u->can('roles.ver') ||
+                $u->can('sucursales.ver') ||
+                $u->can('config.ver')
+        );
     }
 }

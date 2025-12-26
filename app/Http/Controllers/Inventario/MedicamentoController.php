@@ -59,25 +59,64 @@ class MedicamentoController extends Controller
 
     public function indexGeneral(Request $request)
     {
-        $q = trim($request->get('q'));
+        $q = trim((string)$request->get('q', ''));
+        $mode = $request->get('mode', 'auto'); // auto|nombre|codigo|laboratorio|todo
 
         $query = Medicamento::with('categoria');
 
-        // BÚSQUEDA TOTAL (Lo que pediste: busca por lo que sea)
-        if ($q) {
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nombre', 'LIKE', "%$q%")
-                    ->orWhere('codigo', 'LIKE', "%$q%")
-                    ->orWhere('codigo_barra', 'LIKE', "%$q%")
-                    ->orWhere('laboratorio', 'LIKE', "%$q%")
-                    ->orWhere('presentacion', 'LIKE', "%$q%")
-                    ->orWhere('descripcion', 'LIKE', "%$q%");
-            });
+        if ($q !== '') {
+
+            // AUTO: si parece código (solo números, 8-14 dígitos) => código/barra exacto
+            if ($mode === 'auto') {
+                $digits = preg_replace('/\D+/', '', $q);
+
+                if ($digits !== '' && strlen($digits) >= 8 && strlen($digits) <= 14) {
+                    $query->where(function ($sub) use ($digits) {
+                        $sub->where('codigo_barra', $digits)
+                            ->orWhere('codigo', $digits);
+                    });
+                } else {
+                    // texto => nombre + (presentación opcional)
+                    $query->where(function ($sub) use ($q) {
+                        $sub->where('nombre', 'LIKE', "%$q%")
+                            ->orWhere('presentacion', 'LIKE', "%$q%");
+                    });
+                }
+            }
+
+            // MODO MANUAL (cuando el usuario elige)
+            elseif ($mode === 'nombre') {
+                $query->where('nombre', 'LIKE', "%$q%");
+            } elseif ($mode === 'codigo') {
+                $digits = preg_replace('/\D+/', '', $q);
+                $query->where(function ($sub) use ($digits, $q) {
+                    // si viene numérico, usa digits; si no, usa texto
+                    if ($digits !== '') {
+                        $sub->where('codigo_barra', $digits)->orWhere('codigo', $digits);
+                    } else {
+                        $sub->where('codigo', 'LIKE', "%$q%")
+                            ->orWhere('codigo_barra', 'LIKE', "%$q%");
+                    }
+                });
+            } elseif ($mode === 'laboratorio') {
+                $query->where('laboratorio', 'LIKE', "%$q%");
+            } elseif ($mode === 'todo') {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('nombre', 'LIKE', "%$q%")
+                        ->orWhere('codigo', 'LIKE', "%$q%")
+                        ->orWhere('codigo_barra', 'LIKE', "%$q%")
+                        ->orWhere('laboratorio', 'LIKE', "%$q%")
+                        ->orWhere('presentacion', 'LIKE', "%$q%")
+                        ->orWhere('descripcion', 'LIKE', "%$q%");
+                });
+            }
         }
+
         $medicamentos = $query->orderBy('nombre', 'asc')->paginate(20);
 
-        return view('inventario.medicamentos.general.general', compact('medicamentos', 'q'));
+        return view('inventario.medicamentos.general.general', compact('medicamentos', 'q', 'mode'));
     }
+
 
 
     public function show($id)

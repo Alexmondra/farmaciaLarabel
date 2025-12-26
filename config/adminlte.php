@@ -215,8 +215,7 @@ return [
         // 1. DASHBOARD (Limpio, sin etiquetas de colores)
 
 
-        ['header' => 'OPERACIONES COMERCIALES'],
-
+        ['header' => 'OPERACIONES COMERCIALES', 'can' => 'ver_operaciones'],
         // 2. PUNTO DE VENTA (Destacado por icono, no por etiquetas)
         [
             'text'    => 'Punto de Venta (POS)',
@@ -249,7 +248,7 @@ return [
                 [
                     'text'   => 'Guías de Remisión',
                     'url'    => 'guias',
-                    // 'can' => 'guias.ver', // Descomenta cuando tengas el permiso
+                    'can' => 'guias.ver', // Descomenta cuando tengas el permiso
                     'icon'   => 'fas fa-shipping-fast', // Ícono de transporte/envío
                     'active' => ['guias*'],
                 ],
@@ -265,8 +264,7 @@ return [
 
         // 3.5 
 
-        ['header' => 'FACTURACIÓN ELECTRÓNICA (SUNAT)'],
-
+        ['header' => 'FACTURACIÓN ELECTRÓNICA (Sunat)', 'can' => 'ver_sunat'],
         [
             'text'    => 'Control SUNAT', // Título del menú desplegable
             'icon'    => 'fas fa-university', // Ícono de institución/gobierno
@@ -275,6 +273,7 @@ return [
                 [
                     'text'       => 'Monitor de Envíos',
                     'url'        => 'facturacion/pendientes',
+                    'can'     => 'sunat.monitor',
                     'icon'       => 'fas fa-satellite-dish',
                     'icon_color' => 'orange', // Se mantiene la alerta naranja
                 ],
@@ -283,6 +282,7 @@ return [
                 [
                     'text'        => 'Archivos y Auditoría',
                     'url'         => 'facturacion/comprobantes',
+                    'can'         => 'sunat.archivos',
                     'icon'        => 'fas fa-file-archive',
                     'label'       => 'XML/CDR',
                     'label_color' => 'info',
@@ -293,11 +293,7 @@ return [
         // 3.5 - 2. CONTABILIDAD / SIRE (Lo que hablamos antes para el contador)
 
 
-        ['header' => 'ADMINISTRACIÓN Y GESTIÓN'],
-
-        // 5. LOGÍSTICA (Compras y Proveedores juntos)
-
-        // 4. INVENTARIO FARMACÉUTICO (Todo lo de productos aquí)
+        ['header' => 'ADMINISTRACIÓN Y GESTIÓN', 'can' => 'ver_gestion'],
         [
             'text' => 'Inventario',
             'icon' => 'fas fa-boxes',
@@ -318,6 +314,7 @@ return [
                 [
                     'text' => 'Catálogo General', // Nombre claro: son TODOS los productos
                     'url'  => 'inventario/medicamentos-general',
+                    'can'    => 'medicamentos.global',
                     'icon' => 'fas fa-globe-americas', // Ícono global
                     'active' => ['inventario/medicamentos-general*'],
                 ],
@@ -357,15 +354,27 @@ return [
                 [
                     'text' => 'Ventas',
                     'icon' => 'fas fa-cash-register',
+                    'can'  => 'reportes.ventas',
                     'submenu' => [
-                        ['text' => 'Ventas del Día',    'url' => 'reportes/ventas-dia', 'icon' => 'far fa-circle'],
-                        ['text' => 'Historial de ventas',  'url' => 'reportes/ventas-historial', 'icon' => 'far fa-circle'],
+                        [
+                            'text' => 'Ventas del Día',
+                            'url' => 'reportes/ventas-dia',
+                            'icon' => 'far fa-circle'
+
+
+                        ],
+                        [
+                            'text' => 'Historial de ventas',
+                            'url' => 'reportes/ventas-historial',
+                            'icon' => 'far fa-circle'
+                        ],
                         ['text' => 'Ventas Anuladas',   'url' => 'reportes/ventas-anuladas', 'icon' => 'far fa-circle text-danger'],
                     ],
                 ],
                 [
                     'text' => 'Estado de medicamento',
                     'icon' => 'fas fa-medkit',
+                    'can'  => 'reportes.inventario',
                     'submenu' => [
                         ['text' => 'Lotes por Vencer',  'url' => 'reportes/vencimientos', 'icon' => 'far fa-circle text-danger'],
                         ['text' => 'Stock Bajo/Reponer', 'url' => 'reportes/stock-bajo',   'icon' => 'far fa-circle text-warning'],
