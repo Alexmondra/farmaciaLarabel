@@ -144,31 +144,53 @@
                     medicamento_id: id,
                     sucursal_id: sucursalId
                 },
-                async: false,
                 success: function(lotes) {
                     let tbody = $('#modal-lotes-tbody').empty();
+
                     if (!lotes.length) {
-                        tbody.append('<tr><td colspan="6" class="text-center text-danger font-weight-bold">AGOTADO / SIN STOCK</td></tr>');
+                        tbody.append('<tr><td colspan="7" class="text-center text-danger">SIN STOCK DISPONIBLE</td></tr>');
                         return;
                     }
-                    lotes.forEach(l => {
-                        let precioBase = parseFloat(l.precio_venta);
-                        let precioOferta = l.precio_oferta ? parseFloat(l.precio_oferta) : null;
-                        let htmlPrecio = precioOferta ?
-                            `<small style="text-decoration:line-through" class="text-muted">S/ ${precioBase.toFixed(2)}</small><br><span class="text-danger font-weight-bold">S/ ${precioOferta.toFixed(2)}</span>` :
-                            `S/ ${precioBase.toFixed(2)}`;
-                        let precioFinal = precioOferta || precioBase;
-                        let rowClass = precioOferta ? 'table-warning' : '';
 
+                    lotes.forEach(l => {
+                        // A. GENERAR OPCIONES DE PRESENTACIÓN
+                        // Opción Base: Unidad
+                        let options = `<option value="UNIDAD" data-precio="${l.precios.unidad}" data-factor="1">UNIDAD</option>`;
+
+                        // Si tiene Blíster configurado (Factor > 1 y Precio > 0)
+                        if (l.factores.blister > 1 && l.precios.blister > 0) {
+                            options += `<option value="BLISTER" data-precio="${l.precios.blister}" data-factor="${l.factores.blister}">BLISTER (x${l.factores.blister})</option>`;
+                        }
+
+                        // Si tiene Caja configurada
+                        if (l.factores.caja > 1 && l.precios.caja > 0) {
+                            options += `<option value="CAJA" data-precio="${l.precios.caja}" data-factor="${l.factores.caja}">CAJA (x${l.factores.caja})</option>`;
+                        }
+
+                        // B. RENDERIZAR FILA
                         tbody.append(`
-                            <tr data-lote-id="${l.id}" class="${rowClass}">
-                                <td class="align-middle small">${l.codigo_lote}</td>
+                            <tr data-lote-id="${l.id}" data-stock="${l.stock_actual}">
+                                <td class="align-middle small font-weight-bold">${l.codigo_lote}</td>
                                 <td class="align-middle small">${l.fecha_vencimiento || '-'}</td>
-                                <td class="text-center font-weight-bold align-middle text-primary" style="font-size:1.1em">${l.stock_actual}</td>
-                                <td class="align-middle"><input type="number" class="form-control form-control-sm input-cant-lote text-center font-weight-bold" min="1" max="${l.stock_actual}" value="1"></td>
-                                <td class="align-middle text-right" style="line-height:1.1">${htmlPrecio}</td>
-                                <td class="align-middle text-center"><button type="button" class="btn btn-sm btn-success btn-agregar-lote"><i class="fas fa-plus"></i></button></td>
-                                <td style="display:none;" class="data-precio">${precioFinal}</td>
+                                <td class="text-center font-weight-bold align-middle text-primary">${l.stock_actual}</td>
+                                
+                                <td class="align-middle">
+                                    <select class="form-control form-control-sm select-presentacion font-weight-bold" style="font-size: 0.85rem;">
+                                        ${options}
+                                    </select>
+                                </td>
+
+                                <td class="align-middle">
+                                    <input type="number" class="form-control form-control-sm input-cant-lote text-center font-weight-bold" min="1" value="1">
+                                </td>
+                                
+                                <td class="align-middle text-right font-weight-bold text-success cell-precio">
+                                    S/ ${l.precios.unidad.toFixed(2)}
+                                </td>
+
+                                <td class="align-middle text-center">
+                                    <button type="button" class="btn btn-sm btn-success btn-agregar-lote"><i class="fas fa-plus"></i></button>
+                                </td>
                                 <td style="display:none;" class="data-codigo-lote">${l.codigo_lote}</td>
                             </tr>
                         `);
@@ -177,38 +199,69 @@
             });
         }
 
+        // EVENTO: CAMBIAR PRECIO AL CAMBIAR SELECT
+        $(document).on('change', '.select-presentacion', function() {
+            let row = $(this).closest('tr');
+            let precio = parseFloat($(this).find(':selected').data('precio'));
+            row.find('.cell-precio').text('S/ ' + precio.toFixed(2));
+        });
+
         // ==========================================
         // 2. CARRITO Y TABLA
         // ==========================================
         $(document).on('click', '.btn-agregar-lote', function() {
-            let fila = $(this).closest('tr');
-            let loteId = fila.data('lote-id');
-            let cant = parseInt(fila.find('.input-cant-lote').val()) || 0;
-            let stock = parseInt(fila.find('.input-cant-lote').attr('max'));
-            let precio = parseFloat(fila.find('.data-precio').text());
+            let row = $(this).closest('tr');
+            let loteId = row.data('lote-id');
+            let stockReal = parseInt(row.data('stock')); // Stock en unidades
 
-            if (cant > stock) return toastr.error('La cantidad supera el stock disponible.');
-            if (cant <= 0) return toastr.error('Cantidad inválida.');
+            // Datos de la selección
+            let select = row.find('.select-presentacion option:selected');
+            let tipo = select.val(); // UNIDAD, BLISTER, CAJA
+            let precio = parseFloat(select.data('precio'));
+            let factor = parseInt(select.data('factor')); // Por cuántas unidades multiplicamos
 
-            if (carrito[loteId]) {
-                let nuevaCant = carrito[loteId].cantidad + cant;
-                if (nuevaCant > stock) return toastr.warning('Stock máximo alcanzado en el carrito.');
-                carrito[loteId].cantidad = nuevaCant;
+            let cantidad = parseInt(row.find('.input-cant-lote').val()) || 0;
+
+            if (cantidad <= 0) return toastr.error('Cantidad inválida.');
+
+            // VALIDACIÓN MATEMÁTICA: Cantidad * Factor <= Stock Real
+            // Ej: 2 Cajas de 100 = 200 unidades requeridas
+            let totalRequerido = cantidad * factor;
+
+            if (totalRequerido > stockReal) {
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Stock Insuficiente',
+                    text: `Solicitas ${totalRequerido} unidades en total (${cantidad} ${tipo}), pero solo quedan ${stockReal} unidades en el lote.`
+                });
+            }
+
+            // AGREGAR AL CARRITO (Usamos ID compuesto para diferenciar Caja de Unidad del mismo lote)
+            let uniqueId = loteId + '-' + tipo;
+
+            if (carrito[uniqueId]) {
+                carrito[uniqueId].cantidad += cantidad;
             } else {
-                let item = {
+                carrito[uniqueId] = {
+                    unique_id: uniqueId,
+                    unidad_medida: tipo,
+
                     lote_id: loteId,
                     nombre: medicamentoSeleccionado.nombre,
-                    presentacion: medicamentoSeleccionado.presentacion,
-                    codigo_lote: fila.find('.data-codigo-lote').text(),
-                    cantidad: cant,
+                    presentacion: `${medicamentoSeleccionado.presentacion} [${tipo}]`,
+                    codigo_lote: row.find('.data-codigo-lote').text(),
+
+                    cantidad: cantidad,
                     precio_venta: precio,
-                    stock_max: stock
+
+                    stock_max: Math.floor(stockReal / factor),
+                    factor: factor
                 };
-                carrito[loteId] = item;
             }
+
             renderCarrito();
             $('#modalLotes').modal('hide');
-            $('#busqueda_medicamento').focus();
+            $('#busqueda_medicamento').val('').focus();
         });
 
         $(document).on('keydown', '.input-cant-lote', function(e) {
@@ -232,12 +285,17 @@
             items.forEach(i => {
                 let subtotal = i.cantidad * i.precio_venta;
                 total += subtotal;
+
+                // CAMBIO AQUÍ: Usamos data-unique-id en lugar de data-lote-id
                 tbody.append(`
-                    <tr data-lote-id="${i.lote_id}">
-                        <td class="align-middle"><span class="font-weight-bold text-dark">${i.nombre}</span><br><small class="text-muted">${i.presentacion} | Lote: ${i.codigo_lote}</small></td>
+                    <tr data-unique-id="${i.unique_id || (i.lote_id + '-' + i.unidad_medida)}">
+                        <td class="align-middle">
+                            <span class="font-weight-bold text-dark">${i.nombre}</span><br>
+                            <small class="text-muted">${i.presentacion_visual || i.presentacion} | Lote: ${i.codigo_lote}</small>
+                        </td>
                         
                         <td class="align-middle text-center"> 
-                            <input type="number" class="form-control form-control-sm input-edit-cant font-weight-bold" value="${i.cantidad}" min="1" max="${i.stock_max}">
+                            <input type="number" class="form-control form-control-sm input-edit-cant font-weight-bold" value="${i.cantidad}" min="1">
                         </td>
                         
                         <td class="align-middle text-center"> 
@@ -249,7 +307,11 @@
                         </td>
                         
                         <td class="align-middle text-right font-weight-bold text-success td-subtotal">S/ ${subtotal.toFixed(2)}</td>
-                        <td class="align-middle text-center"><button type="button" class="btn btn-xs btn-outline-danger btn-eliminar-item"><i class="fas fa-trash-alt"></i></button></td>
+                        <td class="align-middle text-center">
+                            <button type="button" class="btn btn-xs btn-outline-danger btn-eliminar-item">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
                     </tr>
                 `);
             });
@@ -293,8 +355,42 @@
         });
 
         $(document).on('click', '.btn-eliminar-item', function() {
-            delete carrito[$(this).closest('tr').data('lote-id')];
-            renderCarrito();
+            // 1. Identificar qué vamos a borrar
+            let row = $(this).closest('tr');
+            let uniqueId = row.data('unique-id');
+            let item = carrito[uniqueId];
+
+            // 2. Preguntar antes de disparar (Seguridad)
+            Swal.fire({
+                title: '¿Quitar del carrito?',
+                text: `Se eliminará: ${item.nombre} [${item.presentacion}]`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, quitar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true // Pone el cancelar a la izquierda (más cómodo)
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // 3. Si dice que sí, borramos
+                    delete carrito[uniqueId];
+                    renderCarrito();
+
+                    // Feedback visual suave
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 1500,
+                        timerProgressBar: true
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Eliminado'
+                    });
+                }
+            });
         });
 
         function recalcularTotalDesdeMemoria() {

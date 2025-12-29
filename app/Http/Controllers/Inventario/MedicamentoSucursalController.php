@@ -62,36 +62,33 @@ class MedicamentoSucursalController extends Controller
     {
         $user = Auth::user();
 
-        // ... (Tu validación de permisos se queda igual) ...
+        // Validar permisos (Mantenemos tu lógica existente)
         if (!$user->hasRole('Administrador')) {
             $permitidas = $user->sucursales()->pluck('sucursales.id')->toArray();
             if (!in_array((int)$sucursalId, $permitidas, true)) {
-                // ... lógica de error ...
                 return back()->withErrors('No tienes permiso en esta sucursal.');
             }
         }
 
-        // Validación
+        // 1. VALIDACIÓN AMPLIADA PARA LOS 3 PRECIOS
         $pivotData = $request->validate([
-            'precio'        => ['nullable', 'numeric', 'min:0'],
-            'stock_minimo'  => ['nullable', 'integer', 'min:0'], // <--- ESTO ES NUEVO
-            'ubicacion'     => ['nullable', 'string', 'max:120'],
+            'precio'         => ['nullable', 'numeric', 'min:0'],
+            'precio_blister' => ['nullable', 'numeric', 'min:0'],
+            'precio_caja'    => ['nullable', 'numeric', 'min:0'],
+            'stock_minimo'   => ['nullable', 'integer', 'min:0'],
+            'ubicacion'      => ['nullable', 'string', 'max:120'],
         ]);
 
         $datosParaGuardar = [
-            'updated_by' => Auth::id() // <--- AGREGADO: Para saber quién editó
+            'updated_by' => Auth::id()
         ];
 
-        if (array_key_exists('precio', $pivotData)) {
-            $datosParaGuardar['precio_venta'] = $pivotData['precio'];
-        }
+        if (array_key_exists('precio', $pivotData)) $datosParaGuardar['precio_venta'] = $pivotData['precio'];
+        if (array_key_exists('precio_blister', $pivotData)) $datosParaGuardar['precio_blister'] = $pivotData['precio_blister'];
+        if (array_key_exists('precio_caja', $pivotData)) $datosParaGuardar['precio_caja'] = $pivotData['precio_caja'];
 
-        if (array_key_exists('stock_minimo', $pivotData)) {
-            $datosParaGuardar['stock_minimo'] = $pivotData['stock_minimo'];
-        }
-        if (array_key_exists('ubicacion', $pivotData)) {
-            $datosParaGuardar['ubicacion'] = $pivotData['ubicacion'];
-        }
+        if (array_key_exists('stock_minimo', $pivotData)) $datosParaGuardar['stock_minimo'] = $pivotData['stock_minimo'];
+        if (array_key_exists('ubicacion', $pivotData)) $datosParaGuardar['ubicacion'] = $pivotData['ubicacion'];
 
         $m = Medicamento::findOrFail($medicamentoId);
 
@@ -104,10 +101,10 @@ class MedicamentoSucursalController extends Controller
         });
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Datos actualizados correctamente.']);
+            return response()->json(['success' => true, 'message' => 'Precios actualizados correctamente.']);
         }
 
-        return back()->with('success', 'Actualizado para la sucursal.');
+        return back()->with('success', 'Actualizado.');
     }
 
     public function attach(Request $request, $medicamentoId)

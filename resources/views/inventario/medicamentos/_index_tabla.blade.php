@@ -77,25 +77,61 @@
                             @endcan
                         </div>
 
-                        {{-- 3. Precio --}}
-                        <div class="d-flex align-items-center">
+                        {{-- 3. PRECIOS (Bloque Mejorado) --}}
+                        <div class="mt-1">
                             @if($precio)
-                            <span class="text-dark font-weight-bold mr-2 small" id="price-display-{{ $m->id }}">
-                                S/ {{ number_format($precio, 2) }}
-                            </span>
-                            @else
-                            <small class="text-muted mr-2" id="price-display-{{ $m->id }}">Sin precio</small>
+                            {{-- Precio Unitario --}}
+                            <div class="d-flex align-items-center justify-content-between" style="max-width: 140px;">
+                                <span class="text-primary font-weight-bold small" id="price-display-{{ $m->id }}">
+                                    S/ {{ number_format($precio, 2) }}
+                                    <span class="text-muted" style="font-size: 0.7em;">(Unid)</span>
+                                </span>
+
+                                @can('medicamentos.editar')
+                                {{-- BOTÓN DE EDICIÓN: Ahora pasa todos los parámetros --}}
+                                <button type="button"
+                                    class="btn btn-xs btn-light border rounded-circle ml-2"
+                                    style="width: 22px; height: 22px;"
+                                    onclick="abrirModalPrecio(
+                                            {{ $m->id }}, 
+                                            '{{ addslashes($m->nombre) }}', 
+                                            '{{ $precio }}', 
+                                            '{{ $pivot->precio_blister ?? 0 }}', 
+                                            '{{ $pivot->precio_caja ?? 0 }}',
+                                            {{ $m->unidades_por_blister ?? 0 }},
+                                            {{ $m->unidades_por_envase ?? 1 }}
+                                        )"
+                                    title="Configurar Precios">
+                                    <i class="fas fa-pencil-alt text-secondary" style="font-size: 0.7rem;"></i>
+                                </button>
+                                @endcan
+                            </div>
+
+                            {{-- Precios Secundarios (Solo visualización pequeña) --}}
+                            @if( ($pivot->precio_blister ?? 0) > 0 || ($pivot->precio_caja ?? 0) > 0 )
+                            <div class="mt-1 pl-1 border-left border-secondary" style="font-size: 0.75rem; line-height: 1.1;">
+                                @if(($pivot->precio_blister ?? 0) > 0)
+                                <div class="text-muted">Blís: <strong>S/ {{ number_format($pivot->precio_blister, 2) }}</strong></div>
+                                @endif
+                                @if(($pivot->precio_caja ?? 0) > 0)
+                                <div class="text-muted">Caja: <strong>S/ {{ number_format($pivot->precio_caja, 2) }}</strong></div>
+                                @endif
+                            </div>
                             @endif
 
-                            @can('medicamentos.editar')
-                            <button type="button"
-                                class="btn btn-xs btn-outline-secondary rounded-circle border-0 p-0"
-                                style="width: 20px; height: 20px;"
-                                onclick="abrirModalPrecio({{ $m->id }}, '{{ addslashes($m->nombre) }}', '{{ $precio }}')"
-                                title="Cambiar Precio">
-                                <i class="fas fa-pencil-alt" style="font-size: 0.7rem;"></i>
-                            </button>
-                            @endcan
+                            @else
+                            {{-- Sin Precio --}}
+                            <div class="d-flex align-items-center">
+                                <small class="text-danger mr-2">Sin asignar</small>
+                                @can('medicamentos.editar')
+                                <button type="button"
+                                    class="btn btn-xs btn-outline-danger rounded-circle"
+                                    onclick="abrirModalPrecio({{ $m->id }}, '{{ addslashes($m->nombre) }}', 0, 0, 0, {{ $m->unidades_por_blister ?? 0 }}, {{ $m->unidades_por_envase ?? 1 }})">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                @endcan
+                            </div>
+                            @endif
                         </div>
                     </div>
 

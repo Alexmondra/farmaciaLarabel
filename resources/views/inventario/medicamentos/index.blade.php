@@ -94,25 +94,55 @@
 {{-- MODAL PRECIO --}}
 @can('medicamentos.editar')
 <div class="modal fade" id="modalPrecio" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered"> {{-- Quitamos modal-sm para que quepa todo --}}
         <div class="modal-content">
-            <div class="modal-header bg-light py-2">
-                <h6 class="modal-title font-weight-bold">Actualizar Precio</h6>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title font-weight-bold">
+                    <i class="fas fa-tags mr-1"></i> Configurar Precios
+                </h6>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form id="formUpdatePrecio" onsubmit="guardarPrecio(event)">
-                <div class="modal-body">
-                    <p id="lblNombreMedicamento" class="small text-muted mb-2 text-center"></p>
+                <div class="modal-body bg-light">
+                    <p id="lblNombreMedicamento" class="font-weight-bold text-center text-dark mb-3" style="font-size: 1.1em;"></p>
                     <input type="hidden" id="medIdHidden">
-                    <div class="input-group">
-                        <div class="input-group-prepend"><span class="input-group-text">S/</span></div>
-                        <input type="number" step="0.01" min="0" class="form-control text-center font-weight-bold" id="inputNuevoPrecio" required>
+
+                    <div class="row">
+                        {{-- 1. PRECIO UNITARIO (Siempre visible) --}}
+                        <div class="col-12 mb-3">
+                            <label class="small font-weight-bold text-primary mb-1">PRECIO UNITARIO (S/)</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text bg-white border-primary fw-bold">S/</span></div>
+                                <input type="number" step="0.01" min="0"
+                                    class="form-control font-weight-bold text-primary form-control-lg"
+                                    id="inputPrecioUnidad" required placeholder="0.00">
+                            </div>
+                            <small class="text-muted">Precio por pastilla o unidad mínima.</small>
+                        </div>
+
+                        {{-- 2. PRECIO BLISTER (Opcional) --}}
+                        <div class="col-6 mb-2" id="divPrecioBlister">
+                            <label class="small font-weight-bold text-info mb-1">P. BLÍSTER (S/)</label>
+                            <input type="number" step="0.01" min="0"
+                                class="form-control font-weight-bold border-info text-info"
+                                id="inputPrecioBlister" placeholder="0.00">
+                            <small class="text-info" id="lblInfoBlister">x 10 un.</small>
+                        </div>
+
+                        {{-- 3. PRECIO CAJA (Opcional) --}}
+                        <div class="col-6 mb-2" id="divPrecioCaja">
+                            <label class="small font-weight-bold text-success mb-1">P. CAJA (S/)</label>
+                            <input type="number" step="0.01" min="0"
+                                class="form-control font-weight-bold border-success text-success"
+                                id="inputPrecioCaja" placeholder="0.00">
+                            <small class="text-success" id="lblInfoCaja">x 100 un.</small>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer p-1 justify-content-center">
-                    <button type="submit" class="btn btn-primary btn-sm btn-block">Guardar</button>
+                <div class="modal-footer p-2 justify-content-center bg-white">
+                    <button type="submit" class="btn btn-primary btn-block font-weight-bold shadow-sm">
+                        <i class="fas fa-save mr-2"></i> GUARDAR PRECIOS
+                    </button>
                 </div>
             </form>
         </div>
@@ -444,68 +474,131 @@ $permisosJS = [
     });
 
     // 4. LÓGICA PRECIO CON PERMISOS
-    function abrirModalPrecio(id, nombre, precioActual) {
-        // Bloqueo de seguridad JS
+    function abrirModalPrecio(id, nombre, pUnit, pBlister, pCaja, uBlister, uCaja) {
         if (!userPermissions.canEdit) {
             ToastCentro.fire({
                 icon: 'error',
-                title: 'No tienes permiso para editar precios.'
+                title: 'Sin permisos.'
             });
             return;
         }
 
         $('#medIdHidden').val(id);
         $('#lblNombreMedicamento').text(nombre);
-        $('#inputNuevoPrecio').val(precioActual);
+
+        // 1. Cargar valores actuales
+        $('#inputPrecioUnidad').val(pUnit > 0 ? pUnit : '');
+        $('#inputPrecioBlister').val(pBlister > 0 ? pBlister : '');
+        $('#inputPrecioCaja').val(pCaja > 0 ? pCaja : '');
+
+        // 2. Lógica Visual: ¿Mostramos input de Blíster?
+        if (uBlister && uBlister > 1) {
+            $('#divPrecioBlister').show();
+            $('#lblInfoBlister').text('x ' + uBlister + ' un.');
+        } else {
+            $('#divPrecioBlister').hide();
+            $('#inputPrecioBlister').val(''); // Limpiar para no enviar basura
+        }
+
+        // 3. Lógica Visual: ¿Mostramos input de Caja?
+        if (uCaja && uCaja > 1) {
+            $('#divPrecioCaja').show();
+            $('#lblInfoCaja').text('x ' + uCaja + ' un.');
+        } else {
+            $('#divPrecioCaja').hide(); // Si es jarabe (uCaja=1), el precio unitario es el de la caja
+            $('#inputPrecioCaja').val('');
+        }
+
         $('#modalPrecio').modal('show');
         setTimeout(() => {
-            $('#inputNuevoPrecio').select();
+            $('#inputPrecioUnidad').select();
+        }, 500);
+    }
+
+    // LÓGICA PRECIO CON PERMISOS
+    function abrirModalPrecio(id, nombre, pUnit, pBlister, pCaja, uBlister, uCaja) {
+        if (!userPermissions.canEdit) {
+            ToastCentro.fire({
+                icon: 'error',
+                title: 'Sin permisos.'
+            });
+            return;
+        }
+
+        $('#medIdHidden').val(id);
+        $('#lblNombreMedicamento').text(nombre);
+
+        // 1. Cargar valores actuales
+        $('#inputPrecioUnidad').val(pUnit > 0 ? pUnit : '');
+        $('#inputPrecioBlister').val(pBlister > 0 ? pBlister : '');
+        $('#inputPrecioCaja').val(pCaja > 0 ? pCaja : '');
+
+        // 2. Lógica Visual: ¿Mostramos input de Blíster?
+        if (uBlister && uBlister > 1) {
+            $('#divPrecioBlister').show();
+            $('#lblInfoBlister').text('x ' + uBlister + ' un.');
+        } else {
+            $('#divPrecioBlister').hide();
+            $('#inputPrecioBlister').val(''); // Limpiar para no enviar basura
+        }
+
+        // 3. Lógica Visual: ¿Mostramos input de Caja?
+        if (uCaja && uCaja > 1) {
+            $('#divPrecioCaja').show();
+            $('#lblInfoCaja').text('x ' + uCaja + ' un.');
+        } else {
+            $('#divPrecioCaja').hide(); // Si es jarabe (uCaja=1), el precio unitario es el de la caja
+            $('#inputPrecioCaja').val('');
+        }
+
+        $('#modalPrecio').modal('show');
+        setTimeout(() => {
+            $('#inputPrecioUnidad').select();
         }, 500);
     }
 
     function guardarPrecio(e) {
         e.preventDefault();
-
-        // Doble verificación
         if (!userPermissions.canEdit) return;
 
         let medId = $('#medIdHidden').val();
-        let nuevoPrecio = $('#inputNuevoPrecio').val();
         let sucursalId = "{{ $sucursalSeleccionada ? $sucursalSeleccionada->id : '' }}";
 
-        if (!sucursalId) {
-            ToastCentro.fire({
-                icon: 'error',
-                title: 'No hay sucursal seleccionada.'
-            });
-            return;
-        }
+        // Obtenemos los 3 valores
+        let pUnit = $('#inputPrecioUnidad').val();
+        let pBlis = $('#inputPrecioBlister').val();
+        let pCaja = $('#inputPrecioCaja').val();
 
         $.ajax({
             url: "/inventario/medicamentos/" + medId + "/sucursales/" + sucursalId,
             type: "PUT",
             data: {
                 _token: "{{ csrf_token() }}",
-                precio: nuevoPrecio
+                precio: pUnit, // Mapeado a precio_venta
+                precio_blister: pBlis, // Nuevo
+                precio_caja: pCaja // Nuevo
             },
             success: function(response) {
                 $('#modalPrecio').modal('hide');
-                $('#price-display-' + medId).text('S/ ' + parseFloat(nuevoPrecio).toFixed(2));
+
+                // Actualizar visualmente SOLO el precio unitario en la tabla rápida
+                // (Para ver los otros, el usuario recargará o entrará al detalle)
+                let visualPrice = parseFloat(pUnit).toFixed(2);
+                $('#price-display-' + medId).html('S/ ' + visualPrice + '<br><small class="text-muted" style="font-size:0.7em">Actualizado</small>');
+
                 ToastCentro.fire({
                     icon: 'success',
-                    title: '¡Precio actualizado!'
+                    title: 'Precios actualizados'
                 });
             },
             error: function(xhr) {
-                let msj = xhr.responseJSON ? xhr.responseJSON.error : 'Error al guardar.';
                 ToastCentro.fire({
                     icon: 'error',
-                    title: msj
+                    title: 'Error al guardar.'
                 });
             }
         });
     }
-
     // ==========================================
     // LÓGICA STOCK MÍNIMO
     // ==========================================

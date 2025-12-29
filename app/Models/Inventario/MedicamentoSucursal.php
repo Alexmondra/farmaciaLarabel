@@ -20,15 +20,19 @@ class MedicamentoSucursal extends Model
         'sucursal_id',
         'stock_minimo',
         'precio_venta',
+        'precio_blister',
+        'precio_caja',
         'activo',
         'updated_by',
     ];
 
     protected $casts = [
-        'stock_minimo' => 'integer',
-        'precio_venta' => 'decimal:2',
-        'activo'       => 'boolean',
-        'deleted_at'   => 'datetime',
+        'stock_minimo'   => 'integer',
+        'precio_venta'   => 'decimal:2',
+        'precio_blister' => 'decimal:2',
+        'precio_caja'    => 'decimal:2',
+        'activo'         => 'boolean',
+        'deleted_at'     => 'datetime',
     ];
 
     /* ===================== RELACIONES ===================== */
@@ -55,10 +59,16 @@ class MedicamentoSucursal extends Model
             ->where('sucursal_id', $this->sucursal_id);
     }
 
+
+    /* ===================== LÓGICA DE NEGOCIO EXTRA ===================== */
+    public function getPrecioReporteDigemidAttribute()
+    {
+        return $this->precio_venta;
+    }
+
     /* ===================== SCOPES (Lógica de Negocio) ===================== */
     /* ===================== SCOPES RECUPERADOS (ESENCIALES PARA VENTAS) ===================== */
 
-    // 1. scopeActivos: Usado en VentaController@lookupMedicamentos
     public function scopeActivos($query)
     {
         return $query->where('activo', true);

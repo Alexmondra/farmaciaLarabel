@@ -133,10 +133,12 @@
                 $('#edit_med_digemid').val(info.codigo_digemid);
                 $('#edit_med_barra').val(info.codigo_barra);
                 $('#edit_med_reg').val(info.registro_sanitario);
+                $('#edit_med_forma').val(info.forma_farmaceutica);
                 $('#edit_med_lab').val(info.laboratorio);
                 $('#edit_med_pres').val(info.presentacion);
                 $('#edit_med_conc').val(info.concentracion);
                 $('#edit_med_unidades').val(info.unidades_por_envase);
+                $('#edit_med_unidades_blister').val(info.unidades_por_blister);
                 $('#edit_med_desc').val(info.descripcion);
 
                 // Selects
@@ -446,7 +448,7 @@
             let precioHtml = i.precio_venta > 0 ? `<span class="search-item-price">S/ ${parseFloat(i.precio_venta).toFixed(2)}</span>` : '<span class="search-item-price text-muted">Nuevo</span>';
             $div.append(`
                 <div class="search-item" onclick='seleccionarItem(${JSON.stringify(item)}, this)'>
-                    <div><strong>${i.nombre}</strong> <small>(${i.presentacion})</small></div>
+                    <div><strong>${i.nombre}</strong> <small>(${i.forma_farmaceutica})</small></div>
                     <small class="text-muted">Stock: ${i.stock_actual}</small> ${precioHtml}
                 </div>
             `);

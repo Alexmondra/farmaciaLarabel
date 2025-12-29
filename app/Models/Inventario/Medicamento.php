@@ -10,27 +10,34 @@ use Illuminate\Database\Eloquent\Model;
 class Medicamento extends Model
 {
     protected $fillable = [
+        // Identificadores
         'codigo',
         'codigo_digemid',
+        'codigo_barra',
+        'codigo_barra_blister',
         'nombre',
         'forma_farmaceutica',
         'concentracion',
         'presentacion',
         'laboratorio',
         'registro_sanitario',
-        'codigo_barra',
         'descripcion',
         'unidades_por_envase',
+        'unidades_por_blister',
         'imagen_path',
         'categoria_id',
         'user_id',
         'activo',
         'afecto_igv',
+        'receta_medica',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
         'afecto_igv' => 'boolean',
+        'receta_medica' => 'boolean',
+        'unidades_por_envase' => 'integer',
+        'unidades_por_blister' => 'integer',
     ];
 
     public function categoria()
@@ -45,8 +52,15 @@ class Medicamento extends Model
 
     public function sucursales()
     {
-        return $this->belongsToMany(\App\Models\Sucursal::class, 'medicamento_sucursal')
-            ->withPivot('precio_venta', 'stock_minimo', 'deleted_at')
+        return $this->belongsToMany(Sucursal::class, 'medicamento_sucursal')
+            ->withPivot([
+                'precio_venta',
+                'precio_blister',
+                'precio_caja',
+                'stock_minimo',
+                'activo',
+                'deleted_at'
+            ])
             ->wherePivot('deleted_at', null)
             ->withTimestamps();
     }
@@ -94,5 +108,18 @@ class Medicamento extends Model
               WHERE lotes.medicamento_id = medicamento_sucursal.medicamento_id 
               AND lotes.sucursal_id = medicamento_sucursal.sucursal_id) > 0'
         );
+    }
+
+
+    /* ================= LÓGICA DE NEGOCIO ================= */
+    public function identificarPresentacion($codigoEscaneado)
+    {
+        if ($codigoEscaneado && $codigoEscaneado === $this->codigo_barra) {
+            return 'CAJA';
+        }
+        if ($codigoEscaneado && $codigoEscaneado === $this->codigo_barra_blister) {
+            return 'BLISTER';
+        }
+        return 'UNIDAD';
     }
 }

@@ -21,9 +21,13 @@
                             <tr>
                                 <th>Lote</th>
                                 <th>Vence</th>
-                                <th class="text-center">Stock</th>
-                                <th style="width: 100px;">Cant.</th>
-                                <th>Precio</th>
+                                <th class="text-center">Stock (Unid)</th>
+
+                                {{-- NUEVA COLUMNA --}}
+                                <th style="width: 140px;">Presentación</th>
+
+                                <th style="width: 80px;">Cant.</th>
+                                <th class="text-right">Precio</th>
                                 <th></th>
                             </tr>
                         </thead>

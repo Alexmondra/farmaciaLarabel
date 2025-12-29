@@ -318,10 +318,7 @@ class VentaController extends Controller
 
             $query->whereHas('medicamento', function ($sub) use ($term) {
 
-                // LÓGICA INTELIGENTE:
-                // ¿Es un número y tiene longitud de código de barras (8 o más dígitos)?
                 if (is_numeric($term) && strlen($term) >= 8) {
-                    // ENTONCES: Búsqueda EXACTA (Prioridad al código de barras)
                     $sub->where(function ($q) use ($term) {
                         $q->where('codigo_barra', $term)
                             ->orWhere('codigo', $term);
@@ -353,7 +350,7 @@ class VentaController extends Controller
                     'medicamento_id'          => $ms->medicamento_id,
                     'nombre'                  => $ms->medicamento->nombre,
                     'codigo'                  => $ms->medicamento->codigo,
-                    'presentacion'            => $ms->medicamento->presentacion ?? null,
+                    'presentacion'            => $ms->medicamento->forma_farmaceutica ?? null,
                     'precio_venta'            => (float) $ms->precio_venta,
                 ];
             });
@@ -370,14 +367,27 @@ class VentaController extends Controller
 
         $hoy = now()->format('Y-m-d');
 
-        // 1. Obtenemos el precio BASE de la sucursal primero (para no depender de relaciones complejas en Lote)
-        $precioBase = MedicamentoSucursal::where('medicamento_id', $request->medicamento_id)
+        // 1. OBTENER PRECIOS Y DATOS DEL PRODUCTO
+        $ms = MedicamentoSucursal::with('medicamento') // Cargamos la relación del medicamento
+            ->where('medicamento_id', $request->medicamento_id)
             ->where('sucursal_id', $request->sucursal_id)
-            ->value('precio_venta'); // Obtiene solo el valor float directo
+            ->first();
 
-        $precioBase = $precioBase ? (float)$precioBase : 0.00;
+        if (!$ms) return response()->json([]);
 
-        // 2. Buscamos los lotes
+        // Preparamos datos maestros
+        $precios = [
+            'unidad'  => (float) $ms->precio_venta,
+            'blister' => (float) $ms->precio_blister,
+            'caja'    => (float) $ms->precio_caja
+        ];
+
+        $factores = [
+            'blister' => $ms->medicamento->unidades_por_blister ?? 0,
+            'caja'    => $ms->medicamento->unidades_por_envase ?? 1
+        ];
+
+        // 2. BUSCAR LOTES
         $lotes = Lote::where('medicamento_id', $request->medicamento_id)
             ->where('sucursal_id', $request->sucursal_id)
             ->where('stock_actual', '>', 0)
@@ -385,23 +395,18 @@ class VentaController extends Controller
                 $q->whereDate('fecha_vencimiento', '>=', $hoy)
                     ->orWhereNull('fecha_vencimiento');
             })
-            ->orderBy('fecha_vencimiento', 'asc') // Prioridad: Vencimiento más próximo primero (FIFO/FEFO)
+            ->orderBy('fecha_vencimiento', 'asc')
             ->get()
-            ->map(function ($lote) use ($precioBase) {
+            ->map(function ($lote) use ($precios, $factores) {
                 return [
                     'id'                => $lote->id,
                     'codigo_lote'       => $lote->codigo_lote,
-                    'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('Y-m-d'),
-                    'ubicacion'         => $lote->ubicacion,
-                    'stock_actual'      => $lote->stock_actual,
+                    'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('d/m/Y'),
+                    'stock_actual'      => $lote->stock_actual, // Stock siempre en unidades
 
-                    // Usamos el precio base que buscamos arriba
-                    'precio_venta'      => $precioBase,
-
-                    // Si el lote tiene oferta específica, la mandamos
-                    'precio_oferta'     => $lote->precio_oferta !== null
-                        ? (float) $lote->precio_oferta
-                        : null,
+                    'precios'           => $precios,
+                    'factores'          => $factores,
+                    'precio_oferta'     => $lote->precio_oferta ? (float)$lote->precio_oferta : null,
                 ];
             });
 
