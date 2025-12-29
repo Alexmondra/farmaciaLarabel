@@ -42,20 +42,36 @@ class VentaService
 
             // 2. PROCESAR ITEMS
             $items = json_decode($data['items'], true);
+            if (!is_array($items) || empty($items)) {
+                throw new Exception("El carrito está vacío o es inválido.");
+            }
+
             $itemsProcesados = [];
 
-            $rawOpGravada = 0;
+            $rawOpGravada   = 0;
             $rawOpExonerada = 0;
-            $rawIgv = 0;
-            $rawTotalVenta = 0;
+            $rawIgv         = 0;
+            $rawTotalVenta  = 0;
 
             foreach ($items as $index => $item) {
-                $loteId = $item['id'] ?? $item['lote_id'] ?? null;
-                if (!$loteId) throw new Exception("Error Item #" . ($index + 1));
 
-                $precioVenta = (float) ($item['precio_venta'] ?? $item['precio_unitario'] ?? 0);
-                $cantidad = (int) $item['cantidad'];
-                $subtotalItem = $precioVenta * $cantidad;
+                $loteId = $item['id'] ?? $item['lote_id'] ?? null;
+                if (!$loteId) throw new Exception("Error Item #" . ($index + 1) . ": lote_id no encontrado.");
+
+                // Cantidad "por presentación" (ej: 2 cajas / 3 blisters / 5 unidades)
+                $cantidadPresentacion = (int)($item['cantidad'] ?? 0);
+                if ($cantidadPresentacion <= 0) {
+                    throw new Exception("Error Item #" . ($index + 1) . ": cantidad inválida.");
+                }
+
+                // Tipo de presentación que viene del front: UNIDAD / BLISTER / CAJA
+                $unidadMedida = strtoupper($item['unidad_medida'] ?? 'UNIDAD');
+
+                // Precio según presentación (en tu front precio_venta es el precio de esa presentación)
+                $precioPresentacion = (float)($item['precio_venta'] ?? $item['precio_unitario'] ?? 0);
+                if ($precioPresentacion <= 0) {
+                    throw new Exception("Error Item #" . ($index + 1) . ": precio inválido.");
+                }
 
                 // --- BUSCAR MEDICAMENTO (PLAN A + PLAN B) ---
                 $medicamentoId = $item['medicamento_id'] ?? null;
@@ -63,32 +79,60 @@ class VentaService
 
                 if ($medicamentoId) {
                     $medicamento = Medicamento::find($medicamentoId);
-                } elseif ($loteId) {
+                } else {
                     $loteTemp = Lote::with('medicamento')->find($loteId);
                     if ($loteTemp) {
                         $medicamento = $loteTemp->medicamento;
-                        $medicamentoId = $medicamento->id;
+                        $medicamentoId = $medicamento?->id;
                     }
                 }
 
+                if (!$medicamento) {
+                    throw new Exception("Error Item #" . ($index + 1) . ": no se encontró el medicamento.");
+                }
+
+                // === FACTOR REAL (NO confiamos en el front) ===
+                $factor = 1;
+                if ($unidadMedida === 'CAJA') {
+                    $factor = (int)($medicamento->unidades_por_envase ?? 0);
+                } elseif ($unidadMedida === 'BLISTER') {
+                    $factor = (int)($medicamento->unidades_por_blister ?? 0);
+                } else {
+                    $factor = 1; // UNIDAD
+                }
+
+                if ($factor < 1) {
+                    throw new Exception("El producto '{$medicamento->nombre}' no tiene configurado el factor para {$unidadMedida}.");
+                }
+
+                // Cantidad TOTAL en unidades reales (esto es lo que debe ir a stock y SUNAT)
+                $cantidadUnidades = $cantidadPresentacion * $factor;
+
+                // Convertimos precio de presentación => precio por unidad real
+                // Ej: Caja S/ 35 con 100 unid => unit S/ 0.35
+                $precioUnit = round($precioPresentacion / $factor, 4);
+
+                // Subtotal consistente con DB (decimal 2)
+                $subtotalItem = round($precioUnit * $cantidadUnidades, 2);
+
                 // --- LÓGICA DE IMPUESTOS ---
-                $esExonerado = $esZonaAmazonia || ($medicamento && !$medicamento->afecto_igv);
+                $esExonerado = $esZonaAmazonia || !$medicamento->afecto_igv; // afecto_igv está en Medicamento :contentReference[oaicite:3]{index=3}
 
                 if ($esExonerado) {
                     // Exonerado (Código 20)
-                    $valorUnitario = $precioVenta;
+                    $valorUnitario = $precioUnit; // base = mismo (sin IGV)
                     $igvItemTotal = 0;
                     $codigoAfectacion = '20';
 
                     $rawOpExonerada += $subtotalItem;
                 } else {
                     // Gravado (Código 10)
-                    $valorUnitario = $precioVenta / 1.18;
-                    $igvItemTotal = ($precioVenta - $valorUnitario) * $cantidad;
+                    $valorUnitario = round($precioUnit / 1.18, 4);
+                    $igvItemTotal  = round(($precioUnit - $valorUnitario) * $cantidadUnidades, 2);
                     $codigoAfectacion = '10';
 
-                    $rawOpGravada += ($valorUnitario * $cantidad);
-                    $rawIgv += $igvItemTotal;
+                    $rawOpGravada += round($valorUnitario * $cantidadUnidades, 2);
+                    $rawIgv       += $igvItemTotal;
                 }
 
                 $rawTotalVenta += $subtotalItem;
@@ -96,15 +140,30 @@ class VentaService
                 $itemsProcesados[] = [
                     'lote_id' => $loteId,
                     'medicamento_id' => $medicamentoId,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precioVenta,
-                    'valor_unitario' => $valorUnitario,
+
+                    // Lo que guardamos y usamos para SUNAT: UNIDADES REALES
+                    'cantidad' => $cantidadUnidades,
+
+                    // Precios por UNIDAD REAL
+                    'precio_unitario' => $precioUnit,
+                    'valor_unitario'  => $valorUnitario,
+
                     'igv' => $igvItemTotal,
                     'subtotal_neto' => $subtotalItem,
-                    'subtotal_bruto' => $valorUnitario * $cantidad, // <--- CORREGIDO AQUÍ
-                    'tipo_afectacion' => $codigoAfectacion
+
+                    // Subtotales base (sin impuestos)
+                    'subtotal_bruto' => round($valorUnitario * $cantidadUnidades, 2),
+
+                    'tipo_afectacion' => $codigoAfectacion,
+
+                    // Metadata opcional (no se guarda en DB, pero útil para debug/log)
+                    'unidad_medida' => $unidadMedida,
+                    'factor' => $factor,
+                    'cantidad_presentacion' => $cantidadPresentacion,
+                    'precio_presentacion' => $precioPresentacion,
                 ];
             }
+
             // 3. DESCUENTOS
             $descuentoDinero = isset($data['descuento_puntos']) ? (float)$data['descuento_puntos'] : 0;
             $puntosUsados = isset($data['puntos_usados']) ? (int)$data['puntos_usados'] : 0;
@@ -113,10 +172,10 @@ class VentaService
 
             $factorAjuste = ($rawTotalVenta > 0) ? (1 - ($descuentoDinero / $rawTotalVenta)) : 1;
 
-            $finalOpGravada = $rawOpGravada * $factorAjuste;
-            $finalOpExonerada = $rawOpExonerada * $factorAjuste;
-            $finalIgv = $rawIgv * $factorAjuste;
-            $finalTotalNeto = $rawTotalVenta - $descuentoDinero;
+            $finalOpGravada   = round($rawOpGravada * $factorAjuste, 2);
+            $finalOpExonerada = round($rawOpExonerada * $factorAjuste, 2);
+            $finalIgv         = round($rawIgv * $factorAjuste, 2);
+            $finalTotalNeto   = round($rawTotalVenta - $descuentoDinero, 2);
 
             // 4. SERIE Y NUMERO
             $tipoComp = $data['tipo_comprobante'];
@@ -125,13 +184,13 @@ class VentaService
             $ultimoCorrelativo = Venta::where('tipo_comprobante', $tipoComp)->where('serie', $serie)->max('numero');
             $nuevoNumero = $ultimoCorrelativo ? ($ultimoCorrelativo + 1) : 1;
 
-
             $montoRecibido = 0;
             if ($data['medio_pago'] === 'EFECTIVO') {
                 $montoRecibido = !empty($data['paga_con']) ? (float)$data['paga_con'] : $finalTotalNeto;
             } else {
                 $montoRecibido = $finalTotalNeto;
             }
+
             // 5. CREAR VENTA
             $venta = Venta::create([
                 'caja_sesion_id'   => $caja->id,
@@ -146,20 +205,26 @@ class VentaService
                 'monto_recibido'   => round($montoRecibido, 2),
                 'referencia_pago'  => $data['referencia_pago'] ?? null,
                 'estado'           => 'EMITIDA',
-                'total_bruto'     => round($finalOpGravada + $finalOpExonerada, 2),
-                'total_descuento' => round($descuentoDinero, 2),
-                'total_neto'      => round($finalTotalNeto, 2),
-                'op_gravada'   => round($finalOpGravada, 2),
-                'op_exonerada' => round($finalOpExonerada, 2),
-                'op_inafecta'  => 0,
-                'total_igv'    => round($finalIgv, 2),
-                'porcentaje_igv' => $sucursal->impuesto_porcentaje,
+
+                'total_bruto'      => round($finalOpGravada + $finalOpExonerada, 2),
+                'total_descuento'  => round($descuentoDinero, 2),
+                'total_neto'       => round($finalTotalNeto, 2),
+
+                'op_gravada'       => $finalOpGravada,
+                'op_exonerada'     => $finalOpExonerada,
+                'op_inafecta'      => 0,
+                'total_igv'        => $finalIgv,
+                'porcentaje_igv'   => $sucursal->impuesto_porcentaje,
             ]);
 
-            // 6. GUARDAR DETALLES
+            // 6. GUARDAR DETALLES + DESCONTAR STOCK (EN UNIDADES REALES)
             foreach ($itemsProcesados as $item) {
                 $lote = Lote::lockForUpdate()->find($item['lote_id']);
-                if (!$lote || $lote->stock_actual < $item['cantidad']) throw new Exception("Stock insuficiente");
+
+                if (!$lote) throw new Exception("Lote no encontrado.");
+                if ($lote->stock_actual < $item['cantidad']) {
+                    throw new Exception("Stock insuficiente en lote {$lote->id}. Solicitas {$item['cantidad']} unid, quedan {$lote->stock_actual}.");
+                }
 
                 $lote->decrement('stock_actual', $item['cantidad']);
 
@@ -167,15 +232,16 @@ class VentaService
                     'venta_id'        => $venta->id,
                     'lote_id'         => $item['lote_id'],
                     'medicamento_id'  => $item['medicamento_id'] ?? $lote->medicamento_id,
-                    'cantidad'        => $item['cantidad'],
-                    'precio_unitario' => $item['precio_unitario'],
+
+                    'cantidad'        => $item['cantidad'], // unidades reales
+                    'precio_unitario' => $item['precio_unitario'], // por unidad real
+
                     'valor_unitario'  => $item['valor_unitario'],
-                    'igv'             => $item['igv'] * $factorAjuste,
-                    'subtotal_neto'   => $item['subtotal_neto'],
-                    'subtotal_bruto'  => $item['valor_unitario'] * $item['cantidad'],
+                    'igv'           => round($item['igv'] * $factorAjuste, 2),
+                    'subtotal_neto' => round($item['subtotal_neto'] * $factorAjuste, 2),
+                    'subtotal_bruto' => round($item['subtotal_bruto'] * $factorAjuste, 2),
                     'subtotal_descuento' => 0,
-                    // AQUÍ ESTÁ LA CORRECCIÓN VISUAL:
-                    'tipo_afectacion' => $item['tipo_afectacion']
+                    'tipo_afectacion' => $item['tipo_afectacion'],
                 ]);
             }
 
@@ -200,6 +266,7 @@ class VentaService
             return $venta;
         });
     }
+
 
     public function anularVenta(User $user, Venta $venta, string $motivo): NotaCredito
     {

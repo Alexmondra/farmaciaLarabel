@@ -130,72 +130,80 @@ class CompraController extends Controller
         $ctx  = $this->sucursalResolver->resolverPara($user);
         $sucursalSeleccionada = $ctx['sucursal_seleccionada'];
 
-        if (!$sucursalSeleccionada) {
-            return redirect()->back()->with('error', 'Debes seleccionar una sucursal.');
-        }
+        if (!$sucursalSeleccionada) return redirect()->back()->with('error', 'Seleccione una sucursal.');
 
-        // 1) VALIDACIÓN
+        // 1. VALIDACIÓN
         $data = $request->validate([
+            // Cabecera
             'proveedor_id'             => 'required|exists:proveedores,id',
             'fecha_recepcion'          => 'required|date',
-            'tipo_comprobante'         => 'nullable|string|max:30',
-            'numero_factura_proveedor' => 'nullable|string|max:100',
-            'observaciones'            => 'nullable|string|max:500',
-            'archivo_comprobante'      => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
+            'tipo_comprobante'         => 'nullable|string',
+            'numero_factura_proveedor' => 'nullable|string',
+            'observaciones'            => 'nullable|string',
+            'archivo_comprobante'      => 'nullable|file|max:10240|mimes:pdf,jpg,jpeg,png', // Max 10MB
 
+            // Items (Arrays)
             'items'                            => 'required|array|min:1',
-            'items.*.medicamento_id'           => 'required|exists:medicamentos,id',
-            'items.*.codigo_lote'              => 'nullable|string|max:80',
-            'items.*.fecha_vencimiento'        => 'nullable|date',
+            'items.*.medicamento_id'           => 'required|integer',
+            'items.*.codigo_lote'              => 'required|string', // Lote obligatorio
+            'items.*.fecha_vencimiento'        => 'required|date',   // Vencimiento obligatorio
+
+            // Cantidades y Costos (Calculados por JS)
             'items.*.cantidad_recibida'        => 'required|integer|min:1',
             'items.*.precio_compra_unitario'   => 'required|numeric|min:0',
-            'items.*.precio_oferta'            => 'nullable|numeric|min:0',
-            // NUEVO CAMPO VALIDADO
-            'items.*.precio_venta'             => 'required|numeric|min:0',
-            'items.*.ubicacion'                => 'nullable|string|max:100',
+
+            // Precios de Venta (Nuevos campos)
+            'items.*.precio_venta'             => 'required|numeric|min:0',      // Unidad
+            'items.*.precio_venta_blister'     => 'nullable|numeric|min:0',      // Blíster
+            'items.*.precio_venta_caja'        => 'nullable|numeric|min:0',      // Caja
+            'items.*.precio_oferta'            => 'nullable|numeric|min:0',      // Oferta
+
+            'items.*.ubicacion'                => 'nullable|string',
         ]);
 
-        // 2) SUBIDA DE ARCHIVO (Igual que antes...)
+        // 2. ARCHIVO PRIVADO (Seguridad)
         $pathArchivo = null;
         if ($request->hasFile('archivo_comprobante')) {
-            $pathArchivo = $request->file('archivo_comprobante')->store('compras', 'public');
+            // Guardamos en el disco 'local' (storage/app), NO en 'public'.
+            // Carpeta: compras_documentos
+            $pathArchivo = $request->file('archivo_comprobante')->store('compras_documentos', 'local');
         }
 
-        // 3) TRANSACCIÓN
+        // 3. TRANSACCIÓN DB
         $compra = DB::transaction(function () use ($data, $user, $sucursalSeleccionada, $pathArchivo) {
 
-            // 3.1 CABECERA (Igual que antes...)
+            // A. Crear Cabecera
             $compra = Compra::create([
                 'proveedor_id'             => $data['proveedor_id'],
                 'sucursal_id'              => $sucursalSeleccionada->id,
                 'user_id'                  => $user->id,
-                'numero_factura_proveedor' => $data['numero_factura_proveedor'] ?? null,
+                'numero_factura_proveedor' => $data['numero_factura_proveedor'],
                 'fecha_recepcion'          => $data['fecha_recepcion'],
-                'costo_total_factura'      => 0,
-                'observaciones'            => $data['observaciones'] ?? null,
-                'estado'                   => 'recibida',
-                'tipo_comprobante'         => $data['tipo_comprobante'] ?? null,
-                'archivo_comprobante'      => $pathArchivo,
+                'tipo_comprobante'         => $data['tipo_comprobante'],
+                'observaciones'            => $data['observaciones'],
+                'archivo_comprobante'      => $pathArchivo, // Guardamos la ruta privada
+                'estado'                   => 'registrada',
+                'costo_total_factura'      => 0
             ]);
 
-            $total = 0;
+            $totalCompra = 0;
 
-            // 3.2 ITEMS
+            // B. Procesar Items
             foreach ($data['items'] as $item) {
 
-                // A. LOTE (Igual...)
+                // 1. Crear Lote (Stock entra en UNIDADES TOTALES)
                 $lote = Lote::create([
                     'medicamento_id'    => $item['medicamento_id'],
                     'sucursal_id'       => $sucursalSeleccionada->id,
-                    'codigo_lote'       => $item['codigo_lote'] ?? null,
+                    'codigo_lote'       => strtoupper($item['codigo_lote']),
                     'stock_actual'      => $item['cantidad_recibida'],
-                    'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
+                    'fecha_vencimiento' => $item['fecha_vencimiento'],
                     'ubicacion'         => $item['ubicacion'] ?? null,
                     'precio_compra'     => $item['precio_compra_unitario'],
                     'precio_oferta'     => $item['precio_oferta'] ?? null,
                 ]);
 
-                // B. DETALLE (Igual...)
+                // 2. Detalle Compra (Histórico)
                 DetalleCompra::create([
                     'compra_id'              => $compra->id,
                     'lote_id'                => $lote->id,
@@ -203,37 +211,52 @@ class CompraController extends Controller
                     'precio_compra_unitario' => $item['precio_compra_unitario'],
                 ]);
 
-                // C. MEDICAMENTO_SUCURSAL (ACTUALIZAR PRECIO VENTA)
-                // Usamos firstOrNew para buscar si existe. Si no, crea instancia vacía.
-                $medSucursal = MedicamentoSucursal::withTrashed()->firstOrNew([
+                // 3. Actualizar Precios en la Sucursal (Pivote)
+                $ms = MedicamentoSucursal::withTrashed()->firstOrNew([
                     'medicamento_id' => $item['medicamento_id'],
                     'sucursal_id'    => $sucursalSeleccionada->id
                 ]);
 
-                if ($medSucursal->trashed()) {
-                    $medSucursal->restore();
-                }
+                if ($ms->trashed()) $ms->restore();
 
-                $medSucursal->precio_venta = $item['precio_venta'];
-                $medSucursal->activo       = true;
-                $medSucursal->updated_by   = $user->id;
-                // Si es nuevo registro, definimos stock mínimo por defecto
-                if (!$medSucursal->exists) {
-                    $medSucursal->stock_minimo = 10;
-                }
+                // Actualizamos TODOS los precios configurados
+                $ms->precio_venta   = $item['precio_venta'];
+                $ms->precio_blister = $item['precio_venta_blister'] ?? null;
+                $ms->precio_caja    = $item['precio_venta_caja'] ?? null; // <--- Nuevo campo Caja
 
-                $medSucursal->save();
+                $ms->activo         = true;
+                $ms->save();
 
-                $total += $item['cantidad_recibida'] * $item['precio_compra_unitario'];
+                // Sumar al total de la factura
+                $totalCompra += ($item['cantidad_recibida'] * $item['precio_compra_unitario']);
             }
 
-            $compra->update(['costo_total_factura' => $total]);
+            // Actualizar total final cabecera
+            $compra->update(['costo_total_factura' => $totalCompra]);
+
             return $compra;
         });
 
-        return redirect()
-            ->route('compras.show', $compra->id)
-            ->with('success', 'Compra registrada exitosamente.');
+        return redirect()->route('compras.show', $compra->id)
+            ->with('success', 'Compra registrada correctamente.');
+    }
+
+    /**
+     * NUEVO MÉTODO: Descargar archivo privado
+     */
+    public function descargarComprobante($id)
+    {
+        $compra = Compra::findOrFail($id);
+
+        // Seguridad: Verificar si el usuario tiene permiso o pertenece a la sucursal
+        // ... (Tu lógica de permisos aquí) ...
+
+        if (!$compra->archivo_comprobante) {
+            abort(404, 'No hay archivo adjunto.');
+        }
+
+        // Descarga segura desde storage/app/compras_documentos
+        return response()->download(storage_path("app/{$compra->archivo_comprobante}"));
     }
 
 

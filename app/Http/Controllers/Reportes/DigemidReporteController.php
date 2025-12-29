@@ -6,7 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventario\MedicamentoSucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\DB; // Importante para DB::raw
+use Illuminate\Support\Facades\DB;
+use App\Exports\DigemidExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class DigemidReporteController extends Controller
 {
@@ -122,6 +126,38 @@ class DigemidReporteController extends Controller
     }
 
     public function exportar(Request $request)
-    { /* Pendiente */
+    {
+        $sucursalId = Session::get('sucursal_id') ?? auth()->user()->sucursal_id;
+        if (!$sucursalId) {
+            return back()->withErrors(['sucursal' => 'Selecciona una sucursal primero.']);
+        }
+
+        // Columnas
+        $colsDefault = ['cod_establecimiento', 'codigo_digemid', 'nombre', 'laboratorio', 'precio_venta', 'stock_computado', 'estado'];
+        $colsSeleccionadas = $request->input('cols', $colsDefault);
+
+        // Data (misma consulta, sin paginar)
+        $query = $this->construirConsulta($request, $sucursalId);
+        $resultados = $query->get();
+
+        $format = strtolower($request->input('format', 'excel'));
+        $timestamp = now()->format('Ymd_His');
+        $nombreBase = "digemid_{$timestamp}";
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('reportes.digemid.pdf', [
+                'resultados' => $resultados,
+                'colsSeleccionadas' => $colsSeleccionadas,
+                'columnasDisponibles' => $this->columnasMaestras,
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download($nombreBase . '.pdf');
+        }
+
+        // Excel por defecto
+        return Excel::download(
+            new DigemidExport($resultados, $colsSeleccionadas, $this->columnasMaestras),
+            $nombreBase . '.xlsx'
+        );
     }
 }

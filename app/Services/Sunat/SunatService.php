@@ -189,7 +189,7 @@ class SunatService
             $porcentaje     = $tieneIgv ? 18.00 : 0.00;
 
             // Base imponible del ítem (Cantidad * ValorUnitario)
-            $baseItem = $det->valor_unitario * $det->cantidad;
+            $baseItem = round((float)$det->subtotal_bruto, 2);
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')

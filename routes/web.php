@@ -225,6 +225,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reportes/ventas-historial', [ReporteVentasController::class, 'ventasHistorial'])
         ->name('reportes.ventas-historial');
 
+    Route::get('/reportes/ventas/historial/export-excel', [ReporteVentasController::class, 'exportarExcelHistorial'])
+        ->name('reportes.ventas-historial.export-excel');
+
     Route::get('reportes/ventas-anuladas', [ReporteVentasController::class, 'ventasAnuladas'])
         ->name('reportes.ventas-anuladas');
 

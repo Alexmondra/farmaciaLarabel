@@ -162,13 +162,15 @@ class MedicamentoController extends Controller
             ->where(function ($query) use ($term) {
                 $query->where('nombre', 'LIKE', "%$term%")
                     ->orWhere('codigo', 'LIKE', "$term%")
-                    ->orWhere('codigo_barra', 'LIKE', "$term%");
+                    ->orWhere('codigo_barra', 'LIKE', "$term%")
+                    ->orWhere('codigo_barra_blister', 'LIKE', "$term%");
             })
             ->where('activo', true)
             ->limit(20)
             ->get();
 
         $results = $medicamentos->map(function ($med) {
+            // Obtenemos la data de la sucursal (precios, stock)
             $sucursalData = $med->sucursales->first()->pivot ?? null;
             $imgUrl = $med->imagen_path ? asset('storage/' . $med->imagen_path) : null;
 
@@ -178,26 +180,41 @@ class MedicamentoController extends Controller
 
                 // === DATOS COMPLETOS PARA JS ===
                 'full_data' => [
-                    'id'                  => $med->id,
-                    'nombre'              => $med->nombre,
-                    'codigo'              => $med->codigo ?? 'S/C',
-                    'codigo_barra'        => $med->codigo_barra ?? '',
-                    'laboratorio'         => $med->laboratorio ?? '',
+                    // IDENTIFICACIÓN
+                    'id'                   => $med->id,
+                    'nombre'               => $med->nombre,
+                    'codigo'               => $med->codigo ?? 'S/C',
+                    'codigo_digemid'       => $med->codigo_digemid ?? '',
+                    'codigo_barra'         => $med->codigo_barra ?? '',
+                    'codigo_barra_blister' => $med->codigo_barra_blister ?? '',
 
-                    // CORRECCIÓN 1: Agregamos categoria_id para que el Select funcione
-                    'categoria_id'        => $med->categoria_id,
-                    'categoria'           => $med->categoria ? $med->categoria->nombre : 'Sin Categoría',
-                    'forma_farmaceutica'  => $med->forma_farmaceutica ?? '',
-                    'presentacion'        => $med->presentacion ?? '',
-                    'concentracion'       => $med->concentracion ?? '',
-                    'registro_sanitario'  => $med->registro_sanitario ?? '',
-                    'descripcion'         => $med->descripcion ?? '',
-                    'unidades_por_envase' => $med->unidades_por_envase ?? 1,
-                    'afecto_igv'          => $med->afecto_igv, // Booleano
+                    // CLASIFICACIÓN
+                    'laboratorio'          => $med->laboratorio ?? '',
+                    'categoria_id'         => $med->categoria_id,
+                    'categoria_nombre'     => $med->categoria ? $med->categoria->nombre : 'Sin Categoría',
 
-                    'stock_actual'        => $sucursalData->stock_actual ?? 0,
-                    'precio_venta'        => $sucursalData->precio_venta ?? 0,
-                    'imagen_url'          => $imgUrl
+                    // DETALLES
+                    'forma_farmaceutica'   => $med->forma_farmaceutica ?? '',
+                    'presentacion'         => $med->presentacion ?? '',
+                    'concentracion'        => $med->concentracion ?? '',
+                    'registro_sanitario'   => $med->registro_sanitario ?? '',
+                    'descripcion'          => $med->descripcion ?? '',
+
+                    // UNIDADES Y FACTORES
+                    'unidades_por_envase'  => $med->unidades_por_envase ?? 1,
+                    'unidades_por_blister' => $med->unidades_por_blister ?? 0,
+
+                    // BOOLEANOS
+                    'afecto_igv'           => $med->afecto_igv,
+                    'receta_medica'        => $med->receta_medica,
+
+                    // DATOS DE SUCURSAL (PRECIOS Y STOCK)
+                    'stock_actual'         => $sucursalData->stock_actual ?? 0,
+                    'precio_venta'         => $sucursalData->precio_venta ?? 0,     // Precio Unidad
+                    'precio_blister'       => $sucursalData->precio_blister ?? 0,   // Precio Blíster
+                    'precio_caja'          => $sucursalData->precio_caja ?? 0,      // Precio Caja (opcional)
+
+                    'imagen_url'           => $imgUrl
                 ]
             ];
         });

@@ -9,6 +9,8 @@ use App\Models\Sucursal;
 use App\Services\SucursalResolver;
 use Carbon\Carbon;
 use App\Services\ComprobanteService;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\Ventas\VentasHistorialExport;
 
 
 class ReporteVentasController extends Controller
@@ -281,5 +283,48 @@ class ReporteVentasController extends Controller
         $venta = Venta::with(['detalles.medicamento', 'cliente', 'sucursal'])
             ->findOrFail($id);
         return $pdfService->generarPdf($venta, 'stream');
+    }
+
+
+
+
+
+    public function exportarExcelHistorial(Request $request, SucursalResolver $resolver)
+    {
+        $acceso = $resolver->resolverPara(auth()->user());
+
+        // Fechas (igual que tu historial)
+        try {
+            $fechaInicio = $request->filled('fecha_inicio')
+                ? \Carbon\Carbon::parse($request->fecha_inicio)->startOfDay()
+                : \Carbon\Carbon::now()->startOfMonth();
+
+            $fechaFin = $request->filled('fecha_fin')
+                ? \Carbon\Carbon::parse($request->fecha_fin)->endOfDay()
+                : \Carbon\Carbon::now()->endOfDay();
+        } catch (\Exception $e) {
+            $fechaInicio = \Carbon\Carbon::now()->startOfMonth();
+            $fechaFin    = \Carbon\Carbon::now()->endOfDay();
+        }
+
+        $modo = $request->input('modo', 'ambos'); // ventas | detalles | ambos
+        if (!in_array($modo, ['ventas', 'detalles', 'ambos'])) {
+            $modo = 'ambos';
+        }
+
+        $filters = [
+            'fecha_inicio' => $fechaInicio->toDateTimeString(),
+            'fecha_fin'    => $fechaFin->toDateTimeString(),
+            'sucursal_id'  => $request->input('sucursal_id'),
+            'search'       => $request->input('search'),
+            'ids_filtro'   => $acceso['ids_filtro'],
+            'modo'         => $modo,
+        ];
+
+
+
+        $fileName = "ventas_{$fechaInicio->format('Ymd')}_{$fechaFin->format('Ymd')}_{$modo}.xlsx";
+
+        return Excel::download(new VentasHistorialExport($filters), $fileName);
     }
 }

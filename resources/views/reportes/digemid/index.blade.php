@@ -79,10 +79,17 @@
 
                     <div class="col-lg-2 col-md-2 text-end">
                         <label class="d-block mb-1 text-white">.</label>
-                        <button type="button" id="btnExportarExcel" class="btn btn-success w-100 fw-bold shadow-sm">
-                            <i class="fas fa-file-excel mr-2"></i> Exportar
-                        </button>
+
+                        <div class="btn-group w-100">
+                            <button type="button" id="btnExportarExcel" class="btn btn-success fw-bold shadow-sm">
+                                <i class="fas fa-file-excel mr-2"></i> Excel
+                            </button>
+                            <button type="button" id="btnExportarPdf" class="btn btn-danger fw-bold shadow-sm">
+                                <i class="fas fa-file-pdf mr-2"></i> PDF
+                            </button>
+                        </div>
                     </div>
+
 
                 </div>
             </div>
@@ -195,5 +202,17 @@
             }
         });
     }
+
+    $('#btnExportarExcel').on('click', function() {
+        let url = "{{ route('digemid.exportar') }}";
+        let params = $('#filterForm').serialize();
+        window.location.href = url + "?format=excel&" + params;
+    });
+
+    $('#btnExportarPdf').on('click', function() {
+        let url = "{{ route('digemid.exportar') }}";
+        let params = $('#filterForm').serialize();
+        window.location.href = url + "?format=pdf&" + params;
+    });
 </script>
 @endsection

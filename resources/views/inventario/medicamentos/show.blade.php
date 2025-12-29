@@ -139,7 +139,7 @@
                                 <th class="d-none d-sm-table-cell">Vencimiento</th>
                                 <th>Stock</th>
                                 <th class="d-none d-md-table-cell">Ubicación</th>
-                                <th>Precios</th>
+                                <th>Precios Oferta</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -184,7 +184,6 @@
                                         </span>
                                     </div>
                                     @else
-                                    S/ {{ number_format($lote->precio_compra ?? $item['precio'], 2) }}
                                     @endif
                                 </td>
                                 </tr>

@@ -383,14 +383,8 @@ return [
                 [
                     'text' => 'Digemid / Minsa',
                     'icon' => 'fas fa-file-medical',
-                    // 'can' => 'reportes.digemid',
-                    'submenu' => [
-                        [
-                            'text' => 'Exportar Precios',
-                            'url'  => 'reportes/reporte-digemid',
-                            'icon' => 'far fa-circle text-primary'
-                        ],
-                    ],
+                    'url'  => 'reportes/reporte-digemid',
+
                 ],
 
             ],

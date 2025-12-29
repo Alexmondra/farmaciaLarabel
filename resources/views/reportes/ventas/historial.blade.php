@@ -243,6 +243,24 @@
                     </div>
 
                 </div>
+                {{-- debajo del row actual (después de la columna Search) --}}
+                <div class="col-12 col-md-3 mt-3 mt-md-0">
+                    <label class="text-white small mb-1"><i class="fas fa-file-excel"></i> Exportar</label>
+
+                    <div class="d-flex gap-2">
+                        <select id="modoExport" class="input-futuristic" style="min-width: 140px;">
+                            <option value="ambos">Ventas + Detalles</option>
+                            <option value="ventas">Solo Ventas</option>
+                            <option value="detalles">Solo Detalles</option>
+                        </select>
+
+                        <button type="button" class="btn btn-light" onclick="exportarExcel()">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+
+
             </div>
 
             <div id="loadingOverlay" style="display:none; position:absolute; z-index:50; width:100%; height:100%; background:rgba(255,255,255,0.7); align-items:center; justify-content:center; top:0; left:0;">
@@ -341,5 +359,24 @@
             cargarTabla(page);
         }
     });
+
+
+
+
+
+    function exportarExcel() {
+        let inicio = document.getElementById('fecha_inicio').value;
+        let fin = document.getElementById('fecha_fin').value;
+
+        let sucursalElement = document.getElementById('filtroSucursal');
+        let sucursal = sucursalElement ? sucursalElement.value : '';
+
+        let search = document.getElementById('filtroSearch').value;
+        let modo = document.getElementById('modoExport').value;
+
+        let url = `{{ route('reportes.ventas-historial.export-excel') }}?fecha_inicio=${inicio}&fecha_fin=${fin}&sucursal_id=${sucursal}&search=${encodeURIComponent(search)}&modo=${modo}`;
+
+        window.location.href = url;
+    }
 </script>
 @endsection
