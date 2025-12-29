@@ -380,6 +380,19 @@ return [
                         ['text' => 'Stock Bajo/Reponer', 'url' => 'reportes/stock-bajo',   'icon' => 'far fa-circle text-warning'],
                     ],
                 ],
+                [
+                    'text' => 'Digemid / Minsa',
+                    'icon' => 'fas fa-file-medical',
+                    // 'can' => 'reportes.digemid',
+                    'submenu' => [
+                        [
+                            'text' => 'Exportar Precios',
+                            'url'  => 'reportes/reporte-digemid',
+                            'icon' => 'far fa-circle text-primary'
+                        ],
+                    ],
+                ],
+
             ],
         ],
         // 7. CONFIGURACIÓN (Seguridad y Parámetros juntos)

@@ -12,10 +12,8 @@
         body {
             font-family: 'Nunito', sans-serif;
             background-color: #f1f5f9;
-            /* Slate-100: Suave y profesional */
         }
 
-        /* Corrección de color para autocompletado de Chrome */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
@@ -25,13 +23,11 @@
             transition: background-color 5000s ease-in-out 0s;
         }
 
-        /* PERSONAJE */
         .avatar-svg {
             width: 120px;
             height: 120px;
             position: absolute;
             top: -60px;
-            /* Sale por arriba */
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
@@ -42,7 +38,6 @@
             transform-origin: bottom center;
         }
 
-        /* Posición inicial de las manos (escondidas abajo) */
         .arm-left {
             transform: translateY(110px) rotate(-10deg);
         }
@@ -51,7 +46,6 @@
             transform: translateY(110px) rotate(10deg);
         }
 
-        /* Estado: Taparse los ojos */
         .cover-eyes .arm-left {
             transform: translateY(15px) translateX(5px) rotate(10deg);
         }

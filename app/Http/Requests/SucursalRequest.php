@@ -45,7 +45,7 @@ class SucursalRequest extends FormRequest
             'serie_nc_boleta'     => ['required', 'string', 'max:4', Rule::unique('sucursales')->ignore($id)],
             'serie_nc_factura'    => ['required', 'string', 'max:4', Rule::unique('sucursales')->ignore($id)],
             'serie_guia'          => ['required', 'string', 'max:4', Rule::unique('sucursales')->ignore($id)],
-
+            'cod_establecimiento_digemid' => 'nullable|string|max:50',
             'activo'              => ['sometimes', 'boolean'],
         ];
     }

@@ -11,6 +11,7 @@ class Medicamento extends Model
 {
     protected $fillable = [
         'codigo',
+        'codigo_digemid',
         'nombre',
         'forma_farmaceutica',
         'concentracion',
@@ -24,13 +25,12 @@ class Medicamento extends Model
         'categoria_id',
         'user_id',
         'activo',
-        // --- NUEVO CAMPO IMPORTANTE ---
-        'afecto_igv', // true = Paga IGV (Normal), false = Exonerado (Cáncer, etc.)
+        'afecto_igv',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
-        'afecto_igv' => 'boolean', // <--- ¡Importante para que funcione tu if()!
+        'afecto_igv' => 'boolean',
     ];
 
     public function categoria()

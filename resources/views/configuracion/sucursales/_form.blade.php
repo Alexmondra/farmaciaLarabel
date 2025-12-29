@@ -31,14 +31,24 @@
 
     {{-- COLUMNA DERECHA: DATOS --}}
     <div class="col-12 col-md-9 pl-md-4">
+        {{-- FILA 1: CÓDIGOS Y NOMBRE --}}
         <div class="form-row">
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-dark">COD. SUNAT *</label>
                 <input type="text" name="codigo" class="form-control font-weight-bold" placeholder="0000" maxlength="4" required
                     value="{{ old('codigo', isset($sucursal) ? $sucursal->codigo : ($sugerenciaCodigo ?? '')) }}" autocomplete="off">
-
             </div>
-            <div class="form-group col-md-9">
+
+            {{-- === NUEVO CAMPO DIGEMID === --}}
+            <div class="form-group col-md-3">
+                <label class="small font-weight-bold text-primary">COD. DIGEMID</label>
+                <input type="text" name="cod_establecimiento_digemid" class="form-control font-weight-bold text-primary" placeholder="Ej: 0001234"
+                    value="{{ old('cod_establecimiento_digemid', $sucursal->cod_establecimiento_digemid ?? '') }}" autocomplete="off">
+                <small class="text-muted" style="font-size: 10px;">Requerido para Observatorio</small>
+            </div>
+            {{-- =========================== --}}
+
+            <div class="form-group col-md-6">
                 <label class="small font-weight-bold text-teal">NOMBRE SUCURSAL *</label>
                 <input type="text" name="nombre" class="form-control" placeholder="Ej: Oficina Principal" required
                     value="{{ old('nombre', $sucursal->nombre ?? '') }}" autocomplete="organization">
@@ -117,7 +127,6 @@
                 </div>
             </div>
 
-            {{-- Aquí estaba el problema: Si $sugerencia no existe, debe poner vacío, no fallar --}}
             <div class="form-group col-md-3">
                 <label class="small font-weight-bold text-primary">SERIE FACTURA</label>
                 <input type="text" name="serie_factura" class="form-control form-control-sm text-uppercase font-weight-bold letter-spacing-1" maxlength="4" required placeholder="F001"

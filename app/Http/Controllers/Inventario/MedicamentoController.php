@@ -201,6 +201,7 @@ class MedicamentoController extends Controller
         // 1. VALIDACIÓN RIGUROSA
         $request->validate([
             'codigo'              => 'required|string|max:30|unique:medicamentos,codigo',
+            'codigo_digemid'      => 'nullable|string|max:50',
             'nombre'              => 'required|string|max:180|unique:medicamentos,nombre', // Valida nombre repetido
             'codigo_barra'        => 'nullable|string|max:50|unique:medicamentos,codigo_barra', // Valida código barras repetido
             'laboratorio'         => 'nullable|string|max:120',
@@ -230,6 +231,7 @@ class MedicamentoController extends Controller
         // 3. CREAR MEDICAMENTO (Solo datos maestros)
         $medicamento = \App\Models\Inventario\Medicamento::create([
             'codigo'              => $request->codigo,
+            'codigo_digemid'      => $request->codigo_digemid,
             'nombre'              => $request->nombre,
             'codigo_barra'        => $request->codigo_barra,
             'laboratorio'         => $request->laboratorio,
@@ -260,6 +262,7 @@ class MedicamentoController extends Controller
 
         $request->validate([
             'codigo'       => 'required|string|max:30|unique:medicamentos,codigo,' . $id,
+            'codigo_digemid' => 'nullable|string|max:50',
             'nombre'       => 'required|string|max:180|unique:medicamentos,nombre,' . $id,
             'unidades_por_envase' => 'required|integer|min:1',
             // Validamos que sea booleano o 0/1
@@ -298,6 +301,7 @@ class MedicamentoController extends Controller
             'id'                  => $med->id,
             'nombre'              => $med->nombre,
             'codigo'              => $med->codigo ?? 'S/C',
+            'codigo_digemid'      => $med->codigo_digemid ?? '',
             'codigo_barra'        => $med->codigo_barra ?? '',
             'laboratorio'         => $med->laboratorio ?? '',
             'categoria_id'        => $med->categoria_id,
@@ -316,7 +320,7 @@ class MedicamentoController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Actualizado correctamente.',
-            'data'    => $fullData // ¡Enviamos los datos nuevos!
+            'data'    => $fullData
         ]);
     }
 }

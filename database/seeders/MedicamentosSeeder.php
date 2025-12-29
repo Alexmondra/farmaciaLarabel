@@ -85,6 +85,7 @@ class MedicamentosSeeder extends Seeder
             'CODIGO' => $iCodigo,
             'TIPOPRODUCTO' => $iTipo,
             'NOMBRE' => $iNombre,
+            'PAIS' => $iPais,
             'SITUACION' => $iSit,
             'NUMREGISTROSANITARIO' => $iRS,
         ];
@@ -105,46 +106,56 @@ class MedicamentosSeeder extends Seeder
             $row = $file->fgetcsv();
             if (!$row || $row === [null]) continue;
 
+            // 1) Solo activos
             $situacion = strtoupper(trim((string)($row[$iSit] ?? '')));
             if ($situacion !== 'ACTIVO') {
                 $skipped++;
                 continue;
             }
 
+            // 2) Solo medicamentos (si quieres incluir ALIMENTO/COSMETICO, borra este filtro)
             $tipo = strtoupper(trim((string)($row[$iTipo] ?? '')));
-            if ($tipo === '') {
+            if ($tipo !== 'PRODUCTO FARMACEUTICO') {
                 $skipped++;
                 continue;
             }
 
+            // 3) Solo los comercializados en Perú: PAIS = PERÚ/PERU (normalizado)
+            $paisRaw = trim((string)($row[$iPais] ?? ''));
+            $pais = $this->normalizePais($paisRaw);
+            if ($pais !== 'PERU') {
+                $skipped++;
+                continue;
+            }
+
+            // 4) Nombre obligatorio
             $nombre = trim((string)($row[$iNombre] ?? ''));
             if ($nombre === '') {
                 $skipped++;
                 continue;
             }
 
-            // GTIN (solo dígitos)
-            $gtinRaw = (string)($row[$iCodigo] ?? '');
-            $gtin = $this->digitsOnly($gtinRaw);
-
-            // Registro sanitario
+            // 5) Registro sanitario obligatorio (Perú comercializable)
             $rs = trim((string)($row[$iRS] ?? ''));
-
-            // codigo = GTIN, si no hay GTIN => RS (fallback)
-            $codigo = '';
-            if ($gtin !== '') {
-                $codigo = $gtin;
-            } elseif ($rs !== '') {
-                $codigo = $this->makeCodigoFromRS($rs); // seguro <= 30
-            } else {
+            if ($rs === '') {
                 $skipped++;
                 continue;
             }
 
-            // Resolver categoria_id por TIPOPRODUCTO
+            // 6) GTIN/EAN13 obligatorio (13 dígitos)
+            $gtinRaw = (string)($row[$iCodigo] ?? '');
+            $gtin = $this->digitsOnly($gtinRaw);
+            if (strlen($gtin) !== 13) {
+                $skipped++;
+                continue;
+            }
+
+            // codigo = GTIN
+            $codigo = $gtin;
+
+            // Resolver categoria_id por TIPOPRODUCTO (PRODUCTO FARMACEUTICO)
             $categoriaId = $categoriaMap[$tipo] ?? null;
             if (!$categoriaId) {
-                // Por si aparece un tipo nuevo (opcional: crear categoría al vuelo)
                 DB::table('categorias')->updateOrInsert(
                     ['nombre' => $tipo],
                     ['descripcion' => 'Auto import desde CATALOGO_GTIN_v4.csv', 'activo' => 1, 'created_at' => $now, 'updated_at' => $now]
@@ -157,7 +168,6 @@ class MedicamentosSeeder extends Seeder
             $conc  = $iConc  !== false ? trim((string)($row[$iConc]  ?? '')) : '';
             $pres  = $iPres  !== false ? trim((string)($row[$iPres]  ?? '')) : '';
             $lab   = $iLab   !== false ? trim((string)($row[$iLab]   ?? '')) : '';
-            $pais  = $iPais  !== false ? trim((string)($row[$iPais]  ?? '')) : '';
             $denom = $iDenom !== false ? trim((string)($row[$iDenom] ?? '')) : '';
 
             $uniRaw = $iUni !== false ? (string)($row[$iUni] ?? '') : '';
@@ -165,7 +175,7 @@ class MedicamentosSeeder extends Seeder
             if ($unidades <= 0) $unidades = 1;
 
             // descripcion = DENOMINACIONCOMUN | PAIS | TIPOPRODUCTO
-            $descParts = array_values(array_filter([$denom, $pais, $tipo], fn($x) => trim((string)$x) !== ''));
+            $descParts = array_values(array_filter([$denom, 'PERÚ', $tipo], fn($x) => trim((string)$x) !== ''));
             $descripcion = !empty($descParts) ? implode(' | ', $descParts) : null;
 
             $batch[] = [
@@ -176,7 +186,7 @@ class MedicamentosSeeder extends Seeder
                 'presentacion'        => $this->cut($pres, 120) ?: null,
                 'laboratorio'         => $this->cut($lab, 120) ?: null,
                 'registro_sanitario'  => $this->cut($rs, 60) ?: null,
-                'codigo_barra'        => $gtin !== '' ? $this->cut($gtin, 50) : null,
+                'codigo_barra'        => $this->cut($gtin, 50),
                 'descripcion'         => $descripcion,
                 'unidades_por_envase' => $unidades,
                 'afecto_igv'          => 1,
@@ -200,7 +210,7 @@ class MedicamentosSeeder extends Seeder
             $processed += count($batch);
         }
 
-        $this->command->info("MedicamentosSeeder OK. Upsert: {$processed} | Skipped: {$skipped}");
+        $this->command->info("MedicamentosSeeder (PERÚ+ACTIVO+RS+GTIN13) OK. Upsert: {$processed} | Skipped: {$skipped}");
     }
 
     private function flushUpsert(array $rows): void
@@ -242,21 +252,35 @@ class MedicamentosSeeder extends Seeder
         return $s ?: '';
     }
 
-    // Garantiza <= 30 y evita colisiones si RS es muy largo
-    private function makeCodigoFromRS(string $rs): string
-    {
-        $rs = trim($rs);
-        if (mb_strlen($rs) <= 30) return $rs;
-
-        // 20 + 1 + 9 = 30
-        $hash = substr(hash('crc32b', $rs), 0, 9);
-        return mb_substr($rs, 0, 20) . '_' . $hash;
-    }
-
     private function cut(string $value, int $max): string
     {
         $value = trim($value ?? '');
         if ($value === '') return '';
         return mb_substr($value, 0, $max);
+    }
+
+    // PERÚ / PERU / "Perú" -> PERU
+    private function normalizePais(string $pais): string
+    {
+        $p = trim($pais);
+        if ($p === '') return '';
+
+        $p = mb_strtoupper($p, 'UTF-8');
+
+        // Quitar tildes comunes (basta para PERÚ)
+        $p = strtr($p, [
+            'Á' => 'A',
+            'É' => 'E',
+            'Í' => 'I',
+            'Ó' => 'O',
+            'Ú' => 'U',
+            'Ü' => 'U',
+            'Ñ' => 'N',
+        ]);
+
+        // Normaliza espacios
+        $p = preg_replace('/\s+/', ' ', $p);
+
+        return $p;
     }
 }

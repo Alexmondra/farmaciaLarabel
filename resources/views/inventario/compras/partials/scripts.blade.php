@@ -130,6 +130,7 @@
                 $('#edit_med_id').val(info.id);
                 $('#edit_med_nombre').val(info.nombre);
                 $('#edit_med_codigo').val(info.codigo);
+                $('#edit_med_digemid').val(info.codigo_digemid);
                 $('#edit_med_barra').val(info.codigo_barra);
                 $('#edit_med_reg').val(info.registro_sanitario);
                 $('#edit_med_lab').val(info.laboratorio);

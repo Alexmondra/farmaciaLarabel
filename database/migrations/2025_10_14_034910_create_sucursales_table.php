@@ -34,6 +34,9 @@ return new class extends Migration {
             $table->string('serie_guia', 4)->nullable();    // Ej: T001 
             $table->string('serie_ticket', 4)->nullable();  // Ej: TK01
 
+            //-- digemid 
+            $table->string('cod_establecimiento_digemid')->nullable();
+
             $table->boolean('activo')->default(true);
             $table->timestamps();
         });

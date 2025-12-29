@@ -59,7 +59,7 @@
                         <th style="width: 30%">Medicamento</th>
                         <th style="width: 15%">Laboratorio</th>
                         <th style="width: 15%">Categoría</th>
-                        <th style="width: 10%" class="text-center">Digemid</th>
+                        <th style="width: 10%" class="text-center">C.Sanitario</th>
                         <th style="width: 15%" class="text-right">Acciones</th>
                     </tr>
                 </thead>
@@ -70,6 +70,7 @@
                     $medJson = [
                     'id' => $med->id,
                     'codigo' => $med->codigo,
+                    'codigo_digemid' => $med->codigo_digemid,
                     'codigo_barra' => $med->codigo_barra,
                     'registro_sanitario' => $med->registro_sanitario,
                     'nombre' => $med->nombre,
@@ -182,6 +183,7 @@
             $('#edit_med_id').val(info.id);
             $('#edit_med_nombre').val(info.nombre);
             $('#edit_med_codigo').val(info.codigo);
+            $('#edit_med_digemid').val(info.codigo_digemid);
             $('#edit_med_barra').val(info.codigo_barra);
             $('#edit_med_reg').val(info.registro_sanitario);
             $('#edit_med_lab').val(info.laboratorio);

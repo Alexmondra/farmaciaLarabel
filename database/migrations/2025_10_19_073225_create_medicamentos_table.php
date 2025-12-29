@@ -10,6 +10,7 @@ return new class extends Migration {
         Schema::create('medicamentos', function (Blueprint $table) {
             $table->id();
             $table->string('codigo', 30)->unique();
+            $table->string('codigo_digemid', 20)->nullable();
             $table->string('nombre', 180);
             $table->string('forma_farmaceutica', 100)->nullable();
             $table->string('concentracion', 100)->nullable();

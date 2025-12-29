@@ -210,6 +210,7 @@
       $('input[name="serie_nc_boleta"]').val(data.serie_nc_boleta || sugerencias.nc_boleta);
       $('input[name="serie_guia"]').val(data.serie_guia || sugerencias.guia);
 
+      $('input[name="cod_establecimiento_digemid"]').val(data.cod_establecimiento_digemid);
       // Imagen y Estado
       checkActivo.prop('checked', data.activo == 1).trigger('change');
       $('#customFile').val(''); // Resetear campo file

@@ -39,7 +39,7 @@ class RolesPermisosSeeder extends Seeder
             'reportes.ver',
             'reportes.ventas',
             'reportes.inventario',
-
+            'reportes.digemid',
             //5.5. Ajustes
             'lotes.ver',
             'stock.ajustar',

@@ -17,7 +17,7 @@ use App\Http\Controllers\Guias\GuiaRemisionController;
 use App\Http\Controllers\Reportes\ReporteInventarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SunatVerificacion\FacturacionController;
-
+use App\Http\Controllers\Reportes\DigemidReporteController;
 use App\Http\Controllers\SunatVerificacion\SunatArchivosController;
 // =========================================================================
 // 1. RUTAS PÚBLICAS
@@ -28,19 +28,16 @@ Route::get('/', function () {
 
 require __DIR__ . '/auth.php';
 
-// =========================================================================
-// 2. RUTAS PROTEGIDAS (SOLO REQUIEREN LOGIN)
-// =========================================================================
 
-// Rutas Públicas (fuera del middleware auth)
 Route::view('/consultar', 'publico.buscar')->name('publico.buscar_vista');
 Route::post('/consultar', [PublicoController::class, 'buscar'])->name('publico.buscar_post');
 Route::get('/descargar-comprobante/{id}', [PublicoController::class, 'descargar'])
     ->name('publico.descargar')
     ->middleware('signed');
 
-
-
+// =========================================================================
+// 2. RUTAS PROTEGIDAS (SOLO REQUIEREN LOGIN)
+// =========================================================================
 
 Route::middleware(['auth'])->group(function () {
 
@@ -243,4 +240,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('reportes/stock-bajo', [ReporteInventarioController::class, 'stockBajo'])
         ->name('reportes.stock_bajo');
+
+    Route::middleware(['auth'])->prefix('reportes')->group(function () {
+        Route::get('reporte-digemid', [DigemidReporteController::class, 'index'])->name('digemid.index');
+        Route::get('reporte-digemid/exportar', [DigemidReporteController::class, 'exportar'])->name('digemid.exportar');
+    });
 });

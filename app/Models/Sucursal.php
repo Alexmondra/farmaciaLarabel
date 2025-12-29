@@ -26,6 +26,7 @@ class Sucursal extends Model
         'serie_nc_boleta',
         'serie_nc_factura',
         'serie_guia',
+        'cod_establecimiento_digemid',
 
         'activo'
     ];
