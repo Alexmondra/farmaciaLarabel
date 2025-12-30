@@ -333,44 +333,71 @@
             $row.find('.td-subtotal').text('S/ ' + subtotal.toFixed(2));
         }
 
-        $(document).on('input change', '.input-edit-cant', function() {
+        $(document).on('input blur change', '.input-edit-cant', function(e) {
             const $row = $(this).closest('tr');
             const uniqueId = $row.data('unique-id');
             const item = carrito[uniqueId];
             if (!item) return;
 
-            let cant = parseInt($(this).val() || '0', 10);
-            if (cant < 1) cant = 1;
+            let val = $(this).val();
+
+            if (e.type === 'blur' || e.type === 'change') {
+                if (val === '' || isNaN(val) || parseInt(val) < 1) {
+                    val = 1;
+                    $(this).val(1);
+                }
+            }
+
+            let cant = parseInt(val);
+
+            if (cant < 0) {
+                cant = 1;
+                $(this).val(1);
+            }
+
+            if (isNaN(cant)) cant = 1;
 
             if (cant > item.stock_max) {
                 cant = item.stock_max;
+                $(this).val(cant);
                 $(this).addClass('is-invalid');
                 setTimeout(() => $(this).removeClass('is-invalid'), 800);
             }
 
             item.cantidad = cant;
-            $(this).val(cant);
-
             refrescarSubtotalFila($row, item);
-            actualizarTotalGlobal();
+            recalcularTotalDesdeMemoria();
         });
 
-        $(document).on('input change', '.input-edit-precio', function() {
+        $(document).on('input blur change', '.input-edit-precio', function(e) {
             const $row = $(this).closest('tr');
             const uniqueId = $row.data('unique-id');
             const item = carrito[uniqueId];
             if (!item) return;
 
-            let precio = normalizarNumero($(this).val());
-            if (precio < 0) precio = 0;
+            let val = $(this).val();
+
+            if (e.type === 'blur' || e.type === 'change') {
+                if (val === '' || isNaN(val) || parseFloat(val) < 0) {
+                    val = 0;
+                    $(this).val('0.00');
+                } else {
+                    // Si escribió un número válido, al salir lo formateamos bonito (ej: 5 -> 5.00)
+                    $(this).val(parseFloat(val).toFixed(2));
+                }
+            }
+
+            let precio = normalizarNumero(val);
+
+            if (precio < 0) {
+                precio = 0;
+                $(this).val(0);
+            }
 
             item.precio_venta = precio;
-            $(this).val(precio.toFixed(2));
-
             refrescarSubtotalFila($row, item);
-            actualizarTotalGlobal();
+            recalcularTotalDesdeMemoria();
         });
-
         $(document).on('click', '.btn-eliminar-item', function() {
             let row = $(this).closest('tr');
             let uniqueId = row.data('unique-id');
