@@ -22,11 +22,95 @@
         agregarFilaItem();
 
         // 1. PROVEEDORES (Tu código existente)
+        // 1. PROVEEDORES
         $('.select2-proveedor').select2({
             theme: 'bootstrap-5',
             placeholder: "-- Buscar Proveedor --",
             allowClear: true,
             width: '100%'
+        });
+
+        // A. DETECTAR CLIC EN EL BOTÓN (+ o OJITO)
+        $(document).on('click', '#btn-accion-proveedor', function() {
+            let proveedorId = $('#proveedor_id').val();
+
+            if (proveedorId) {
+                // SI HAY PROVEEDOR SELECCIONADO -> MODO VER (OJITO)
+                let data = $('#proveedor_id option:selected').data();
+
+                // Llenamos el modal de "Ver"
+                $('#view_razon_social').text($('#proveedor_id option:selected').text());
+                $('#view_ruc').text('RUC: ' + (data.ruc || '--'));
+                $('#view_telefono').text(data.telefono || '--');
+                $('#view_email').text(data.email || '--');
+                $('#view_direccion').text(data.direccion || '--');
+
+                $('#modalVerProveedor').modal('show');
+            } else {
+                // SI NO HAY NADA SELECCIONADO -> MODO CREAR (MAS)
+                $('#formNuevoProveedor')[0].reset();
+                $('#modalCrearProveedor').modal('show');
+
+                setTimeout(function() {
+                    $('#formNuevoProveedor input[name="ruc"]').focus();
+                }, 500);
+            }
+        });
+
+        // B. CAMBIAR ÍCONO DEL BOTÓN AL SELECCIONAR PROVEEDOR
+        $('#proveedor_id').on('change', function() {
+            let val = $(this).val();
+            let btn = $('#btn-accion-proveedor');
+            let icon = $('#icon-accion-proveedor');
+
+            if (val) {
+                // Cambiar a Ojito (Ver)
+                btn.removeClass('btn-outline-primary').addClass('btn-outline-info').attr('title', 'Ver Datos');
+                icon.removeClass('fa-plus').addClass('fa-eye');
+            } else {
+                // Cambiar a Más (Crear)
+                btn.removeClass('btn-outline-info').addClass('btn-outline-primary').attr('title', 'Nuevo Proveedor');
+                icon.removeClass('fa-eye').addClass('fa-plus');
+            }
+        });
+
+        // C. GUARDAR NUEVO PROVEEDOR (AJAX)
+        $('#formNuevoProveedor').on('submit', function(e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+
+            $.ajax({
+                url: "/inventario/proveedores/store-rapido", // Asegúrate que esta ruta exista
+                method: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    $('#modalCrearProveedor').modal('hide');
+
+                    // Agregar el nuevo proveedor al Select2
+                    let texto = response.ruc + ' - ' + response.razon_social;
+                    let newOption = new Option(texto, response.id, true, true);
+
+                    // Agregar datos extra para el modal de ver
+                    $(newOption).data('ruc', response.ruc);
+                    $(newOption).data('telefono', response.telefono);
+                    $(newOption).data('email', response.email);
+                    $(newOption).data('direccion', response.direccion);
+
+                    $('.select2-proveedor').append(newOption).trigger('change');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Proveedor Guardado',
+                        showConfirmButton: false,
+                        timer: 1000
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire('Error', 'No se pudo guardar.', 'error');
+                }
+            });
         });
 
         // ... (Mantén aquí tu lógica de botones de proveedor si la tienes) ...
