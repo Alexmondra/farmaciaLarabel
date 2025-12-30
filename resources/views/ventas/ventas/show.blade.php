@@ -52,7 +52,6 @@
                             @endphp
 
                             @if($tieneWsp)
-                            {{-- AQUI ESTA EL CAMBIO CLAVE: Usamos URL::signedRoute --}}
                             <button type="button" class="dropdown-item"
                                 onclick="enviarWhatsApp(
                                         '{{ $telefono }}', 
@@ -84,8 +83,6 @@
                             @endif
                         </div>
                     </div>
-
-
 
                     {{-- Botón Imprimir --}}
                     <button onclick="window.print()" class="btn btn-danger btn-lg font-weight-bold shadow px-4 pulse-btn">
@@ -152,23 +149,41 @@
                 </tbody>
             </table>
 
-            {{-- TOTALES --}}
+            {{-- TOTALES CORREGIDOS (TICKET) --}}
             <div class="border-top border-dark pt-1">
                 <table class="w-100 mb-1 small">
+
+                    {{-- 1. OPERACIÓN GRAVADA (Solo si existe) --}}
+                    @if($venta->op_gravada > 0)
                     <tr>
-                        <td class="text-right pr-2">SUBTOTAL:</td>
+                        <td class="text-right pr-2">OP. GRAVADA:</td>
                         <td class="text-right font-weight-bold">{{ number_format($venta->op_gravada, 2) }}</td>
                     </tr>
+                    @endif
+
+                    {{-- 2. OPERACIÓN EXONERADA (ESTO FALTABA) --}}
+                    @if($venta->op_exonerada > 0)
+                    <tr>
+                        <td class="text-right pr-2">OP. EXONERADA:</td>
+                        <td class="text-right font-weight-bold">{{ number_format($venta->op_exonerada, 2) }}</td>
+                    </tr>
+                    @endif
+
+                    {{-- 3. IGV --}}
                     <tr>
                         <td class="text-right pr-2">IGV (18%):</td>
                         <td class="text-right font-weight-bold">{{ number_format($venta->total_igv, 2) }}</td>
                     </tr>
+
+                    {{-- 4. DESCUENTO --}}
                     @if($venta->total_descuento > 0)
                     <tr>
                         <td class="text-right pr-2">DESCUENTO:</td>
                         <td class="text-right font-weight-bold">-{{ number_format($venta->total_descuento, 2) }}</td>
                     </tr>
                     @endif
+
+                    {{-- 5. TOTAL --}}
                     <tr style="font-size: 13px; border-top: 1px dashed #000;">
                         <td class="text-right pr-2 pt-1"><b>TOTAL:</b></td>
                         <td class="text-right pt-1 text-nowrap"><b>S/ {{ number_format($venta->total_neto, 2) }}</b></td>
@@ -271,7 +286,7 @@
                 </tbody>
             </table>
 
-            {{-- FOOTER A4 (ABSOLUTO AL FONDO) --}}
+            {{-- FOOTER A4 (TOTALES CORREGIDOS) --}}
             <div class="footer-print-area">
                 <div class="row m-0">
                     {{-- QR y Legales --}}
@@ -291,14 +306,25 @@
                     {{-- Totales --}}
                     <div class="col-4 pr-0">
                         <table class="w-100 small mb-2">
+                            @if($venta->op_gravada > 0)
                             <tr>
-                                <td class="text-right font-weight-bold">SUBTOTAL:</td>
+                                <td class="text-right font-weight-bold">OP. GRAVADA:</td>
                                 <td class="text-right">S/ {{ number_format($venta->op_gravada, 2) }}</td>
                             </tr>
+                            @endif
+
+                            @if($venta->op_exonerada > 0)
+                            <tr>
+                                <td class="text-right font-weight-bold">OP. EXONERADA:</td>
+                                <td class="text-right">S/ {{ number_format($venta->op_exonerada, 2) }}</td>
+                            </tr>
+                            @endif
+
                             <tr>
                                 <td class="text-right font-weight-bold">I.G.V. (18%):</td>
                                 <td class="text-right">S/ {{ number_format($venta->total_igv, 2) }}</td>
                             </tr>
+
                             @if($venta->total_descuento > 0)
                             <tr>
                                 <td class="text-right font-weight-bold text-danger">DESCUENTO:</td>

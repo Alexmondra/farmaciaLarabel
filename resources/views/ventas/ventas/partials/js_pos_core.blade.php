@@ -318,44 +318,60 @@
             actualizarTotalGlobal(total);
         }
 
-        $(document).on('input', '.input-edit-cant', function() {
-            let input = $(this);
-            let row = input.closest('tr');
-            let loteId = row.data('lote-id');
-            let item = carrito[loteId];
-            let val = parseInt(input.val());
 
-            if (val > item.stock_max) {
-                input.val(item.stock_max);
-                val = item.stock_max;
-                input.addClass('is-invalid');
-                setTimeout(() => input.removeClass('is-invalid'), 1000);
+
+        /// lo q es cambiar el total del carrito
+
+        // Helpers (opcional pero limpio)
+        function normalizarNumero(val) {
+            if (val === null || val === undefined) return 0;
+            return parseFloat(String(val).replace(',', '.')) || 0;
+        }
+
+        function refrescarSubtotalFila($row, item) {
+            const subtotal = item.cantidad * item.precio_venta;
+            $row.find('.td-subtotal').text('S/ ' + subtotal.toFixed(2));
+        }
+
+        $(document).on('input change', '.input-edit-cant', function() {
+            const $row = $(this).closest('tr');
+            const uniqueId = $row.data('unique-id');
+            const item = carrito[uniqueId];
+            if (!item) return;
+
+            let cant = parseInt($(this).val() || '0', 10);
+            if (cant < 1) cant = 1;
+
+            if (cant > item.stock_max) {
+                cant = item.stock_max;
+                $(this).addClass('is-invalid');
+                setTimeout(() => $(this).removeClass('is-invalid'), 800);
             }
-            if (val < 1 && input.val() !== '') {
-                input.val(1);
-                val = 1;
-            }
-            if (!isNaN(val)) {
-                carrito[loteId].cantidad = val;
-                let subtotal = val * item.precio_venta;
-                row.find('.td-subtotal').text('S/ ' + subtotal.toFixed(2));
-                recalcularTotalDesdeMemoria();
-            }
+
+            item.cantidad = cant;
+            $(this).val(cant);
+
+            refrescarSubtotalFila($row, item);
+            actualizarTotalGlobal();
         });
 
-        $(document).on('input', '.input-edit-precio', function() {
-            let row = $(this).closest('tr');
-            let loteId = row.data('lote-id');
-            let val = parseFloat($(this).val()) || 0;
-            carrito[loteId].precio_venta = val;
-            let cant = carrito[loteId].cantidad;
-            let subtotal = cant * val;
-            row.find('.td-subtotal').text('S/ ' + subtotal.toFixed(2));
-            recalcularTotalDesdeMemoria();
+        $(document).on('input change', '.input-edit-precio', function() {
+            const $row = $(this).closest('tr');
+            const uniqueId = $row.data('unique-id');
+            const item = carrito[uniqueId];
+            if (!item) return;
+
+            let precio = normalizarNumero($(this).val());
+            if (precio < 0) precio = 0;
+
+            item.precio_venta = precio;
+            $(this).val(precio.toFixed(2));
+
+            refrescarSubtotalFila($row, item);
+            actualizarTotalGlobal();
         });
 
         $(document).on('click', '.btn-eliminar-item', function() {
-            // 1. Identificar qué vamos a borrar
             let row = $(this).closest('tr');
             let uniqueId = row.data('unique-id');
             let item = carrito[uniqueId];

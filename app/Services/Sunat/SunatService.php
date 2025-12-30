@@ -149,21 +149,7 @@ class SunatService
             ->setRznSocial($venta->cliente->nombre_completo);
         $invoice->setClient($client);
 
-        // Descuentos Globales
-        if ($venta->total_descuento > 0) {
-            // Nota: El cálculo del factorDivisor aquí es complejo si es mixto.
-            // Para simplificar, asumimos que si hay IGV global > 0, usamos factor 1.18, sino 1.00
-            $factorDivisor = ($venta->total_igv > 0) ? 1.18 : 1.00;
-            $descuentoBase = $venta->total_descuento / $factorDivisor;
 
-            $cargo = new Charge();
-            $cargo->setCodTipo('02') // Descuento global
-                ->setFactor(1)
-                ->setMonto(round($descuentoBase, 2))
-                ->setMontoBase(round(($venta->op_gravada + $venta->op_exonerada) + $descuentoBase, 2));
-
-            $invoice->setDescuentos([$cargo]);
-        }
 
         // Totales (Usamos lo calculado en VentaService)
         $invoice->setMtoOperGravadas($venta->op_gravada)
@@ -179,34 +165,37 @@ class SunatService
         foreach ($venta->detalles as $det) {
             $item = new SaleDetail();
 
-            // Lógica por Ítem: Si tiene IGV guardado, es Gravado (10). Si es 0, es Exonerado (20).
-            $tieneIgv = ($det->igv > 0.00);
+            $cantidad  = (float)$det->cantidad;
+            if ($cantidad <= 0) continue;
 
-            // CÓDIGOS DE AFECTACIÓN IGV
-            // 10: Gravado - Operación Onerosa
-            // 20: Exonerado - Operación Onerosa
-            $tipoAfectacion = $tieneIgv ? '10' : '20';
+            $baseItem  = round((float)$det->subtotal_bruto, 2);
+            $igvItem   = round((float)$det->igv, 2);
+            $totalItem = round((float)$det->subtotal_neto, 2);
+
+            $tieneIgv = ($igvItem > 0.00);
+            $tipoAfectacion = $det->tipo_afectacion ?? ($tieneIgv ? '10' : '20');
             $porcentaje     = $tieneIgv ? 18.00 : 0.00;
 
-            // Base imponible del ítem (Cantidad * ValorUnitario)
-            $baseItem = round((float)$det->subtotal_bruto, 2);
+            $valorUnit  = round($baseItem / $cantidad, 4);
+            $precioUnit = round($totalItem / $cantidad, 4);
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')
-                ->setCantidad($det->cantidad)
+                ->setCantidad($cantidad)
                 ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO')
                 ->setMtoBaseIgv($baseItem)
                 ->setPorcentajeIgv($porcentaje)
-                ->setIgv($det->igv)
-                ->setTipAfeIgv($tipoAfectacion) // ¡Clave para mixto!
-                ->setTotalImpuestos($det->igv)
+                ->setIgv($igvItem)
+                ->setTipAfeIgv($tipoAfectacion)
+                ->setTotalImpuestos($igvItem)
                 ->setMtoValorVenta($baseItem)
-                ->setMtoValorUnitario($det->valor_unitario)
-                ->setMtoPrecioUnitario($det->precio_unitario);
+                ->setMtoValorUnitario($valorUnit)
+                ->setMtoPrecioUnitario($precioUnit);
 
             $items[] = $item;
         }
         $invoice->setDetails($items);
+
 
         // LEYENDAS
         $leyendas = [];

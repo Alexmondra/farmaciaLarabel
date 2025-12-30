@@ -8,11 +8,11 @@
 
 @section('content')
 
-<form method="POST" action="{{ route('seguridad.usuarios.store') }}" enctype="multipart/form-data">
+{{-- Agregamos ID al formulario para controlarlo con JS --}}
+<form id="formCrearUsuario" method="POST" action="{{ route('seguridad.usuarios.store') }}" enctype="multipart/form-data" novalidate>
   @csrf
 
   <div class="row">
-    <!-- COLUMNA IZQUIERDA: DATOS -->
     <div class="col-md-8">
       <div class="card card-primary card-outline">
         <div class="card-header">
@@ -27,7 +27,9 @@
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fas fa-user"></i></span>
                 </div>
+                {{-- Validación básica: required --}}
                 <input type="text" name="name" class="form-control" required value="{{ old('name') }}" placeholder="Ej: Juan Pérez">
+                <div class="invalid-feedback">El nombre es obligatorio.</div>
               </div>
             </div>
             <div class="form-group col-md-6">
@@ -36,38 +38,71 @@
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                 </div>
+                {{-- Validación: type="email" y required --}}
                 <input type="email" name="email" class="form-control" required value="{{ old('email') }}" placeholder="juan@farmacia.com">
+                <div class="invalid-feedback">Ingresa un correo válido.</div>
               </div>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group col-md-4">
-              <label>DNI / Documento</label>
-              <input type="text" name="documento" class="form-control" value="{{ old('documento') }}">
+              <label>DNI / Documento *</label>
+              {{-- Validación: Solo números (vía JS) y max 8 --}}
+              <input type="text"
+                name="documento"
+                id="inputDNI"
+                class="form-control"
+                value="{{ old('documento') }}"
+                maxlength="8"
+                minlength="8"
+                placeholder="8 dígitos"
+                required>
+              <div class="invalid-feedback">El DNI debe tener exactamente 8 números.</div>
             </div>
             <div class="form-group col-md-4">
               <label>Teléfono</label>
-              <input type="text" name="telefono" class="form-control" value="{{ old('telefono') }}">
+              {{-- Validación: Solo números (vía JS) --}}
+              <input type="text"
+                name="telefono"
+                id="inputTelefono"
+                class="form-control"
+                value="{{ old('telefono') }}"
+                maxlength="9"
+                placeholder="Solo números">
             </div>
             <div class="form-group col-md-4">
               <label>Dirección</label>
-              <input type="text" name="direccion" class="form-control" value="{{ old('direccion') }}">
+              {{-- Sin required, puede ir vacío --}}
+              <input type="text" name="direccion" class="form-control" value="{{ old('direccion') }}" placeholder="Opcional">
             </div>
           </div>
 
           <hr>
 
-          <!-- PASSWORD OBLIGATORIO AL CREAR -->
           <div class="alert alert-light border">
             <div class="form-row">
               <div class="form-group col-md-6">
                 <label class="text-primary font-weight-bold">Contraseña Inicial *</label>
-                <input type="password" name="password" class="form-control" required placeholder="Mínimo 8 caracteres">
+                {{-- Validación: minlength="8" --}}
+                <input type="password"
+                  name="password"
+                  id="password"
+                  class="form-control"
+                  required
+                  minlength="8"
+                  placeholder="Mínimo 8 caracteres">
+                <div class="invalid-feedback">La contraseña es obligatoria (mín. 8 caracteres).</div>
               </div>
               <div class="form-group col-md-6">
                 <label class="text-primary font-weight-bold">Confirmar Contraseña *</label>
-                <input type="password" name="password_confirmation" class="form-control" required>
+                <input type="password"
+                  name="password_confirmation"
+                  id="password_confirmation"
+                  class="form-control"
+                  required
+                  placeholder="Repite la contraseña">
+                <div id="msgPassword" class="invalid-feedback">Las contraseñas no coinciden.</div>
               </div>
             </div>
           </div>
@@ -75,7 +110,6 @@
         </div>
       </div>
 
-      <!-- PERMISOS -->
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Accesos y Permisos</h3>
@@ -109,7 +143,6 @@
       </div>
     </div>
 
-    <!-- COLUMNA DERECHA: FOTO -->
     <div class="col-md-4">
       <div class="card card-outline card-secondary">
         <div class="card-body text-center">
@@ -131,7 +164,7 @@
         </div>
       </div>
 
-      <button type="submit" class="btn btn-success btn-lg btn-block shadow-sm">
+      <button type="submit" id="btnGuardarUsuario" class="btn btn-success btn-lg btn-block shadow-sm">
         <i class="fas fa-save mr-2"></i> Guardar Usuario
       </button>
       <a href="{{ route('seguridad.usuarios.index') }}" class="btn btn-default btn-block">
@@ -144,7 +177,7 @@
 
 @section('js')
 <script>
-  // Preview de imagen
+  // 1. Preview de imagen
   document.getElementById('inputFile').addEventListener('change', function(e) {
     if (this.files && this.files[0]) {
       var reader = new FileReader();
@@ -152,10 +185,63 @@
         document.getElementById('preview').src = e.target.result;
       }
       reader.readAsDataURL(this.files[0]);
-
       var fileName = this.files[0].name;
       $(this).next('.custom-file-label').html(fileName);
     }
+  });
+
+  // 2. VALIDACIONES EN TIEMPO REAL Y AL ENVIAR
+  $(document).ready(function() {
+
+    // A. Solo permitir números en DNI y Teléfono
+    $('#inputDNI, #inputTelefono').on('input', function() {
+      // Reemplaza cualquier cosa que NO sea número del 0 al 9 con vacío
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // B. Controlar el envío del formulario
+    $('#btnGuardarUsuario').click(function(e) {
+      let form = $('#formCrearUsuario')[0];
+      let isValid = true;
+
+      // Limpiar errores previos
+      $('.is-invalid').removeClass('is-invalid');
+
+      // Validar DNI (Exactamente 8 dígitos)
+      let dni = $('#inputDNI').val();
+      if (dni.length !== 8) {
+        $('#inputDNI').addClass('is-invalid');
+        isValid = false;
+      }
+
+      // Validar Contraseñas Iguales
+      let pass1 = $('#password').val();
+      let pass2 = $('#password_confirmation').val();
+
+      if (pass1 !== pass2) {
+        $('#password_confirmation').addClass('is-invalid');
+        $('#msgPassword').text('Las contraseñas no coinciden.');
+        isValid = false;
+      }
+
+      // Validar Campos HTML5 (Email, Required, etc)
+      if (form.checkValidity() === false) {
+        e.preventDefault();
+        e.stopPropagation();
+        form.classList.add('was-validated'); // Esto muestra los errores nativos de Bootstrap
+        isValid = false;
+      }
+
+      if (!isValid) {
+        e.preventDefault(); // Detiene el envío si hay errores custom
+        Swal.fire({
+          icon: 'error',
+          title: 'Datos incompletos',
+          text: 'Por favor, revisa los campos en rojo (DNI de 8 dígitos, correos válidos, contraseñas iguales).'
+        });
+      }
+    });
+
   });
 </script>
 @stop

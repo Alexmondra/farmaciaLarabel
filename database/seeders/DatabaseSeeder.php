@@ -27,17 +27,17 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SucursalesSeeder::class,
             CategoriasSeeder::class,
-            ProveedoresSeeder::class,
+            //ProveedoresSeeder::class,
         ]);
         $this->call(MedicamentosSeeder::class);
-        $this->call(MedicamentoSucursalSeeder::class);
-        $this->call(ComprasLotesSeeder::class);
+        //$this->call(MedicamentoSucursalSeeder::class);
+        // $this->call(ComprasLotesSeeder::class);
 
         $this->call([
             ClienteSeeder::class,
-            CajaSesionSeeder::class,
-            VentaSeeder::class,
-            DetalleVentaSeeder::class,
+            // CajaSesionSeeder::class,
+            //VentaSeeder::class,
+            // DetalleVentaSeeder::class,
             UbigeosTableSeeder::class,
         ]);
     }
