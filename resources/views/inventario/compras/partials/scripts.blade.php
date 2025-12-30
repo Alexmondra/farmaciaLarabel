@@ -80,40 +80,62 @@
             let formData = new FormData(this);
 
             $.ajax({
-                url: "/inventario/proveedores/store-rapido", // Asegúrate que esta ruta exista
+                // Usamos la ruta oficial de Laravel
+                url: "{{ route('inventario.proveedores.store') }}",
                 method: "POST",
                 data: formData,
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    $('#modalCrearProveedor').modal('hide');
+                    // VERIFICAR ÉXITO
+                    if (response.success) {
+                        $('#modalCrearProveedor').modal('hide');
 
-                    // Agregar el nuevo proveedor al Select2
-                    let texto = response.ruc + ' - ' + response.razon_social;
-                    let newOption = new Option(texto, response.id, true, true);
+                        // OJO: Los datos vienen dentro de response.data
+                        let prov = response.data;
 
-                    // Agregar datos extra para el modal de ver
-                    $(newOption).data('ruc', response.ruc);
-                    $(newOption).data('telefono', response.telefono);
-                    $(newOption).data('email', response.email);
-                    $(newOption).data('direccion', response.direccion);
+                        // Crear el texto para el select
+                        let texto = prov.ruc + ' - ' + prov.razon_social;
 
-                    $('.select2-proveedor').append(newOption).trigger('change');
+                        // Crear la opción y seleccionarla
+                        let newOption = new Option(texto, prov.id, true, true);
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Proveedor Guardado',
-                        showConfirmButton: false,
-                        timer: 1000
-                    });
+                        // Guardar datos extra para el "Ojito" (Ver detalles)
+                        $(newOption).data('ruc', prov.ruc);
+                        $(newOption).data('telefono', prov.telefono);
+                        $(newOption).data('email', prov.email);
+                        $(newOption).data('direccion', prov.direccion);
+
+                        // Agregar al select y disparar el cambio para que se active el botón "Ojito"
+                        $('.select2-proveedor').append(newOption).trigger('change');
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Guardado',
+                            text: response.message, // Mensaje del controlador
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
                 },
                 error: function(xhr) {
-                    Swal.fire('Error', 'No se pudo guardar.', 'error');
+                    // Lógica para mostrar el error exacto (ej: RUC duplicado)
+                    let mensaje = 'No se pudo guardar.';
+
+                    if (xhr.responseJSON) {
+                        if (xhr.responseJSON.errors) {
+                            // Toma el primer error de validación (ej: "El RUC ya existe")
+                            mensaje = Object.values(xhr.responseJSON.errors)[0][0];
+                        } else if (xhr.responseJSON.message) {
+                            mensaje = xhr.responseJSON.message;
+                        }
+                    }
+
+                    Swal.fire('Error', mensaje, 'error');
                 }
             });
         });
 
-        // ... (Mantén aquí tu lógica de botones de proveedor si la tienes) ...
 
         // ============================================================
         // 2. LÓGICA DE LA TABLA DE ITEMS (Buscador, Precios, Cálculos)

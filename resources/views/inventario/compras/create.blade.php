@@ -62,6 +62,7 @@
                 <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <form id="formNuevoProveedor">
+                @csrf
                 <div class="modal-body">
                     <div class="form-group mb-2"><label class="small font-weight-bold">RUC *</label><input type="text" name="ruc" class="form-control input-enhanced" required></div>
                     <div class="form-group mb-2"><label class="small font-weight-bold">Razón Social *</label><input type="text" name="razon_social" class="form-control input-enhanced" required></div>
