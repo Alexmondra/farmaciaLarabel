@@ -67,7 +67,13 @@ class ClienteController extends Controller
 
     public function show($id)
     {
-        $cliente = Cliente::with('ventas')->find($id);
+        $cliente = Cliente::with([
+            'ventas' => function ($query) {
+                $query->orderBy('created_at', 'desc')->limit(50);
+            },
+
+            'ventas.detalle_ventas.medicamento'
+        ])->find($id);
 
         if (!$cliente) {
             return response()->json(['success' => false, 'message' => 'Cliente no encontrado']);
@@ -83,7 +89,6 @@ class ClienteController extends Controller
             ]
         ]);
     }
-
     public function store(StoreClienteRequest $request)
     {
         $cliente = Cliente::create($request->validated());

@@ -230,13 +230,19 @@ class VentaService
             // 7. PUNTOS
             if ($data['cliente_id']) {
                 $cliente = Cliente::find($data['cliente_id']);
-                if ($cliente) {
-                    if ($puntosUsados > 0) $cliente->decrement('puntos', min($cliente->puntos, $puntosUsados));
 
+                // VERIFICACIÓN DE SEGURIDAD:
+                if ($cliente && $cliente->id != 1) {
+                    if ($puntosUsados > 0) {
+                        $cliente->decrement('puntos', min($cliente->puntos, $puntosUsados));
+                    }
                     $config = Configuracion::first();
                     $ratio = $config->puntos_por_moneda ?? 1;
                     $puntosGanados = intval($totalNetoFinal * $ratio);
-                    if ($puntosGanados > 0) $cliente->increment('puntos', $puntosGanados);
+
+                    if ($puntosGanados > 0) {
+                        $cliente->increment('puntos', $puntosGanados);
+                    }
                 }
             }
 

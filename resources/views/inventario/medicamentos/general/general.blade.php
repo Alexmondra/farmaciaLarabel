@@ -10,11 +10,14 @@
                 <i class="fas fa-globe-americas text-primary mr-2"></i> Catálogo Maestro
             </h1>
         </div>
+        @can('medicamentos.crear')
         <div class="col-sm-6 text-right">
             <button class="btn btn-success shadow-sm" id="btnNuevoGlobal">
                 <i class="fas fa-plus-circle mr-1"></i> Nuevo Medicamento
             </button>
         </div>
+        @endcan
+
     </div>
 </div>
 @stop
@@ -120,6 +123,7 @@
                         <td class="align-middle">
                             {{ $med->categoria->nombre ?? 'S/C' }}
                         </td>
+                        @can('medicamentos.editar')
                         <td class="align-middle text-right">
                             <button class="btn btn-sm btn-outline-warning btn-editar shadow-sm"
                                 data-info="{{ json_encode($medJson) }}"
@@ -127,6 +131,7 @@
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
+                        @endcan
                     </tr>
                     @empty
                     <tr>

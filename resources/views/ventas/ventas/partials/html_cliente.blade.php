@@ -19,6 +19,7 @@
                         <span class="input-group-text loader-input d-none" id="loader-cliente"><i class="fas fa-circle-notch fa-spin"></i></span>
                         <button class="btn btn-success d-none" type="button" id="btn-crear-cliente" title="Nuevo"><i class="fas fa-plus"></i></button>
                         <button class="btn btn-primary d-none" type="button" id="btn-ver-cliente" title="Ver"><i class="fas fa-eye"></i></button>
+                        <input type="hidden" id="cliente_id_hidden" name="cliente_id">
                     </div>
                 </div>
             </div>

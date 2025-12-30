@@ -129,29 +129,40 @@
     }
 </style>
 <script>
-    // Esta función es global: Puedes llamarla desde CUALQUIER botón en tu sistema
-    function openShowModal(id) {
+    let currentVentas = [];
 
-        // 1. Limpieza UI
+    function openShowModal(id) {
+        // 1. Definimos la URL ÚNICA (Cache Busting)
+        // Usamos Date.now() para que sea siempre diferente y obligue a ir a la BD
+        let urlFresca = "{{ url('clientes') }}/" + id + "?nocache=" + Date.now();
+
+        // Limpieza UI
         $('#show_avatar').html('<i class="fas fa-spinner fa-spin"></i>');
         $('#show_nombre').text('Cargando...');
         $('#show_equivalencia').html('...');
+        $('#history-container').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i></div>');
+
         $('#modalShowCliente').modal('show');
 
-        // 2. AJAX AL CONTROLADOR (Esto funciona en Ventas igual que en Clientes)
-        // La URL es absoluta, así que no importa desde dónde la llames.
-        $.get("{{ url('clientes') }}/" + id, function(response) {
+        // 2. AJAX (CORREGIDO: Usamos la variable urlFresca)
+        $.get(urlFresca, function(response) {
 
             if (!response.success) {
                 alert('No se pudo cargar la información.');
+                $('#modalShowCliente').modal('hide');
                 return;
             }
 
-            // Datos que envió el controlador
             const c = response.data;
-            const conf = response.config; // ¡Aquí llega la configuración!
+            const conf = response.config;
 
-            // A. Identidad
+            // Guardamos las ventas
+            currentVentas = c.ventas || [];
+
+            // --- DEPURACIÓN (Solo para verificar en consola F12) ---
+            console.log("Datos frescos recibidos:", currentVentas);
+
+            // --- A. LÓGICA DE PERFIL ---
             const isRUC = (c.tipo_documento === 'RUC');
             const nombre = isRUC ? c.razon_social : `${c.nombre} ${c.apellidos}`;
 
@@ -174,33 +185,37 @@
             $('#show_tipo_doc').text(`${c.tipo_documento}: ${c.documento}`);
             $('#show_registro').text(new Date(c.created_at).toLocaleDateString('es-PE'));
 
-            // B. Contacto
+            // --- B. CONTACTO ---
             const setText = (sel, val) => $(sel).text((val && val !== '--') ? val : 'No registrado');
             setText('#show_email', c.email);
             setText('#show_telefono', c.telefono);
             setText('#show_direccion', c.direccion);
 
-            // C. PUNTOS Y DINERO (Tu lógica)
+            // --- C. PUNTOS ---
             let puntos = c.puntos || 0;
             $('#show_puntos').text(puntos);
-
-            // Calculamos con el valor que nos dio el controlador
             let valorUnitario = parseFloat(conf.valor_punto);
             let dinero = (puntos * valorUnitario).toFixed(2);
-
             $('#show_equivalencia').html(`<i class="fas fa-money-bill-wave mr-1"></i> S/ ${dinero}`);
 
-            // D. Historial
-            const rows = (c.ventas || []).map(v => `
+            // --- D. HISTORIAL ---
+            const rows = currentVentas.map((v, index) => `
                 <tr>
-                    <td class="text-muted small">${new Date(v.created_at).toLocaleDateString('es-PE')}</td>
-                    <td class="font-weight-bold">S/ ${parseFloat(v.total).toFixed(2)}</td>
-                    <td><span class="badge badge-success" style="font-size:0.7rem">Venta</span></td>
+                    <td class="text-muted small align-middle">${new Date(v.created_at).toLocaleDateString('es-PE')}</td>
+                    <td class="font-weight-bold align-middle">S/ ${parseFloat(v.total_neto || v.total).toFixed(2)}</td>
+                    <td class="align-middle">
+                        <button class="btn btn-sm btn-outline-info" onclick="verDetalleVenta(${index})" title="Ver productos">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
                 </tr>`).join('');
 
             const tableHtml = rows ?
-                `<div class="table-responsive"><table class="table table-hover table-sm text-center mb-0">
-                    <thead class="bg-light text-muted small"><tr><th>FECHA</th><th>TOTAL</th><th>TIPO</th></tr></thead>
+                `<div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-hover table-sm text-center mb-0">
+                    <thead class="bg-light text-muted small sticky-top">
+                        <tr><th>FECHA</th><th>TOTAL</th><th>DETALLE</th></tr>
+                    </thead>
                     <tbody>${rows}</tbody>
                 </table></div>` :
                 `<div class="text-center py-4"><i class="fas fa-shopping-basket fa-2x text-muted opacity-25 mb-2"></i><p class="text-muted small">Sin historial reciente</p></div>`;
@@ -210,6 +225,51 @@
         }).fail(function() {
             alert('Error de conexión.');
             $('#modalShowCliente').modal('hide');
+        });
+    }
+
+    // --- FUNCIÓN DETALLE (SIN CAMBIOS, AHORA FUNCIONARÁ) ---
+    function verDetalleVenta(index) {
+        const venta = currentVentas[index];
+        // Ahora sí funcionará porque el controlador envía 'detalle_ventas'
+        const detalles = venta.detalle_ventas || [];
+
+        if (detalles.length === 0) {
+            Swal.fire('Info', 'No hay detalles registrados para esta venta (o error de carga).', 'info');
+            return;
+        }
+
+        let htmlDetalles = `
+            <table class="table table-sm text-left" style="font-size: 0.9rem;">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Prod.</th>
+                        <th class="text-center">Cant.</th>
+                        <th class="text-right">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        detalles.forEach(d => {
+            const nombreProd = d.medicamento ? d.medicamento.nombre : '(Producto Eliminado)';
+            htmlDetalles += `
+                <tr>
+                    <td>${nombreProd}</td>
+                    <td class="text-center">${d.cantidad}</td>
+                    <td class="text-right">S/ ${parseFloat(d.subtotal_bruto || d.subtotal).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        htmlDetalles += `</tbody></table>`;
+
+        Swal.fire({
+            title: `Venta del ${new Date(venta.created_at).toLocaleDateString('es-PE')}`,
+            html: htmlDetalles,
+            width: '600px',
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#6c5ce7'
         });
     }
 </script>

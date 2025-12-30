@@ -121,13 +121,15 @@
                     <p class="text-muted mb-3">No hay lotes activos disponibles para venta.</p>
 
                     {{-- Botón para ver historial --}}
+                    @can('lotes.ver ')
                     <a href="{{ route('inventario.medicamento_sucursal.historial', [
-                'medicamento' => $medicamento->id, 
-                'sucursal' => $sucursal->id  // <--- AHORA ES OBLIGATORIO Y ESTÁ DISPONIBLE AQUÍ
-          ]) }}"
+                                        'medicamento' => $medicamento->id, 
+                                        'sucursal' => $sucursal->id  // <--- AHORA ES OBLIGATORIO Y ESTÁ DISPONIBLE AQUÍ
+                                ]) }}"
                         class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-history mr-1"></i> Ver lotes agotados o vencidos
                     </a>
+                    @endcan
                 </div>
                 @else
                 {{-- TABLA DE LOTES ACTIVOS --}}
@@ -192,19 +194,21 @@
                     </table>
 
                     {{-- Footer pequeño de la tabla para ir al historial --}}
+                    @can('lotes.ver ')
                     <div class="bg-light p-2 text-center border-top">
                         <a href="{{ route('inventario.medicamento_sucursal.historial', [
-                'medicamento' => $medicamento->id, 
-                'sucursal' => $sucursal->id  // <--- AHORA ES OBLIGATORIO Y ESTÁ DISPONIBLE AQUÍ
-          ]) }}"
+                                        'medicamento' => $medicamento->id, 
+                                        'sucursal' => $sucursal->id  // <--- AHORA ES OBLIGATORIO Y ESTÁ DISPONIBLE AQUÍ
+                                ]) }}"
                             class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-history mr-1"></i> Ver lotes agotados o vencidos
                         </a>
                     </div>
+                    @endcan
                 </div>
                 @endif
             </div>
-
+            @can('medicamentos.eliminar')
             <div class="card-footer bg-light d-flex justify-content-end p-2">
                 {{-- Formulario para desvincular (Eliminar de sucursal) --}}
                 {{-- Nota: Ajusta la ruta 'inventario.medicamento_sucursal.destroy' si cambiaste el nombre en web.php --}}
@@ -217,6 +221,7 @@
                     </button>
                 </form>
             </div>
+            @endcan
         </div>
         @empty
         <div class="alert alert-info shadow-sm">

@@ -71,7 +71,7 @@
 @include('ventas.ventas.partials.modal_lotes')
 @include('ventas.clientes.modal-create-edit')
 @include('ventas.clientes.modal-show')
-
+<input type="hidden" id="cliente_id_hidden" name="cliente_id">
 @stop
 
 @section('js')

@@ -382,6 +382,7 @@ return [
                 ],
                 [
                     'text' => 'Digemid / Minsa',
+                    'can'  => 'reportes.digemid',
                     'icon' => 'fas fa-file-medical',
                     'url'  => 'reportes/reporte-digemid',
 

@@ -9,31 +9,38 @@
     </h1>
 
     <div class="btn-group shadow-sm">
-        {{-- BOTÓN 1: ACCIONES DE STOCK (Lo que necesitas ahora) --}}
+        @can('stock.ajustar')
         <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-dolly-flatbed mr-2"></i> Operaciones
         </button>
+        @endcan
+
         <div class="dropdown-menu dropdown-menu-right">
-            {{-- Opción A: Ingreso por Compra (Lo más común) --}}
+            @can('compras.crear ')
             <a class="dropdown-item" href="{{ route('compras.create') }}"> {{-- Pon aquí tu ruta real --}}
                 <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Compra (Ingreso)
             </a>
+            @endcan
 
             <div class="dropdown-divider"></div>
 
-            {{-- Opción B: Salidas / Mermas --}}
+            @can('stock.ajustar')
             <a class="dropdown-item" href="#" onclick="abrirModalSalida()">
                 <i class="fas fa-trash-alt text-danger mr-2"></i> Dar de Baja / Ajuste (Salida)
             </a>
+            @endcan
 
-            {{-- Opción C: Traslados --}}
+            @can('guias.crear')
             <a class="dropdown-item" href="{{ route('guias.create') }}"> {{-- Pon aquí tu ruta real --}}
                 <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
             </a>
+            @endcan
 
+            @can('stock.ajustar')
             <a class="dropdown-item" href="#" onclick="abrirModalIngreso()">
                 <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Ingreso / Ajuste (+)
             </a>
+            @endcan
         </div>
 
 

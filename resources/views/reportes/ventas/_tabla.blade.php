@@ -64,11 +64,6 @@
                 {{-- Botones --}}
                 <td class="text-center pr-4">
                     <div class="btn-group">
-
-                        <a href="#" class="btn btn-sm btn-light text-primary" title="Ver" style="border-radius: 50%;">
-                            <i class="fas fa-eye"></i>
-                        </a>
-
                         <a href="{{ route('reportes.venta.pdf', $venta->id) }}" target="_blank"
                             class="btn btn-sm btn-light text-danger ml-1"
                             title="PDF" style="border-radius: 50%;">

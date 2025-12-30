@@ -45,4 +45,14 @@ class Cliente extends Model
     {
         return $this->hasMany(Venta::class);
     }
+
+    public function getPuntosAttribute($value)
+    {
+        // Si es el cliente genérico, siempre decimos que tiene 0
+        if ($this->id === 1) {
+            return 0;
+        }
+
+        return $value;
+    }
 }

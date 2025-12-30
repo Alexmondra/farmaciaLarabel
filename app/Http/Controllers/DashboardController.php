@@ -24,6 +24,10 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        if (!$user->can('reportes.ver')) {
+            return redirect()->route('cajas.index');
+        }
+
         // 1. Resolver contexto (¿Es admin global o local?)
         $ctx = $this->sucursalResolver->resolverPara($user);
         $sucursalesIds = $ctx['ids_filtro'];
