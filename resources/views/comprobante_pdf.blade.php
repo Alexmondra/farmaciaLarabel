@@ -9,17 +9,15 @@
             margin: 10px;
         }
 
-        /* Márgenes mínimos de la hoja */
-
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 11px;
             margin-top: 20px;
             margin-bottom: 180px;
-            /* IMPORTANTE: Espacio para que el footer no tape los items */
+            /* Espacio para el footer */
         }
 
-        /* === HEADER DE 3 COLUMNAS (Estilo Yape) === */
+        /* === HEADER DE 3 COLUMNAS === */
         .header-table {
             width: 100%;
             border-collapse: collapse;
@@ -118,21 +116,18 @@
             vertical-align: middle;
         }
 
-        /* === FOOTER FIJO AL FINAL (Magia de DomPDF) === */
+        /* === FOOTER FIJO AL FINAL === */
         footer {
             position: fixed;
             bottom: 0px;
             left: 0px;
             right: 0px;
             height: 160px;
-            /* Altura reservada para el footer */
             border-top: 1px solid #444;
             padding-top: 10px;
             background-color: #fff;
-            /* Fondo blanco por si pasa algo por debajo */
         }
 
-        /* Utilidades Footer */
         .footer-table {
             width: 100%;
             border-collapse: collapse;
@@ -184,13 +179,12 @@
                 @if($logoBase64)
                 <img src="{{ $logoBase64 }}" style="max-width: 120px; max-height: 80px;">
                 @else
-                {{-- Espacio vacío si no hay logo --}}
                 @endif
             </td>
 
             <td class="col-empresa">
                 <div class="company-name">{{ $emisor['razon_social'] }}</div>
-                <div style="font-weight: bold; margin-bottom: 4px;">{{ $emisor['nombre'] }}</div> {{-- Nombre Sucursal --}}
+                <div style="font-weight: bold; margin-bottom: 4px;">{{ $emisor['nombre'] }}</div>
                 <div class="company-info">
                     {{ $emisor['direccion'] }}<br>
                     @if($emisor['telefono']) Tel: {{ $emisor['telefono'] }} | @endif
@@ -263,14 +257,12 @@
                                 <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" width="85" height="85">
                             </td>
                             <td valign="middle" style="padding-left: 10px;">
-                                {{-- MONTO EN LETRAS (Obligatorio) --}}
                                 <div style="font-weight: bold; margin-bottom: 5px; font-size: 10px;">
                                     {{ $montoLetras }}
                                 </div>
                                 <div style="font-size: 9px; color: #666; line-height: 1.4;">
                                     Representación impresa de la {{ $venta->tipo_comprobante }} ELECTRÓNICA.<br>
                                     Autorizado mediante Resolución de Superintendencia N.° 300-2014/SUNAT.<br>
-
                                     Consulte la validez de este documento en: <br>
                                     <a href="https://mundofarma.online/consulta-comprobante" target="_blank" style="text-decoration: none; color: #000; font-weight: bold;">
                                         mundofarma.online/consulta-comprobante
@@ -283,26 +275,49 @@
 
                 <td width="35%" valign="top">
                     <table width="100%" style="font-size: 10px;">
+
+                        {{-- 1. Op. Gravada --}}
+                        @if($venta->op_gravada > 0)
                         <tr>
                             <td class="text-right label">Op. Gravada:</td>
                             <td class="text-right">S/ {{ number_format($venta->op_gravada, 2) }}</td>
                         </tr>
+                        @endif
+
+                        {{-- 2. Op. Exonerada (NUEVO) --}}
+                        @if($venta->op_exonerada > 0)
+                        <tr>
+                            <td class="text-right label">Op. Exonerada:</td>
+                            <td class="text-right">S/ {{ number_format($venta->op_exonerada, 2) }}</td>
+                        </tr>
+                        @endif
+
+                        {{-- 3. Op. Inafecta (Opcional, pero recomendado) --}}
+                        @if($venta->op_inafecta > 0)
+                        <tr>
+                            <td class="text-right label">Op. Inafecta:</td>
+                            <td class="text-right">S/ {{ number_format($venta->op_inafecta, 2) }}</td>
+                        </tr>
+                        @endif
+
+                        {{-- 4. IGV --}}
                         <tr>
                             <td class="text-right label">I.G.V. (18%):</td>
                             <td class="text-right">S/ {{ number_format($venta->total_igv, 2) }}</td>
                         </tr>
+
+                        {{-- 5. Descuentos --}}
                         @if($venta->total_descuento > 0)
                         <tr>
                             <td class="text-right label" style="color:red">Descuento:</td>
                             <td class="text-right" style="color:red">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
                         </tr>
                         @endif
-                        <tr>
-                            <td colspan="2" style="height: 5px;"></td>
-                        </tr>
+
+                        {{-- 6. TOTAL A PAGAR --}}
                         <tr class="total-row">
-                            <td class="total-cell text-right">TOTAL A PAGAR:</td>
-                            <td class="total-cell text-right">S/ {{ number_format($venta->total_neto, 2) }}</td>
+                            <td class="text-right total-cell">IMPORTE TOTAL:</td>
+                            <td class="text-right total-cell">S/ {{ number_format($venta->total_neto, 2) }}</td>
                         </tr>
                     </table>
                 </td>
