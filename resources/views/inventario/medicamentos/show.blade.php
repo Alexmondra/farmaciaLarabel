@@ -18,7 +18,6 @@
     <div class="col-md-4">
         <div class="card card-primary card-outline shadow-sm">
             <div class="card-body box-profile">
-                {{-- ... (Contenido del perfil, se adapta automáticamente) ... --}}
                 <div class="text-center mb-4">
                     @if($medicamento->imagen_url)
                     <img class="img-fluid rounded shadow-sm" style="max-height: 200px; object-fit: contain;"
@@ -73,7 +72,6 @@
     <div class="col-md-8">
         @forelse($sucursalesDetalle as $item)
         @php
-        // ... (Lógica PHP existente) ...
         /** @var \App\Models\Sucursal $sucursal */
         $sucursal = $item['sucursal'];
 
@@ -124,7 +122,7 @@
                     @can('lotes.ver ')
                     <a href="{{ route('inventario.medicamento_sucursal.historial', [
                                         'medicamento' => $medicamento->id, 
-                                        'sucursal' => $sucursal->id  // <--- AHORA ES OBLIGATORIO Y ESTÁ DISPONIBLE AQUÍ
+                                        'sucursal' => $sucursal->id
                                 ]) }}"
                         class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-history mr-1"></i> Ver lotes agotados o vencidos
@@ -154,17 +152,30 @@
                                 <tr>
                                 <td class="align-middle font-weight-bold">{{ $lote->codigo_lote }}</td>
 
-                                <td class="align-middle d-none d-sm-table-cell">
-                                    @if($vence)
-                                    <span class="badge {{ $porVencer ? 'badge-warning' : 'badge-light border' }}">
-                                        {{ $vence->format('d/m/Y') }}
-                                    </span>
-                                    @if($porVencer)
-                                    <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Próximo</small>
-                                    @endif
-                                    @else
-                                    <span class="text-muted">—</span>
-                                    @endif
+                                <td class="align-middle d-none d-sm-table-cell" id="vencimiento-cell-{{ $lote->id }}">
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            @if($vence)
+                                            <span class="badge {{ $porVencer ? 'badge-warning' : 'badge-light border' }}">
+                                                {{ $vence->format('d/m/Y') }}
+                                            </span>
+                                            @if($porVencer)
+                                            <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Próximo</small>
+                                            @endif
+                                            @else
+                                            <span class="text-muted">—</span>
+                                            @endif
+                                        </div>
+
+                                        <a href="javascript:void(0)"
+                                            class="ml-2 text-secondary js-edit-vencimiento"
+                                            title="Editar vencimiento"
+                                            data-id="{{ $lote->id }}"
+                                            data-current="{{ $lote->fecha_vencimiento ? \Carbon\Carbon::parse($lote->fecha_vencimiento)->format('Y-m-d') : '' }}"
+                                            data-url="{{ route('inventario.lotes.update_vencimiento', $lote->id) }}">
+                                            <i class="fas fa-pen"></i>
+                                        </a>
+                                    </div>
                                 </td>
 
                                 <td class="align-middle">
@@ -173,7 +184,19 @@
                                     </span>
                                 </td>
 
-                                <td class="align-middle text-muted small d-none d-md-table-cell">{{ $lote->ubicacion ?? '—' }}</td>
+                                <td class="align-middle d-none d-md-table-cell" id="ubicacion-cell-{{ $lote->id }}">
+                                    <div class="d-flex align-items-center">
+                                        <span class="text-muted small">{{ $lote->ubicacion ?? '—' }}</span>
+                                        <a href="javascript:void(0)"
+                                            class="ml-2 text-secondary js-edit-ubicacion"
+                                            title="Editar ubicación"
+                                            data-id="{{ $lote->id }}"
+                                            data-current="{{ $lote->ubicacion ?? '' }}"
+                                            data-url="{{ route('inventario.lotes.update_ubicacion', $lote->id) }}">
+                                            <i class="fas fa-pen"></i>
+                                        </a>
+                                    </div>
+                                </td>
 
                                 <td class="align-middle">
                                     @if($lote->precio_oferta > 0)
@@ -186,6 +209,7 @@
                                         </span>
                                     </div>
                                     @else
+                                    {{-- Espacio vacío o precio normal si se desea mostrar algo --}}
                                     @endif
                                 </td>
                                 </tr>
@@ -198,7 +222,7 @@
                     <div class="bg-light p-2 text-center border-top">
                         <a href="{{ route('inventario.medicamento_sucursal.historial', [
                                         'medicamento' => $medicamento->id, 
-                                        'sucursal' => $sucursal->id  // <--- AHORA ES OBLIGATORIO Y ESTÁ DISPONIBLE AQUÍ
+                                        'sucursal' => $sucursal->id
                                 ]) }}"
                             class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-history mr-1"></i> Ver lotes agotados o vencidos
@@ -211,7 +235,6 @@
             @can('medicamentos.eliminar')
             <div class="card-footer bg-light d-flex justify-content-end p-2">
                 {{-- Formulario para desvincular (Eliminar de sucursal) --}}
-                {{-- Nota: Ajusta la ruta 'inventario.medicamento_sucursal.destroy' si cambiaste el nombre en web.php --}}
                 <form method="POST"
                     action="{{ route('inventario.medicamento_sucursal.destroy', ['medicamento' => $medicamento->id, 'sucursal' => $sucursal->id]) }}"
                     onsubmit="return confirm('¿Seguro que deseas retirar este producto de la sucursal {{ $sucursal->nombre }}? Esto ocultará el stock restante.');">
@@ -233,6 +256,211 @@
         @endforelse
     </div>
 </div>
+
+{{-- ✅ Modales para editar lote --}}
+<div class="modal fade" id="modalEditarVencimiento" tabindex="-1" role="dialog" aria-labelledby="modalEditarVencimientoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 520px;">
+        <div class="modal-content" style="border-radius: 14px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="modalEditarVencimientoLabel" style="font-weight: 700;">Editar vencimiento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+
+            <div class="modal-body pt-2">
+                <input type="hidden" id="vencimiento_url" value="">
+                <div class="form-group mb-0">
+                    <label class="small text-muted">Fecha de vencimiento</label>
+                    <input type="date" class="form-control" id="fecha_vencimiento_input">
+                    <small class="text-muted d-block mt-2">
+                        Deja vacío para guardar sin fecha.
+                    </small>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarVencimiento">
+                    <i class="fas fa-save mr-1"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarUbicacion" tabindex="-1" role="dialog" aria-labelledby="modalEditarUbicacionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 520px;">
+        <div class="modal-content" style="border-radius: 14px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="modalEditarUbicacionLabel" style="font-weight: 700;">Editar ubicación</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+
+            <div class="modal-body pt-2">
+                <input type="hidden" id="ubicacion_url" value="">
+                <div class="form-group mb-0">
+                    <label class="small text-muted">Ubicación</label>
+                    <input type="text" class="form-control" id="ubicacion_input" maxlength="50" placeholder="Ej: Estante A - Nivel 2">
+                    <small class="text-muted d-block mt-2">
+                        Máx. 50 caracteres. Deja vacío para borrar ubicación.
+                    </small>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarUbicacion">
+                    <i class="fas fa-save mr-1"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection
+
+@section('js')
+<script>
+    $(function() {
+        const CSRF = '{{ csrf_token() }}';
+
+        function pad2(n) {
+            return (n < 10 ? '0' : '') + n;
+        }
+
+        function formatDMY(ymd) {
+            if (!ymd) return '';
+            const parts = ymd.split('-');
+            if (parts.length !== 3) return ymd;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function porVencer(ymd) {
+            if (!ymd) return false;
+            const today = new Date();
+            const d = new Date(ymd + 'T00:00:00');
+            const diffMs = d.getTime() - today.getTime();
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            return diffDays >= 0 && diffDays < 90; // ~3 meses
+        }
+
+        // ====== Abrir modal vencimiento
+        $(document).on('click', '.js-edit-vencimiento', function() {
+            const url = $(this).data('url');
+            const current = $(this).data('current') || '';
+            $('#vencimiento_url').val(url);
+            $('#fecha_vencimiento_input').val(current);
+            $('#modalEditarVencimiento').modal({
+                backdrop: true,
+                keyboard: true,
+                show: true
+            });
+        });
+
+        // ====== Guardar vencimiento (AJAX)
+        $('#btnGuardarVencimiento').on('click', function() {
+            const url = $('#vencimiento_url').val();
+            const fecha = ($('#fecha_vencimiento_input').val() || '').trim();
+            const idMatch = (url || '').match(/\/lotes\/(\d+)\//);
+            const loteId = idMatch ? idMatch[1] : null;
+
+            $(this).prop('disabled', true);
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: {
+                    _token: CSRF,
+                    _method: 'PUT',
+                    fecha_vencimiento: fecha
+                }
+            }).done(function() {
+                if (loteId) {
+                    const cell = $('#vencimiento-cell-' + loteId);
+                    const editBtn = cell.find('a.js-edit-vencimiento');
+
+                    // Actualiza dataset
+                    editBtn.attr('data-current', fecha);
+                    editBtn.data('current', fecha);
+
+                    // Re-render (sin recargar)
+                    let html = '';
+                    if (fecha) {
+                        const warn = porVencer(fecha);
+                        const badgeClass = warn ? 'badge-warning' : 'badge-light border';
+                        html += `<span class="badge ${badgeClass}">${formatDMY(fecha)}</span>`;
+                        if (warn) {
+                            html += `<br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Próximo</small>`;
+                        }
+                    } else {
+                        html += `<span class="text-muted">—</span>`;
+                    }
+
+                    // Reemplaza solo la parte izquierda (sin tocar el lápiz)
+                    cell.find('div > div').html(html);
+                }
+
+                $('#modalEditarVencimiento').modal('hide');
+            }).fail(function(xhr) {
+                alert('No se pudo actualizar el vencimiento. Revisa la consola/log.');
+                console.error(xhr.responseText || xhr);
+            }).always(function() {
+                $('#btnGuardarVencimiento').prop('disabled', false);
+            });
+        });
+
+        // ====== Abrir modal ubicación
+        $(document).on('click', '.js-edit-ubicacion', function() {
+            const url = $(this).data('url');
+            const current = $(this).data('current') || '';
+            $('#ubicacion_url').val(url);
+            $('#ubicacion_input').val(current);
+            $('#modalEditarUbicacion').modal({
+                backdrop: true,
+                keyboard: true,
+                show: true
+            });
+        });
+
+        // ====== Guardar ubicación (AJAX)
+        $('#btnGuardarUbicacion').on('click', function() {
+            const url = $('#ubicacion_url').val();
+            const ubic = ($('#ubicacion_input').val() || '').trim();
+            const idMatch = (url || '').match(/\/lotes\/(\d+)\//);
+            const loteId = idMatch ? idMatch[1] : null;
+
+            $(this).prop('disabled', true);
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: {
+                    _token: CSRF,
+                    _method: 'PUT',
+                    ubicacion: ubic
+                }
+            }).done(function() {
+                if (loteId) {
+                    const cell = $('#ubicacion-cell-' + loteId);
+                    const editBtn = cell.find('a.js-edit-ubicacion');
+
+                    editBtn.attr('data-current', ubic);
+                    editBtn.data('current', ubic);
+
+                    const text = ubic ? ubic : '—';
+                    cell.find('span').first().text(text);
+                }
+
+                $('#modalEditarUbicacion').modal('hide');
+            }).fail(function(xhr) {
+                alert('No se pudo actualizar la ubicación. Revisa la consola/log.');
+                console.error(xhr.responseText || xhr);
+            }).always(function() {
+                $('#btnGuardarUbicacion').prop('disabled', false);
+            });
+        });
+
+    });
+</script>
 @endsection
 
 @section('css')

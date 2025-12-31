@@ -33,9 +33,7 @@
             </thead>
             <tbody>
                 @forelse($compras as $c)
-                @php
-                $total = $c->detalles->sum(fn($d) => $d->cantidad * $d->precio_compra_unitario);
-                @endphp
+
                 <tr>
                     {{-- FECHA --}}
                     <td>
@@ -76,7 +74,7 @@
 
                     {{-- TOTAL --}}
                     <td class="text-end font-weight-bold">
-                        S/ {{ number_format($total, 2) }}
+                        S/ {{ number_format($c->costo_total_factura, 2) }}
                     </td>
 
                     {{-- ACCIONES --}}

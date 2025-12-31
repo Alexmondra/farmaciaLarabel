@@ -138,8 +138,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('compras/{id}/archivo', [CompraController::class, 'mostrarComprobante'])->name('compras.archivo.ver');
     Route::get('compras/{id}/descargar', [CompraController::class, 'descargarComprobante'])->name('compras.archivo.descargar');
 
+    Route::put('inventario/lotes/{lote}/ubicacion', [MedicamentoSucursalController::class, 'updateLoteUbicacion'])
+        ->name('inventario.lotes.update_ubicacion');
+
+    Route::put('inventario/lotes/{lote}/vencimiento', [App\Http\Controllers\Inventario\MedicamentoSucursalController::class, 'updateLoteVencimiento'])
+        ->name('inventario.lotes.update_vencimiento');
+
     // =================================================================
-    // MÓDULO: VENTAS
+    // MÓDULO: VENTASz
     // =================================================================
     Route::controller(CajaSesionController::class)->group(function () {
         Route::get('cajas', 'index')->name('cajas.index');

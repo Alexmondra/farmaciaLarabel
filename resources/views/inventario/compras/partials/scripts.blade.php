@@ -391,22 +391,152 @@
             });
         });
 
-        // Validación final Formulario
+        // ============================================================
+        // VALIDACIÓN ROBUSTA ANTES DE ENVIAR (EVITA RECARGA)
+        // ============================================================
         $('#form-compra').on('submit', function(e) {
-            if ($('.fila-item').length === 0) {
-                e.preventDefault();
-                Swal.fire('Error', 'Debe agregar al menos un producto.', 'error');
-                return;
+            let errores = [];
+            let hayError = false;
+
+            // 1. LIMPIAR ERRORES PREVIOS (Quitar bordes rojos)
+            $('.is-invalid').removeClass('is-invalid');
+
+            // ------------------------------------------------
+            // A. VALIDAR CABECERA
+            // ------------------------------------------------
+            let proveedor = $('#proveedor_id').val();
+            let fecha = $('#fecha_recepcion').val();
+            let tipoDoc = $('#tipo_comprobante').val();
+            let numDoc = $('input[name="numero_factura_proveedor"]').val();
+
+            if (!proveedor) {
+                $('#proveedor_id').next('.select2-container').find('.select2-selection').css('border', '1px solid #dc3545'); // Borde rojo a Select2
+                errores.push("• Debe seleccionar un Proveedor.");
+                hayError = true;
+            } else {
+                $('#proveedor_id').next('.select2-container').find('.select2-selection').css('border', '');
             }
-            // Validar que se haya seleccionado medicamento
-            let error = false;
-            $('.input-medicamento-id').each(function() {
-                if (!$(this).val()) error = true;
-            });
-            if (error) {
-                e.preventDefault();
-                Swal.fire('Atención', 'Complete la información de los productos seleccionados.', 'warning');
+
+            if (!fecha) {
+                $('#fecha_recepcion').addClass('is-invalid');
+                errores.push("• Falta la Fecha de Recepción.");
+                hayError = true;
             }
+
+            if (!tipoDoc) {
+                $('#tipo_comprobante').addClass('is-invalid');
+                errores.push("• Seleccione el Tipo de Comprobante.");
+                hayError = true;
+            }
+
+            // Opcional: Validar que escriba numero de factura
+            /* if (!numDoc) {
+                $('input[name="numero_factura_proveedor"]').addClass('is-invalid');
+                errores.push("• Falta el N° de Comprobante.");
+                hayError = true;
+            } */
+
+            // ------------------------------------------------
+            // B. VALIDAR TABLA DE ÍTEMS
+            // ------------------------------------------------
+            let filas = $('.fila-item');
+
+            if (filas.length === 0) {
+                errores.push("• La tabla está vacía. Agregue productos.");
+                hayError = true;
+            } else {
+                filas.each(function(index) {
+                    let row = $(this);
+                    let numFila = index + 1;
+                    let rowErrors = false;
+
+                    // 1. Medicamento
+                    let medId = row.find('.input-medicamento-id').val();
+                    if (!medId) {
+                        row.find('.input-medicamento-search').addClass('is-invalid');
+                        rowErrors = true;
+                    }
+
+                    // 2. Lote
+                    let lote = row.find('.input-lote').val();
+                    if (!lote || lote.trim() === '') {
+                        row.find('.input-lote').addClass('is-invalid');
+                        rowErrors = true;
+                    }
+
+                    // 3. Vencimiento
+                    let venci = row.find('.input-fechaVenci').val();
+                    if (!venci) {
+                        row.find('.input-fechaVenci').addClass('is-invalid');
+                        rowErrors = true;
+                    }
+
+                    // 4. Cantidad Visual
+                    let cant = parseFloat(row.find('.input-cantidad-visual').val());
+                    if (!cant || cant <= 0) {
+                        row.find('.input-cantidad-visual').addClass('is-invalid');
+                        rowErrors = true;
+                    }
+
+                    // 5. Costo (Precio Compra)
+                    let precioC = parseFloat(row.find('.input-precio-visual').val());
+                    // Permitimos 0 si es bonificación, pero avisamos si está vacío vacío
+                    if (isNaN(precioC) || row.find('.input-precio-visual').val() === '') {
+                        row.find('.input-precio-visual').addClass('is-invalid');
+                        rowErrors = true;
+                    }
+
+                    // 6. Precio Venta (Mínimo el unitario es obligatorio)
+                    let pv = parseFloat(row.find('.input-pv-unidad').val());
+                    if (!pv || pv <= 0) {
+                        row.find('.input-pv-unidad').addClass('is-invalid');
+                        rowErrors = true;
+                    }
+
+                    if (rowErrors) {
+                        hayError = true;
+                        // Solo agregamos mensaje genérico de filas una vez
+                        if (!errores.includes("• Hay datos incompletos en las filas (ver campos en rojo).")) {
+                            errores.push("• Hay datos incompletos en las filas (ver campos en rojo).");
+                        }
+                    }
+                });
+            }
+
+            // ------------------------------------------------
+            // C. RESULTADO FINAL
+            // ------------------------------------------------
+            if (hayError) {
+                e.preventDefault(); // ¡ESTO EVITA QUE SE ENVÍE Y SE RECARGUE!
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Faltan datos',
+                    html: '<div class="text-left">' + errores.join('<br>') + '</div>',
+                    confirmButtonText: 'Entendido, voy a corregir'
+                });
+            } else {
+                // Si todo está bien, dejamos pasar el submit
+                // Opcional: Mostrar spinner de carga
+                Swal.fire({
+                    title: 'Guardando...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading()
+                    }
+                });
+            }
+        });
+
+        // EXTRA: Quitar el borde rojo apenas el usuario empiece a escribir corregir
+        $(document).on('input change', '.is-invalid', function() {
+            $(this).removeClass('is-invalid');
+        });
+
+        // EXTRA: Quitar borde rojo del Select2 Proveedor al cambiar
+        $('#proveedor_id').on('change', function() {
+            $(this).next('.select2-container').find('.select2-selection').css('border', '');
         });
     });
 

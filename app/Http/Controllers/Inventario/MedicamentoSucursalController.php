@@ -105,6 +105,49 @@ class MedicamentoSucursalController extends Controller
         return back()->with('success', 'Actualizado.');
     }
 
+    public function updateLoteUbicacion(Request $request, $loteId)
+    {
+        $data = $request->validate([
+            'ubicacion' => 'nullable|string|max:50',
+        ]);
+
+        $lote = Lote::findOrFail($loteId);
+        $lote->ubicacion = $data['ubicacion'] ?? null;
+        $lote->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ubicación del lote actualizada.',
+                'ubicacion' => $lote->ubicacion,
+            ]);
+        }
+
+        return back()->with('success', 'Ubicación del lote actualizada.');
+    }
+
+    public function updateLoteVencimiento(Request $request, $loteId)
+    {
+        $data = $request->validate([
+            'fecha_vencimiento' => 'nullable|date',
+        ]);
+
+        $lote = Lote::findOrFail($loteId);
+        $lote->fecha_vencimiento = $data['fecha_vencimiento'] ?? null;
+        $lote->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Fecha de vencimiento actualizada.',
+                'fecha_vencimiento' => $lote->fecha_vencimiento,
+            ]);
+        }
+
+        return back()->with('success', 'Fecha de vencimiento actualizada.');
+    }
+
+
     public function attach(Request $request, $medicamentoId)
     {
         $user = Auth::user();
