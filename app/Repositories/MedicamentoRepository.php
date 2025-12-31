@@ -14,26 +14,27 @@ class MedicamentoRepository
     /**
      * Búsqueda principal EVOLUCIONADA: Soporta Filtros de Precio + Omnibox
      */
-    public function buscarMedicamentos(string $q, array $ctx, int $perPage = 10): LengthAwarePaginator
+    // CAMBIO EN LA FIRMA: Agregamos bool $soloConStock = false
+    public function buscarMedicamentos(string $q, array $ctx, bool $soloConStock = false, int $perPage = 10): LengthAwarePaginator
     {
         $idsFiltro            = $ctx['ids_filtro'];
         $sucursalSeleccionada = $ctx['sucursal_seleccionada'];
 
         $min = $ctx['min'] ?? null;
         $max = $ctx['max'] ?? null;
-
-        // Fecha de hoy para filtrar vencidos
         $hoy = Carbon::today();
 
         $query = Medicamento::query()->with('categoria');
 
+        // Variable auxiliar para usar en el scope del filtro de stock
+        $targetSucursalId = $sucursalSeleccionada ? $sucursalSeleccionada->id : null;
+
         /* =======================================================
-           ESTRATEGIA A: HAY SUCURSAL SELECCIONADA
-           ======================================================= */
+       ESTRATEGIA A: HAY SUCURSAL SELECCIONADA
+       ======================================================= */
         if ($sucursalSeleccionada) {
             $sid = $sucursalSeleccionada->id;
 
-            // 1. Usamos JOIN para el PRECIO
             $query->join('medicamento_sucursal', 'medicamentos.id', '=', 'medicamento_sucursal.medicamento_id')
                 ->where('medicamento_sucursal.sucursal_id', $sid)
                 ->whereNull('medicamento_sucursal.deleted_at')
@@ -42,12 +43,10 @@ class MedicamentoRepository
                     'medicamento_sucursal.precio_venta as precio_v'
                 ]);
 
-            // 2. CORRECCIÓN MAESTRA: Sumar SOLO lotes NO vencidos
             $query->selectSub(function ($sub) use ($sid, $hoy) {
                 $sub->from('lotes')
                     ->whereColumn('lotes.medicamento_id', 'medicamentos.id')
                     ->where('lotes.sucursal_id', $sid)
-                    // FILTRO DE VENCIMIENTO: Fecha futura O nula (sin fecha)
                     ->where(function ($qDate) use ($hoy) {
                         $qDate->whereDate('fecha_vencimiento', '>=', $hoy)
                             ->orWhereNull('fecha_vencimiento');
@@ -55,19 +54,18 @@ class MedicamentoRepository
                     ->selectRaw('COALESCE(SUM(stock_actual), 0)');
             }, 'stock_unico');
 
-            // 3. Filtros de Precio
             if ($min) $query->where('medicamento_sucursal.precio_venta', '>=', $min);
             if ($max) $query->where('medicamento_sucursal.precio_venta', '<=', $max);
         }
         /* =======================================================
-           ESTRATEGIA B: VISTA GLOBAL
-           ======================================================= */ else {
+       ESTRATEGIA B: VISTA GLOBAL
+       ======================================================= */ else {
             $this->filtrarPorSucursales($query, $idsFiltro);
         }
 
         /* =======================================================
-           BUSCADOR "OMNIBOX"
-           ======================================================= */
+       BUSCADOR
+       ======================================================= */
         if ($q) {
             $query->where(function (Builder $k) use ($q) {
                 $k->where('medicamentos.nombre', 'like', "%$q%")
@@ -81,7 +79,31 @@ class MedicamentoRepository
             });
         }
 
-        // Ejecutamos la paginación
+        /* =======================================================
+       FILTRO: SOLO CON STOCK > 0
+       ======================================================= */
+        if ($soloConStock) {
+            // Aquí está la magia: Usamos whereHas contra 'lotes' aplicando la misma regla de fecha
+            $query->whereHas('lotes', function ($subQuery) use ($sucursalSeleccionada, $idsFiltro, $hoy) {
+
+                // 1. Filtrar por sucursal(es)
+                if ($sucursalSeleccionada) {
+                    $subQuery->where('sucursal_id', $sucursalSeleccionada->id);
+                } else {
+                    $subQuery->whereIn('sucursal_id', $idsFiltro);
+                }
+
+                // 2. Solo stock físico real
+                $subQuery->where('stock_actual', '>', 0);
+
+                // 3. REGLA DE ORO: No Vencidos (Fecha >= Hoy o Nula)
+                $subQuery->where(function ($qDate) use ($hoy) {
+                    $qDate->whereDate('fecha_vencimiento', '>=', $hoy)
+                        ->orWhereNull('fecha_vencimiento');
+                });
+            });
+        }
+
         $paginator = $query->orderBy('medicamentos.nombre', 'asc')
             ->paginate($perPage)
             ->withQueryString();

@@ -132,29 +132,91 @@ class DigemidReporteController extends Controller
             return back()->withErrors(['sucursal' => 'Selecciona una sucursal primero.']);
         }
 
-        // Columnas
-        $colsDefault = ['cod_establecimiento', 'codigo_digemid', 'nombre', 'laboratorio', 'precio_venta', 'stock_computado', 'estado'];
-        $colsSeleccionadas = $request->input('cols', $colsDefault);
+        // ✅ Columnas (por defecto: todas las maestras)
+        $colsDefault = array_keys($this->columnasMaestras);
 
-        // Data (misma consulta, sin paginar)
+        $colsSeleccionadas = $request->input('cols', $colsDefault);
+        $colsSeleccionadas = is_array($colsSeleccionadas) ? $colsSeleccionadas : $colsDefault;
+
+        // ✅ Sanitiza: solo permite columnas existentes
+        $colsSeleccionadas = array_values(array_intersect($colsSeleccionadas, $colsDefault));
+        if (empty($colsSeleccionadas)) {
+            $colsSeleccionadas = $colsDefault;
+        }
+
+        // Consulta base (NO ejecutamos aún)
         $query = $this->construirConsulta($request, $sucursalId);
-        $resultados = $query->get();
 
         $format = strtolower($request->input('format', 'excel'));
-        $timestamp = now()->format('Ymd_His');
-        $nombreBase = "digemid_{$timestamp}";
 
+        // Nombre de archivo
+        $nombreBase = 'monitor_digemid_' . now()->format('Ymd_His');
+
+        // ✅ Umbrales
+        $pdfWarnLimit = 500;   // desde aquí mostramos advertencia y pedimos confirmación
+        $pdfHardCap   = 50000;  // desde aquí bloqueamos sí o sí para proteger el servidor
+
+        // =========================
+        //          PDF
+        // =========================
         if ($format === 'pdf') {
+
+            $confirmPdf = filter_var($request->query('confirm_pdf', false), FILTER_VALIDATE_BOOLEAN);
+
+            // ✅ IMPORTANTE: primero solo contamos (mucho más liviano)
+            $totalFilas = (clone $query)->count();
+
+            // ✅ Hard cap de protección
+            if ($totalFilas > $pdfHardCap) {
+                return redirect()->to(url()->previous())->withErrors([
+                    'pdf' => "El reporte tiene {$totalFilas} filas. Para proteger el servidor, filtra más o exporta en Excel."
+                ]);
+            }
+
+            if ($totalFilas > $pdfWarnLimit && !$confirmPdf) {
+
+                $params = $request->query(); // querystring actual del export
+
+                $excelParams = $params;
+                $excelParams['format'] = 'excel';
+                unset($excelParams['confirm_pdf']);
+
+                // Link PDF confirmado
+                $pdfParams = $params;
+                $pdfParams['format'] = 'pdf';
+                $pdfParams['confirm_pdf'] = 1;
+
+                $excelUrl = url()->current() . '?' . http_build_query($excelParams);
+                $pdfUrl   = url()->current() . '?' . http_build_query($pdfParams);
+
+                return redirect()->to(url()->previous())->with('pdf_confirm', [
+                    'total'     => $totalFilas,
+                    'warnLimit' => $pdfWarnLimit,
+                    'excel_url' => $excelUrl,
+                    'pdf_url'   => $pdfUrl,
+                ]);
+            }
+
+            ini_set('memory_limit', '1024M');
+            set_time_limit(300);
+
+            $resultados = $query->get();
+
             $pdf = Pdf::loadView('reportes.digemid.pdf', [
-                'resultados' => $resultados,
-                'colsSeleccionadas' => $colsSeleccionadas,
+                'resultados'          => $resultados,
+                'colsSeleccionadas'   => $colsSeleccionadas,
                 'columnasDisponibles' => $this->columnasMaestras,
+                'limitePdf'           => $pdfWarnLimit,
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($nombreBase . '.pdf');
         }
 
-        // Excel por defecto
+        // =========================
+        //          EXCEL
+        // =========================
+        $resultados = $query->get();
+
         return Excel::download(
             new DigemidExport($resultados, $colsSeleccionadas, $this->columnasMaestras),
             $nombreBase . '.xlsx'

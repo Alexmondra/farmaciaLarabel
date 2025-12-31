@@ -18,70 +18,81 @@ class MedicamentoSucursalSeeder extends Seeder
 
         $spreadsheet = IOFactory::load($path);
         $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray(null, true, true, true); // A,B,C...
+        $rows = $sheet->toArray(null, true, true, true);
 
         $headerRowIndex = $this->findHeaderRow($rows);
         $map = $this->buildHeaderMap($rows[$headerRowIndex] ?? []);
 
-        // 1) Traer sucursales reales de tu BD (en orden)
+        // 1) Sucursales locales
         $localSucursalIds = Sucursal::orderBy('id')->pluck('id')->values()->all();
         if (count($localSucursalIds) === 0) {
-            $this->command?->warn('No hay sucursales en la BD. Crea tus sucursales primero.');
+            $this->command?->warn('No hay sucursales en la BD.');
             return;
         }
 
-        // 2) Armar mapeo: id_externo => sucursal_id_local (en orden de aparición)
+        // 2) Mapeo Sucursal Externa -> Local
         $externalToLocal = [];
         $cursor = 0;
 
+        // Primer barrido solo para mapear sucursales
         for ($i = $headerRowIndex + 1; $i <= count($rows); $i++) {
             $r = $rows[$i];
-
-            $barcode = $this->cleanBarcode($r[$map['CODIGO PRODUCTO']] ?? null);
+            // Usamos limpieza suave para permitir letras (JJLKALKASD) en la búsqueda
+            $rawCode = $this->cleanInput($r[$map['CODIGO PRODUCTO']] ?? null);
             $nombre  = trim((string)($r[$map['NOMBRE PRODUCTO']] ?? ''));
 
-            if (!$barcode || $nombre === '') continue;
+            if (!$rawCode || $nombre === '') continue;
 
             $externalAlmacenId = trim((string)($r[$map['ID ALMACEN/SUCURSAL']] ?? ''));
             if ($externalAlmacenId === '') continue;
 
             if (!isset($externalToLocal[$externalAlmacenId])) {
-                if (!isset($localSucursalIds[$cursor])) {
-                    $this->command?->warn("Hay más IDs externos que sucursales locales. External={$externalAlmacenId} se omitirá.");
-                } else {
+                if (isset($localSucursalIds[$cursor])) {
                     $externalToLocal[$externalAlmacenId] = $localSucursalIds[$cursor];
                     $cursor++;
                 }
             }
         }
 
-        // 3) Recorrer y sembrar pivote + lote
+        // 3) Recorrer y sembrar
         for ($i = $headerRowIndex + 1; $i <= count($rows); $i++) {
             $r = $rows[$i];
 
-            $barcode = $this->cleanBarcode($r[$map['CODIGO PRODUCTO']] ?? null);
+            $rawCode = $this->cleanInput($r[$map['CODIGO PRODUCTO']] ?? null);
             $nombre  = trim((string)($r[$map['NOMBRE PRODUCTO']] ?? ''));
 
-            if (!$barcode || $nombre === '') continue;
+            if (!$rawCode || $nombre === '') continue;
 
             $externalAlmacenId = trim((string)($r[$map['ID ALMACEN/SUCURSAL']] ?? ''));
             if ($externalAlmacenId === '' || !isset($externalToLocal[$externalAlmacenId])) continue;
 
             $sucursalId = (int) $externalToLocal[$externalAlmacenId];
 
-            // Buscar medicamento por codigo_barra
-            $med = Medicamento::where('codigo_barra', $barcode)->first();
+            // --- LÓGICA DE BÚSQUEDA HÍBRIDA ---
+            // 1. Intentar buscar por CODIGO DE BARRA
+            $med = Medicamento::where('codigo_barra', $rawCode)->first();
+
+            // 2. Si no existe, buscar por CODIGO INTERNO (para los casos JJLKALKASD)
+            if (!$med) {
+                $med = Medicamento::where('codigo', $rawCode)->first();
+            }
+
+            // Si no lo encuentra en ninguno de los dos, se salta
             if (!$med) {
                 continue;
             }
+            // -----------------------------------
 
-            // stock minimo (si viene vacío, 0)
             $stockMin = (int) floor((float) ($r[$map['STOCK MINIMO']] ?? 0));
 
-            // Precio de venta: usaremos PRECIO CON IGV del XLS
-            $precioVenta = $this->toDecimal($r[$map['PRECIO CON IGV']] ?? null) ?? 0;
+            // --- LÓGICA DE PRECIO Y REDONDEO ---
+            // Leemos PRECIO SIN IGV
+            $rawPrecio = $this->toDecimal($r[$map['PRECIO SIN IGV']] ?? null) ?? 0;
 
-            // Asegurar pivote medicamento_sucursal
+            // Redondeo: 5.5 -> 5 | 5.6 -> 6 | 5.4 -> 5
+            // PHP_ROUND_HALF_DOWN hace exactamente que el .5 vaya hacia abajo
+            $precioVentaEntero = (int) round($rawPrecio, 0, PHP_ROUND_HALF_DOWN);
+
             MedicamentoSucursal::firstOrCreate(
                 [
                     'medicamento_id' => $med->id,
@@ -89,8 +100,7 @@ class MedicamentoSucursalSeeder extends Seeder
                 ],
                 [
                     'stock_minimo'   => max(0, $stockMin),
-                    // Precio del XLS (con IGV)
-                    'precio_venta'   => $precioVenta,
+                    'precio_venta'   => $precioVentaEntero, // Guardamos el entero redondeado
                     'precio_blister' => 0,
                     'precio_caja'    => 0,
                     'activo'         => true,
@@ -98,12 +108,9 @@ class MedicamentoSucursalSeeder extends Seeder
                 ]
             );
 
-            // Lote: stock_actual solo si > 0
+            // Lote: stock_actual
             $stockActual = (int) floor((float) ($r[$map['STOCK ACTUAL']] ?? 0));
-            if ($stockActual <= 0) {
-                // negativos o cero NO se registran
-                continue;
-            }
+            if ($stockActual <= 0) continue;
 
             $fechaVenc = $this->parseFecha($r[$map['FECHA VENCIMIENTO']] ?? null);
             $precioCompra = $this->toDecimal($r[$map['PRECIO COMPRA']] ?? null);
@@ -128,6 +135,8 @@ class MedicamentoSucursalSeeder extends Seeder
             ]);
         }
     }
+
+    // --- MÉTODOS AUXILIARES ---
 
     private function findHeaderRow(array $rows): int
     {
@@ -157,18 +166,22 @@ class MedicamentoSucursalSeeder extends Seeder
             'FECHA VENCIMIENTO'      => $norm['FECHA VENCIMIENTO'] ?? 'Y',
             'DETALLE - MEMO'         => $norm['DETALLE - MEMO'] ?? 'M',
             'PRECIO COMPRA'          => $norm['PRECIO COMPRA'] ?? 'N',
-            'PRECIO CON IGV'         => $norm['PRECIO CON IGV'] ?? 'I',
+            // Cambiado: Ahora buscamos SIN IGV, ajusta la letra 'H' si en tu excel es otra columna
+            'PRECIO SIN IGV'         => $norm['PRECIO SIN IGV'] ?? 'H',
         ];
     }
 
-    private function cleanBarcode($v): ?string
+    // Limpieza suave: quita espacios pero deja letras y números para la búsqueda interna
+    private function cleanInput($v): ?string
     {
         $s = trim((string)$v);
         if ($s === '') return null;
-        $s = preg_replace('/\s+/', '', $s);
-        $digits = preg_replace('/\D+/', '', $s);
-        return $digits !== '' ? $digits : $s;
+        // Solo quita espacios internos (Code 123 -> Code123)
+        return preg_replace('/\s+/', '', $s);
     }
+
+    // Mantenemos cleanBarcode solo si necesitas estricto en otro lado, 
+    // pero para la lógica principal usamos cleanInput.
 
     private function parseFecha($v): ?string
     {
@@ -179,11 +192,9 @@ class MedicamentoSucursalSeeder extends Seeder
             [$d, $m, $y] = explode('-', $s);
             return "{$y}-{$m}-{$d}";
         }
-
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $s)) {
             return $s;
         }
-
         return null;
     }
 
@@ -192,7 +203,7 @@ class MedicamentoSucursalSeeder extends Seeder
         if ($v === null) return null;
         $s = trim((string)$v);
         if ($s === '') return null;
-        $s = str_replace(',', '', $s);
+        $s = str_replace(',', '', $s); // quitar comas de miles
         if (!is_numeric($s)) return null;
         return (float)$s;
     }

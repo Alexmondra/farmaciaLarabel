@@ -28,8 +28,10 @@ class MedicamentoController extends Controller
         $q   = trim($request->get('q', ''));
         $ctx = $this->sucursalResolver->resolverPara($user);
 
+        $soloConStock = $request->boolean('con_stock');
+
         // Delegamos al repositorio
-        $medicamentos = $this->medicamentoRepo->buscarMedicamentos($q, $ctx);
+        $medicamentos = $this->medicamentoRepo->buscarMedicamentos($q, $ctx, $soloConStock);
 
         $data = [
             'medicamentos'         => $medicamentos,

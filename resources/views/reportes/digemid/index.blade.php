@@ -22,6 +22,65 @@
         No has seleccionado una sucursal activa. Por favor, selecciona una sucursal en el menú superior para ver el reporte.
     </div>
     @else
+
+    {{-- ✅ Modal confirmación PDF grande --}}
+    @if(session('pdf_confirm'))
+    @php($p = session('pdf_confirm'))
+    <div class="modal fade" id="pdfConfirmModal" tabindex="-1" role="dialog" aria-labelledby="pdfConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 520px;">
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title" id="pdfConfirmModalLabel" style="font-weight: 700;">
+                        Confirmar exportación
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body pt-2">
+                    <div class="d-flex align-items-start">
+                        <div class="mr-3" style="font-size: 28px; line-height: 1;">⚠️</div>
+
+                        <div>
+                            <div style="font-weight: 700; font-size: 14px;">
+                                El reporte tiene {{ $p['total'] }} filas
+                            </div>
+
+                            <div class="text-muted" style="font-size: 13px;">
+                                Se recomienda <b>Excel</b> (más rápido y liviano).
+                                Si continúas con <b>PDF</b> puede demorar o fallar según la carga del servidor.
+                            </div>
+
+                            <div class="mt-2 text-muted" style="font-size: 12px;">
+                                ¿Qué deseas hacer?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <a href="{{ $p['excel_url'] }}" class="btn btn-success">
+                        📗 Exportar Excel
+                    </a>
+
+                    <a href="{{ $p['pdf_url'] }}" class="btn btn-outline-danger">
+                        📄 Continuar PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+
+
+
+
     {{-- 2. SI HAY SUCURSAL, MOSTRAMOS TODO --}}
     <form id="filterForm" class="h-100">
 
@@ -184,6 +243,15 @@
         $(document).on('change', '#selectAll', function() {
             $('.row-checkbox').prop('checked', $(this).is(':checked'));
         });
+
+        @if(session('pdf_confirm'))
+        $('#pdfConfirmModal').modal({
+            backdrop: true, // ✅ clic fuera cierra
+            keyboard: true, // ✅ ESC cierra
+            show: true
+        });
+        @endif
+
     });
 
     function cargarTabla(url = null) {

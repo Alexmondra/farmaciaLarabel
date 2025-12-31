@@ -87,6 +87,15 @@
                     </div>
                 </form>
             </div>
+
+            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="chkConStock">
+                    <label class="custom-control-label font-weight-bold text-dark" for="chkConStock">
+                        Solo con Stock
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -418,11 +427,12 @@ $permisosJS = [
         let q = $('#searchInput').val().trim();
         let min = $('#minPrice').val();
         let max = $('#maxPrice').val();
-
+        let conStock = $('#chkConStock').is(':checked') ? 1 : 0;
         let params = new URLSearchParams({
             q: q,
             min: min,
-            max: max
+            max: max,
+            con_stock: conStock
         }).toString();
 
         if (params === ultimaBusqueda) return;
@@ -451,6 +461,10 @@ $permisosJS = [
             }
         });
     }
+
+    $('#chkConStock').on('change', function() {
+        aplicarFiltros();
+    });
 
     $('#searchInput, #minPrice, #maxPrice').on('keyup change', function(e) {
         if ([16, 17, 18, 20, 37, 38, 39, 40].includes(e.keyCode)) return;

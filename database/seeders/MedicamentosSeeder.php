@@ -28,15 +28,17 @@ class MedicamentosSeeder extends Seeder
         $userId = 1; // <-- pon tu user_id dueño de los medicamentos
 
         // Para evitar códigos repetidos en esta corrida
-        $usedCodigos = [];
+        $usedCodigos = [];   // controla duplicados del campo `codigo` en esta corrida
+        $usedBarcodes = [];  // controla duplicados del campo `codigo_barra` en esta corrida
+
         for ($i = $headerRowIndex + 1; $i <= count($rows); $i++) {
             $r = $rows[$i];
 
-            $barcode = $this->cleanBarcode($r[$map['CODIGO PRODUCTO']] ?? null);
+            $rawCodigoProducto = trim((string)($r[$map['CODIGO PRODUCTO']] ?? ''));
             $nombre  = trim((string)($r[$map['NOMBRE PRODUCTO']] ?? ''));
 
             // Saltar filas vacías / basura
-            if (!$barcode || $nombre === '') continue;
+            if ($nombre === '' || $this->isGarbageNombre($nombre)) continue;
 
             $marca   = trim((string)($r[$map['MARCA']] ?? ''));
             $memo    = trim((string)($r[$map['DETALLE - MEMO']] ?? ''));
@@ -54,18 +56,50 @@ class MedicamentosSeeder extends Seeder
 
             $afectoIgv = ($igvCode === '' || $igvCode === '20'); // ajusta si quieres otro mapeo
 
-            // Evitar duplicados por código de barra
-            $exists = Medicamento::where('codigo_barra', $barcode)->exists();
-            if ($exists) continue;
+            // --- REGLA PRINCIPAL ---
+            // 1) Si CODIGO PRODUCTO es barcode válido => va a codigo_barra. Si ya existe en BD => OMITIR.
+            // 2) Si NO es barcode (ej: JJLKALKASD) => va a codigo. Si ya existe en BD => OMITIR. codigo_barra = NULL.
+            // 3) Si viene vacío => se crea igual y el codigo se AUTOGENERA. codigo_barra = NULL.
+            $parsed = $this->parseCodigoProducto($rawCodigoProducto);
+            $barcode = $parsed['barcode']; // puede ser null
+            $variant = $parsed['variant']; // puede ser null
+
+            if ($barcode !== null) {
+                if (isset($usedBarcodes[$barcode])) continue;
+                if (Medicamento::where('codigo_barra', $barcode)->exists()) continue;
+                $usedBarcodes[$barcode] = true;
+
+                // codigo interno autogenerado (no depende del barcode)
+                $codigo = $this->genCodigoFromNombre($nombre, $usedCodigos);
+            } else {
+                if ($rawCodigoProducto !== '') {
+                    $codigo = $this->fitCodigo($rawCodigoProducto);
+                    if ($codigo === '') continue; // por si vino puro espacio
+
+                    if (isset($usedCodigos[$codigo])) continue;
+                    if (Medicamento::where('codigo', $codigo)->exists()) continue;
+
+                    $usedCodigos[$codigo] = true;
+                } else {
+                    // vino vacío => autogenerar
+                    $codigo = $this->genCodigoFromNombre($nombre, $usedCodigos);
+                }
+            }
+
+            // Descripción (memo) + variante si aplica
+            $descripcion = $memo !== '' ? $memo : null;
+            if ($variant !== null && $variant !== '') {
+                $tag = "VARIANTE: " . $variant;
+                $descripcion = $descripcion ? ($descripcion . " | " . $tag) : $tag;
+            }
 
             Medicamento::create([
-                // codigo autogenerado (con prefijo del nombre) <= 30
-                'codigo' => $this->genCodigoFromNombre($nombre, $usedCodigos),
+                'codigo' => Str::limit($codigo, 30, ''),
 
-                'codigo_barra' => $barcode,
+                'codigo_barra' => $barcode, // null si no es barcode
                 'nombre' => Str::limit($nombre, 180, ''),
                 'laboratorio' => Str::limit($marca, 120, ''),
-                'descripcion' => $memo !== '' ? $memo : null,
+                'descripcion' => $descripcion,
 
                 'categoria_id' => $categoriaId,
                 'user_id' => $userId,
@@ -119,15 +153,47 @@ class MedicamentosSeeder extends Seeder
         return $t ?? '';
     }
 
-    private function cleanBarcode($v): ?string
+    private function parseCodigoProducto($v): array
     {
         $s = trim((string)$v);
-        if ($s === '') return null;
+        if ($s === '') return ['barcode' => null, 'variant' => null];
 
+        // quitar espacios internos
         $s = preg_replace('/\s+/', '', $s);
 
-        $digits = preg_replace('/\D+/', '', $s);
-        return $digits !== '' ? $digits : $s;
+        // barcode puro
+        if (preg_match('/^(\d{8}|\d{12}|\d{13}|\d{14})$/', $s)) {
+            return ['barcode' => $s, 'variant' => null];
+        }
+
+        // barcode + variante (ej: 2770...-A)
+        if (preg_match('/^(\d{8}|\d{12}|\d{13}|\d{14})-([A-Za-z0-9]+)$/', $s, $m)) {
+            return ['barcode' => $m[1], 'variant' => $m[2]];
+        }
+
+        return ['barcode' => null, 'variant' => null];
+    }
+
+    private function fitCodigo(string $raw): string
+    {
+        $s = trim($raw);
+        if ($s === '') return '';
+
+        // sin espacios
+        $s = preg_replace('/\s+/', '', $s);
+
+        // Si entra en 30, lo usamos tal cual (regla del usuario)
+        if (strlen($s) <= 30) return $s;
+
+        // Si es muy largo, lo compactamos para que entre en varchar(30)
+        $hash = substr(md5($s), 0, 5);
+        $prefix = substr($s, 0, 24);
+        return $prefix . '-' . $hash; // total 30
+    }
+
+    private function isGarbageNombre(string $nombre): bool
+    {
+        return (bool) preg_match('/\b(DETALLE|SUBTOTAL|TOTAL|IGV)\b/i', $nombre);
     }
 
     private function findHeaderRow(array $rows): int
