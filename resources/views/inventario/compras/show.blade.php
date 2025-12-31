@@ -137,16 +137,98 @@
     </div>
 </div>
 
-{{-- TARJETA DE OBSERVACIONES (Separada y destacada) --}}
-@if($compra->observaciones)
-<div class="card card-modern shadow-sm mt-4 border-left-warning">
-    <div class="card-body py-3 px-4">
-        <h6 class="mb-2 font-weight-bold text-warning"><i class="fas fa-sticky-note mr-2"></i> Observaciones de la Compra</h6>
-        <p class="text-muted mb-0 small">{{ $compra->observaciones }}</p>
+{{-- ZONA INFERIOR: OBSERVACIONES Y ARCHIVO ADJUNTO --}}
+@php
+$tieneArchivo = !empty($compra->archivo_comprobante);
+$esImagen = false;
+
+if($tieneArchivo) {
+$ext = strtolower(pathinfo($compra->archivo_comprobante, PATHINFO_EXTENSION));
+$esImagen = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']);
+}
+@endphp
+
+@if($compra->observaciones || $tieneArchivo)
+<div class="row mt-4">
+
+    {{-- COLUMNA 1: OBSERVACIONES (Ocupa todo el ancho si no hay archivo) --}}
+    <div class="{{ $tieneArchivo ? 'col-md-8' : 'col-12' }}">
+        @if($compra->observaciones)
+        <div class="card card-modern shadow-sm border-left-warning h-100">
+            <div class="card-header bg-transparent py-2">
+                <h6 class="mb-0 font-weight-bold text-warning">
+                    <i class="fas fa-sticky-note mr-2"></i> Observaciones
+                </h6>
+            </div>
+            <div class="card-body py-3 px-4">
+                <p class="text-muted mb-0 small" style="white-space: pre-line;">{{ $compra->observaciones }}</p>
+            </div>
+        </div>
+        @endif
     </div>
+
+    {{-- COLUMNA 2: ARCHIVO ADJUNTO (Solo se muestra si existe) --}}
+    @if($tieneArchivo)
+    <div class="col-md-4 mt-3 mt-md-0">
+        <div class="card card-modern shadow-sm border-left-secondary h-100">
+            <div class="card-header bg-transparent py-2">
+                <h6 class="mb-0 font-weight-bold text-secondary">
+                    <i class="fas fa-paperclip mr-2"></i> Comprobante Adjunto
+                </h6>
+            </div>
+            <div class="card-body p-3 text-center d-flex flex-column justify-content-center align-items-center">
+
+                {{-- VISTA PREVIA --}}
+                @if($esImagen)
+                <div class="mb-3 position-relative" style="width: 100%; height: 160px; overflow: hidden; border-radius: 8px; border: 1px solid #dee2e6; background: #f8f9fa;">
+                    {{-- Usamos la ruta .ver para el src --}}
+                    <img src="{{ route('compras.archivo.ver', $compra->id) }}"
+                        alt="Comprobante"
+                        style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
+                        onclick="window.open('{{ route('compras.archivo.ver', $compra->id) }}', '_blank')">
+
+                    <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center"
+                        style="top:0; left:0; background: rgba(0,0,0,0.03); pointer-events: none;">
+                        <i class="fas fa-search-plus text-white shadow-sm" style="font-size: 2rem; opacity: 0.8;"></i>
+                    </div>
+                </div>
+                @else
+                {{-- Si es DOC/PDF mostramos icono --}}
+                <div class="mb-3 p-3 rounded bg-light" style="width: 100%;">
+                    @if(in_array($ext, ['pdf']))
+                    <i class="fas fa-file-pdf text-danger" style="font-size: 4rem;"></i>
+                    @elseif(in_array($ext, ['doc', 'docx']))
+                    <i class="fas fa-file-word text-primary" style="font-size: 4rem;"></i>
+                    @else
+                    <i class="fas fa-file-alt text-secondary" style="font-size: 4rem;"></i>
+                    @endif
+                    <p class="text-muted small mt-2 mb-0 font-weight-bold text-uppercase">{{ $ext }}</p>
+                </div>
+                @endif
+
+                {{-- BOTONES DE ACCIÓN --}}
+                <div class="w-100">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <a href="{{ route('compras.archivo.ver', $compra->id) }}" target="_blank" class="btn btn-outline-secondary btn-sm btn-block" title="Ver en nueva pestaña">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ route('compras.archivo.descargar', $compra->id) }}" class="btn btn-primary btn-sm btn-block shadow-sm" title="Descargar archivo">
+                                <i class="fas fa-download"></i> Bajar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    @endif
+
 </div>
 @endif
-
 @endsection
 
 @section('css')

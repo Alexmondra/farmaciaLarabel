@@ -135,6 +135,8 @@ Route::middleware(['auth'])->group(function () {
         ->parameters(['proveedores' => 'proveedor']);
 
     Route::resource('compras', CompraController::class);
+    Route::get('compras/{id}/archivo', [CompraController::class, 'mostrarComprobante'])->name('compras.archivo.ver');
+    Route::get('compras/{id}/descargar', [CompraController::class, 'descargarComprobante'])->name('compras.archivo.descargar');
 
     // =================================================================
     // MÓDULO: VENTAS

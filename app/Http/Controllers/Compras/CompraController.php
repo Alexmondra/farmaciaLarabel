@@ -15,7 +15,7 @@ use App\Services\SucursalResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Inventario\MedicamentoSucursal;
-
+use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Support\Facades\DB;
 
@@ -130,133 +130,172 @@ class CompraController extends Controller
         $ctx  = $this->sucursalResolver->resolverPara($user);
         $sucursalSeleccionada = $ctx['sucursal_seleccionada'];
 
-        if (!$sucursalSeleccionada) return redirect()->back()->with('error', 'Seleccione una sucursal.');
+        if (!$sucursalSeleccionada) {
+            return redirect()->back()->with('error', 'Seleccione una sucursal.');
+        }
 
         // 1. VALIDACIÓN
         $data = $request->validate([
-            // Cabecera
+            // --- Cabecera ---
             'proveedor_id'             => 'required|exists:proveedores,id',
             'fecha_recepcion'          => 'required|date',
             'tipo_comprobante'         => 'nullable|string',
             'numero_factura_proveedor' => 'nullable|string',
             'observaciones'            => 'nullable|string',
-            'archivo_comprobante'      => 'nullable|file|max:10240|mimes:pdf,jpg,jpeg,png', // Max 10MB
 
-            // Items (Arrays)
+            // --- Archivo (Aquí está la actualización) ---
+            // max:20480 = 20MB. mimes incluye Word (doc, docx), PDF e Imágenes.
+            'archivo_comprobante'      => 'nullable|file|max:20480|mimes:pdf,jpg,jpeg,png,doc,docx',
+
+            // --- Items ---
             'items'                            => 'required|array|min:1',
             'items.*.medicamento_id'           => 'required|integer',
-            'items.*.codigo_lote'              => 'required|string', // Lote obligatorio
-            'items.*.fecha_vencimiento'        => 'required|date',   // Vencimiento obligatorio
-
-            // Cantidades y Costos (Calculados por JS)
+            'items.*.codigo_lote'              => 'required|string',
+            'items.*.fecha_vencimiento'        => 'required|date',
             'items.*.cantidad_recibida'        => 'required|integer|min:1',
             'items.*.precio_compra_unitario'   => 'required|numeric|min:0',
-
-            // Precios de Venta (Nuevos campos)
-            'items.*.precio_venta'             => 'required|numeric|min:0',      // Unidad
-            'items.*.precio_venta_blister'     => 'nullable|numeric|min:0',      // Blíster
-            'items.*.precio_venta_caja'        => 'nullable|numeric|min:0',      // Caja
-            'items.*.precio_oferta'            => 'nullable|numeric|min:0',      // Oferta
-
+            'items.*.precio_venta'             => 'required|numeric|min:0',
+            'items.*.precio_venta_blister'     => 'nullable|numeric|min:0',
+            'items.*.precio_venta_caja'        => 'nullable|numeric|min:0',
+            'items.*.precio_oferta'            => 'nullable|numeric|min:0',
             'items.*.ubicacion'                => 'nullable|string',
         ]);
 
-        // 2. ARCHIVO PRIVADO (Seguridad)
+        // 2. PROCESAR ARCHIVO (Almacenamiento Privado)
         $pathArchivo = null;
         if ($request->hasFile('archivo_comprobante')) {
-            // Guardamos en el disco 'local' (storage/app), NO en 'public'.
-            // Carpeta: compras_documentos
-            $pathArchivo = $request->file('archivo_comprobante')->store('compras_documentos', 'local');
+            // store() por defecto usa el disco 'local' (storage/app), que NO es público.
+            // Se guardará en: storage/app/compras_documentos/hashName.ext
+            $pathArchivo = $request->file('archivo_comprobante')->store('compras_documentos');
         }
 
         // 3. TRANSACCIÓN DB
-        $compra = DB::transaction(function () use ($data, $user, $sucursalSeleccionada, $pathArchivo) {
+        try {
+            $compra = DB::transaction(function () use ($data, $user, $sucursalSeleccionada, $pathArchivo) {
 
-            // A. Crear Cabecera
-            $compra = Compra::create([
-                'proveedor_id'             => $data['proveedor_id'],
-                'sucursal_id'              => $sucursalSeleccionada->id,
-                'user_id'                  => $user->id,
-                'numero_factura_proveedor' => $data['numero_factura_proveedor'],
-                'fecha_recepcion'          => $data['fecha_recepcion'],
-                'tipo_comprobante'         => $data['tipo_comprobante'],
-                'observaciones'            => $data['observaciones'],
-                'archivo_comprobante'      => $pathArchivo, // Guardamos la ruta privada
-                'estado'                   => 'registrada',
-                'costo_total_factura'      => 0
-            ]);
+                // A. Crear Cabecera
+                $compra = Compra::create([
+                    'proveedor_id'             => $data['proveedor_id'],
+                    'sucursal_id'              => $sucursalSeleccionada->id,
+                    'user_id'                  => $user->id,
+                    'numero_factura_proveedor' => $data['numero_factura_proveedor'],
+                    'fecha_recepcion'          => $data['fecha_recepcion'],
+                    'tipo_comprobante'         => $data['tipo_comprobante'],
+                    'observaciones'            => $data['observaciones'],
 
-            $totalCompra = 0;
+                    // Aquí guardamos la ruta relativa (ej: "compras_documentos/XyZ...jpg")
+                    'archivo_comprobante'      => $pathArchivo,
 
-            // B. Procesar Items
-            foreach ($data['items'] as $item) {
-
-                // 1. Crear Lote (Stock entra en UNIDADES TOTALES)
-                $lote = Lote::create([
-                    'medicamento_id'    => $item['medicamento_id'],
-                    'sucursal_id'       => $sucursalSeleccionada->id,
-                    'codigo_lote'       => strtoupper($item['codigo_lote']),
-                    'stock_actual'      => $item['cantidad_recibida'],
-                    'fecha_vencimiento' => $item['fecha_vencimiento'],
-                    'ubicacion'         => $item['ubicacion'] ?? null,
-                    'precio_compra'     => $item['precio_compra_unitario'],
-                    'precio_oferta'     => $item['precio_oferta'] ?? null,
+                    'estado'                   => 'registrada',
+                    'costo_total_factura'      => 0
                 ]);
 
-                // 2. Detalle Compra (Histórico)
-                DetalleCompra::create([
-                    'compra_id'              => $compra->id,
-                    'lote_id'                => $lote->id,
-                    'cantidad_recibida'      => $item['cantidad_recibida'],
-                    'precio_compra_unitario' => $item['precio_compra_unitario'],
-                ]);
+                $totalCompra = 0;
 
-                // 3. Actualizar Precios en la Sucursal (Pivote)
-                $ms = MedicamentoSucursal::withTrashed()->firstOrNew([
-                    'medicamento_id' => $item['medicamento_id'],
-                    'sucursal_id'    => $sucursalSeleccionada->id
-                ]);
+                // B. Procesar Items
+                foreach ($data['items'] as $item) {
+                    // 1. Crear Lote
+                    $lote = Lote::create([
+                        'medicamento_id'    => $item['medicamento_id'],
+                        'sucursal_id'       => $sucursalSeleccionada->id,
+                        'codigo_lote'       => strtoupper($item['codigo_lote']),
+                        'stock_actual'      => $item['cantidad_recibida'],
+                        'fecha_vencimiento' => $item['fecha_vencimiento'],
+                        'ubicacion'         => $item['ubicacion'] ?? null,
+                        'precio_compra'     => $item['precio_compra_unitario'],
+                        'precio_oferta'     => $item['precio_oferta'] ?? null,
+                    ]);
 
-                if ($ms->trashed()) $ms->restore();
+                    // 2. Detalle Compra
+                    DetalleCompra::create([
+                        'compra_id'              => $compra->id,
+                        'lote_id'                => $lote->id,
+                        'cantidad_recibida'      => $item['cantidad_recibida'],
+                        'precio_compra_unitario' => $item['precio_compra_unitario'],
+                    ]);
 
-                // Actualizamos TODOS los precios configurados
-                $ms->precio_venta   = $item['precio_venta'];
-                $ms->precio_blister = $item['precio_venta_blister'] ?? null;
-                $ms->precio_caja    = $item['precio_venta_caja'] ?? null; // <--- Nuevo campo Caja
+                    // 3. Actualizar Precios (MedicamentoSucursal)
+                    $ms = MedicamentoSucursal::withTrashed()->firstOrNew([
+                        'medicamento_id' => $item['medicamento_id'],
+                        'sucursal_id'    => $sucursalSeleccionada->id
+                    ]);
+                    if ($ms->trashed()) $ms->restore();
 
-                $ms->activo         = true;
-                $ms->save();
+                    $ms->precio_venta   = $item['precio_venta'];
+                    $ms->precio_blister = $item['precio_venta_blister'] ?? null;
+                    $ms->precio_caja    = $item['precio_venta_caja'] ?? null;
+                    $ms->activo         = true;
+                    $ms->save();
 
-                // Sumar al total de la factura
-                $totalCompra += ($item['cantidad_recibida'] * $item['precio_compra_unitario']);
+                    $totalCompra += ($item['cantidad_recibida'] * $item['precio_compra_unitario']);
+                }
+
+                // Actualizar total final
+                $compra->update(['costo_total_factura' => $totalCompra]);
+
+                return $compra;
+            });
+
+            return redirect()->route('compras.show', $compra->id)
+                ->with('success', 'Compra registrada con éxito.');
+        } catch (\Exception $e) {
+            // Si falla la transacción, borramos el archivo si se subió para no dejar basura
+            if ($pathArchivo && \Storage::exists($pathArchivo)) {
+                \Storage::delete($pathArchivo);
             }
 
-            // Actualizar total final cabecera
-            $compra->update(['costo_total_factura' => $totalCompra]);
-
-            return $compra;
-        });
-
-        return redirect()->route('compras.show', $compra->id)
-            ->with('success', 'Compra registrada correctamente.');
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error al guardar la compra: ' . $e->getMessage());
+        }
     }
 
-    /**
-     * NUEVO MÉTODO: Descargar archivo privado
-     */
+
     public function descargarComprobante($id)
     {
         $compra = Compra::findOrFail($id);
 
-        // Seguridad: Verificar si el usuario tiene permiso o pertenece a la sucursal
-        // ... (Tu lógica de permisos aquí) ...
+        // Validar seguridad (sucursal) aquí si es necesario...
 
         if (!$compra->archivo_comprobante) {
             abort(404, 'No hay archivo adjunto.');
         }
 
-        // Descarga segura desde storage/app/compras_documentos
-        return response()->download(storage_path("app/{$compra->archivo_comprobante}"));
+        // VERIFICACIÓN ROBUSTA
+        // Usamos el disco 'local' explícitamente
+        if (!Storage::disk('local')->exists($compra->archivo_comprobante)) {
+            abort(404, 'El archivo físico no existe en el servidor.');
+        }
+
+        // Obtener ruta absoluta segura
+        $path = Storage::disk('local')->path($compra->archivo_comprobante);
+
+        return response()->download($path);
+    }
+
+    public function mostrarComprobante($id)
+    {
+        $compra = Compra::findOrFail($id);
+
+        // Validar seguridad aquí...
+
+        if (!$compra->archivo_comprobante) {
+            abort(404);
+        }
+
+        // VERIFICACIÓN
+        if (!Storage::disk('local')->exists($compra->archivo_comprobante)) {
+            abort(404, 'Archivo no encontrado.');
+        }
+
+        $path = Storage::disk('local')->path($compra->archivo_comprobante);
+
+        // Obtener tipo de archivo (mime type) para que el navegador sepa qué es
+        $type = Storage::disk('local')->mimeType($compra->archivo_comprobante);
+
+        return response()->file($path, [
+            'Content-Type' => $type
+        ]);
     }
 
 
