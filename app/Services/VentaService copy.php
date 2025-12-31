@@ -39,12 +39,15 @@ class VentaService
             $sucursal = $caja->sucursal;
             $esZonaAmazonia = ($sucursal->impuesto_porcentaje == 0);
 
-            // ---------------------------------------------------------
-            // CORRECCIÓN: LÓGICA DE CLIENTE
-            // Solo ponemos el ID 1 si el dato viene vacío o nulo.
-            // Si viene un ID (ej: 50), respetamos ese ID.
-            // ---------------------------------------------------------
-            $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : 1;
+            // =========================================================
+            // CORRECCIÓN DEFINITIVA DE CLIENTE
+            // =========================================================
+            // Lógica estricta:
+            // 1. Tomamos el valor que viene del formulario.
+            // 2. Si es null o vacío (""), asignamos 1 (Público General).
+            // 3. Si tiene cualquier otro valor (ej: 45), respetamos el 45.
+            $clienteIdFinal = empty($data['cliente_id']) ? 1 : $data['cliente_id'];
+
 
             // 2. PROCESAR ITEMS
             $items = json_decode($data['items'], true);
@@ -61,6 +64,7 @@ class VentaService
             $sumaTotalVenta  = 0;
 
             foreach ($items as $index => $item) {
+                // Validación básica de IDs y Cantidades
                 $loteId = $item['id'] ?? $item['lote_id'] ?? null;
                 if (!$loteId) throw new Exception("Error Item #" . ($index + 1) . ": lote_id no encontrado.");
 
@@ -85,7 +89,7 @@ class VentaService
 
                 if (!$medicamento) throw new Exception("Error Item #" . ($index + 1) . ": no se encontró el medicamento.");
 
-                // FACTOR Y PRECIOS
+                // FACTOR Y PRECIOS REALES
                 $factor = 1;
                 if ($unidadMedida === 'CAJA') $factor = (int)($medicamento->unidades_por_envase ?? 0);
                 elseif ($unidadMedida === 'BLISTER') $factor = (int)($medicamento->unidades_por_blister ?? 0);
@@ -94,9 +98,11 @@ class VentaService
 
                 $cantidadUnidades = $cantidadPresentacion * $factor;
                 $precioUnit = round($precioPresentacion / $factor, 4);
+
+                // Calculamos Subtotal Neto de la línea
                 $subtotalItem = round($precioUnit * $cantidadUnidades, 2);
 
-                // IMPUESTOS
+                // CÁLCULO DE IMPUESTOS
                 $esExonerado = $esZonaAmazonia || !$medicamento->afecto_igv;
                 $valorUnitario = 0;
                 $igvItemTotal = 0;
@@ -114,6 +120,7 @@ class VentaService
                     $baseItemTotal = round($subtotalItem / 1.18, 2);
                     $igvItemTotal  = round($subtotalItem - $baseItemTotal, 2);
                     $valorUnitario = round($baseItemTotal / $cantidadUnidades, 4);
+
                     $sumaOpGravada += $baseItemTotal;
                     $sumaIgv       += $igvItemTotal;
                 }
@@ -158,10 +165,7 @@ class VentaService
             $venta = Venta::create([
                 'caja_sesion_id'   => $caja->id,
                 'sucursal_id'      => $sucursal->id,
-
-                // AQUI USAMOS EL ID PROCESADO (NO EL DEL ARRAY DIRECTO)
-                'cliente_id'       => $clienteId,
-
+                'cliente_id'       => $clienteIdFinal, // <--- AQUÍ USAMOS EL ID PROCESADO
                 'user_id'          => $user->id,
                 'tipo_comprobante' => $tipoComp,
                 'serie'            => $serie,
@@ -207,15 +211,18 @@ class VentaService
                 ]);
             }
 
-            // 7. PUNTOS (USAMOS $clienteId)
-            // Solo procesamos puntos si el cliente NO es el genérico (1) y existe
-            if ($clienteId && $clienteId != 1) {
-                $cliente = Cliente::find($clienteId);
+            // 7. PUNTOS (SOLO SI NO ES CLIENTE 1)
+            // Aquí usamos $clienteIdFinal para asegurarnos de que es el cliente real
+            if ($clienteIdFinal && $clienteIdFinal != 1) {
+                $cliente = Cliente::find($clienteIdFinal);
 
                 if ($cliente) {
+                    // Descontar puntos usados
                     if ($puntosUsados > 0) {
                         $cliente->decrement('puntos', min($cliente->puntos, $puntosUsados));
                     }
+
+                    // Sumar nuevos puntos
                     $config = Configuracion::first();
                     $ratio = $config->puntos_por_moneda ?? 1;
                     $puntosGanados = intval($totalNetoFinal * $ratio);
@@ -237,7 +244,6 @@ class VentaService
 
     public function anularVenta(User $user, Venta $venta, string $motivo): NotaCredito
     {
-        // (El código de anulación se mantiene igual, no lo toqué)
         return DB::transaction(function () use ($user, $venta, $motivo) {
             foreach ($venta->detalles as $detalle) {
                 $lote = Lote::find($detalle->lote_id);

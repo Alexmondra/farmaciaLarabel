@@ -6,10 +6,10 @@
         // ==========================================
         const RUTA_LOOKUP_MEDICAMENTOS = "{{ route('ventas.lookup_medicamentos') }}";
         const RUTA_LOOKUP_LOTES = "{{ route('ventas.lookup_lotes') }}";
-        const RUTA_CHECK_CLIENTE = "{{ route('clientes.check') }}"; // O checkDocumento, revisa tu ruta
+        const RUTA_CHECK_CLIENTE = "{{ route('clientes.check') }}";
         const sucursalId = $('#sucursal_id').val();
 
-        // --- NUEVO: VALOR DEL PUNTO DESDE CONFIGURACIÓN ---
+        // --- VALOR DEL PUNTO DESDE CONFIGURACIÓN ---
         // Si no existe la variable, usamos 0.02 por defecto
         let valorPuntoActual = parseFloat("{{ $config->valor_punto_canje ?? 0.02 }}");
 
@@ -225,7 +225,6 @@
             if (cantidad <= 0) return toastr.error('Cantidad inválida.');
 
             // VALIDACIÓN MATEMÁTICA: Cantidad * Factor <= Stock Real
-            // Ej: 2 Cajas de 100 = 200 unidades requeridas
             let totalRequerido = cantidad * factor;
 
             if (totalRequerido > stockReal) {
@@ -286,7 +285,6 @@
                 let subtotal = i.cantidad * i.precio_venta;
                 total += subtotal;
 
-                // CAMBIO AQUÍ: Usamos data-unique-id en lugar de data-lote-id
                 tbody.append(`
                     <tr data-unique-id="${i.unique_id || (i.lote_id + '-' + i.unidad_medida)}">
                         <td class="align-middle">
@@ -318,11 +316,7 @@
             actualizarTotalGlobal(total);
         }
 
-
-
-        /// lo q es cambiar el total del carrito
-
-        // Helpers (opcional pero limpio)
+        // --- Helpers Edición Carrito ---
         function normalizarNumero(val) {
             if (val === null || val === undefined) return 0;
             return parseFloat(String(val).replace(',', '.')) || 0;
@@ -349,12 +343,10 @@
             }
 
             let cant = parseInt(val);
-
             if (cant < 0) {
                 cant = 1;
                 $(this).val(1);
             }
-
             if (isNaN(cant)) cant = 1;
 
             if (cant > item.stock_max) {
@@ -382,13 +374,11 @@
                     val = 0;
                     $(this).val('0.00');
                 } else {
-                    // Si escribió un número válido, al salir lo formateamos bonito (ej: 5 -> 5.00)
                     $(this).val(parseFloat(val).toFixed(2));
                 }
             }
 
             let precio = normalizarNumero(val);
-
             if (precio < 0) {
                 precio = 0;
                 $(this).val(0);
@@ -398,12 +388,12 @@
             refrescarSubtotalFila($row, item);
             recalcularTotalDesdeMemoria();
         });
+
         $(document).on('click', '.btn-eliminar-item', function() {
             let row = $(this).closest('tr');
             let uniqueId = row.data('unique-id');
             let item = carrito[uniqueId];
 
-            // 2. Preguntar antes de disparar (Seguridad)
             Swal.fire({
                 title: '¿Quitar del carrito?',
                 text: `Se eliminará: ${item.nombre} [${item.presentacion}]`,
@@ -413,14 +403,12 @@
                 cancelButtonColor: '#3085d6',
                 confirmButtonText: 'Sí, quitar',
                 cancelButtonText: 'Cancelar',
-                reverseButtons: true // Pone el cancelar a la izquierda (más cómodo)
+                reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // 3. Si dice que sí, borramos
                     delete carrito[uniqueId];
                     renderCarrito();
 
-                    // Feedback visual suave
                     const Toast = Swal.mixin({
                         toast: true,
                         position: 'top-end',
@@ -443,7 +431,7 @@
         }
 
         // ==========================================
-        // 2.5 CALCULO TOTAL CON PUNTOS (MODIFICADO)
+        // 2.5 CALCULO TOTAL CON PUNTOS
         // ==========================================
         function actualizarTotalGlobal(total) {
             // 1. Obtener descuento activo (si hay)
@@ -459,8 +447,8 @@
             // 2. Pintar en el cuadro verde
             if (descuento > 0 && total > 0) {
                 $('#total-venta').html(`
-                <span class="original-price-strike">S/ ${total.toFixed(2)}</span><br>
-            ${totalFinal.toFixed(2)}
+                    <span class="original-price-strike">S/ ${total.toFixed(2)}</span><br>
+                    ${totalFinal.toFixed(2)}
                 `);
             } else {
                 $('#total-venta').text(total.toFixed(2));
@@ -474,12 +462,27 @@
         }
 
         // ==========================================
-        // 3. LOGICA BUSCADOR CLIENTES (MODIFICADO)
+        // 3. LOGICA BUSCADOR CLIENTES
         // ==========================================
         const $tipo = $('#tipo_comprobante');
         const $input = $('#busqueda_cliente');
         const $display = $('#nombre_cliente_display');
         const $hidden = $('#cliente_id_hidden');
+
+        // Sincronizar cliente_id para el backend
+        function syncClienteIdBackend(val) {
+            const $form = $('#form-venta');
+            if (!$form.length) return;
+
+            let $field = $form.find('input[name="cliente_id"]');
+            if (!$field.length) {
+                $field = $('<input>', {
+                    type: 'hidden',
+                    name: 'cliente_id'
+                }).appendTo($form);
+            }
+            $field.val(val || '');
+        }
 
         $tipo.on('change', function() {
             let isFactura = ($(this).val() === 'FACTURA');
@@ -507,12 +510,11 @@
                     doc: doc
                 })
                 .done(res => {
-                    // Tu controlador devuelve { exists: true/false, data: { ... puntos: X } }
                     if (res.exists) {
+                        // Si el backend devuelve configuración de puntos, actualizar
                         if (res.config && res.config.valor_punto) {
                             valorPuntoActual = parseFloat(res.config.valor_punto);
                         }
-
                         selectCliente(res.data);
                     } else {
                         showCreateOption();
@@ -526,13 +528,13 @@
 
         function selectCliente(data) {
             $hidden.val(data.id);
+            syncClienteIdBackend(data.id);
             let nombre = (data.tipo_documento === 'RUC') ? data.razon_social : `${data.nombre} ${data.apellidos}`;
             $display.val(nombre).removeClass('text-danger').addClass('text-primary font-weight-bold');
             $('#btn-crear-cliente').addClass('d-none');
             $('#btn-ver-cliente').removeClass('d-none');
 
-            // --- LÓGICA DE PUNTOS (NUEVA) ---
-            // Verifica si el objeto 'data' trae puntos y si son mayores a 0
+            // --- LÓGICA DE PUNTOS ---
             if (data.puntos && data.puntos > 0) {
                 $('#panel-canje-puntos').slideDown();
                 $('#lbl-puntos-total').text(data.puntos);
@@ -558,6 +560,7 @@
 
         function resetCliente() {
             $hidden.val('');
+            syncClienteIdBackend('');
             $display.val('--- Cliente General ---').removeClass('text-primary text-danger font-weight-bold');
             $('#btn-crear-cliente, #btn-ver-cliente').addClass('d-none');
 
@@ -594,7 +597,7 @@
         $tipo.trigger('change');
 
         // ==========================================
-        // 3.5 CALCULADORA DE PUNTOS (NUEVO)
+        // 3.5 CALCULADORA DE PUNTOS
         // ==========================================
 
         // A. Al escribir puntos, calcular dinero automáticamente
@@ -639,7 +642,7 @@
 
 
         // ==========================================
-        // 4. LOGICA COBRO, VUELTO Y REFERENCIA (CORREGIDO)
+        // 4. LOGICA COBRO, VUELTO Y REFERENCIA
         // ==========================================
 
         // A. Función para validar si el botón se activa o no
@@ -657,16 +660,14 @@
             if (medio === 'EFECTIVO') {
                 let pagaCon = parseFloat($('#input-paga-con').val()) || 0;
 
-                // Tolerancia de 0.01 céntimos para evitar errores de decimales
+                // Tolerancia de 0.01 céntimos
                 if (pagaCon >= (totalVenta - 0.01)) {
-                    // SI ALCANZA EL DINERO -> ACTIVA
                     btn.prop('disabled', false).removeClass('btn-secondary').addClass('btn-light');
                 } else {
-                    // NO ALCANZA -> BLOQUEA
                     btn.prop('disabled', true).removeClass('btn-light').addClass('btn-secondary');
                 }
             } else {
-                // TARJETA/YAPE/PLIN -> SIEMPRE ACTIVO (Referencia es opcional)
+                // TARJETA/YAPE/PLIN -> SIEMPRE ACTIVO
                 btn.prop('disabled', false).removeClass('btn-secondary').addClass('btn-light');
             }
         }
@@ -674,7 +675,7 @@
         // B. Evento: Cuando cambias entre Efectivo / Yape / Tarjeta
         $('#medio_pago').change(function() {
             let metodo = $(this).val();
-            let totalFinal = obtenerTotalActual(); // Usamos función auxiliar
+            let totalFinal = obtenerTotalActual();
 
             if (metodo === 'EFECTIVO') {
                 $('#bloque-calculadora').slideDown();
@@ -692,18 +693,14 @@
             validarBotonConfirmar(totalFinal);
         });
 
-        // C. Evento: ¡ESTE ES EL QUE TE FALTABA! (Cuando escribes el dinero)
+        // C. Cuando escribes el dinero
         $('#input-paga-con').on('input', function() {
             let totalFinal = obtenerTotalActual();
-
-            // 1. Calculamos visualmente el vuelto
             calcularVuelto(totalFinal);
-
-            // 2. Validamos si el botón debe prenderse
             validarBotonConfirmar(totalFinal);
         });
 
-        // D. Función Visual: Calcular Vuelto (Texto Rojo/Verde)
+        // D. Función Visual: Calcular Vuelto
         window.calcularVuelto = function(totalVenta) {
             if ($('#medio_pago').val() !== 'EFECTIVO') return;
 
@@ -720,7 +717,7 @@
             }
         };
 
-        // E. Auxiliar para no repetir código de cálculo de total
+        // E. Auxiliar para obtener total actual
         function obtenerTotalActual() {
             let totalCarrito = 0;
             Object.values(carrito).forEach(i => totalCarrito += (i.cantidad * i.precio_venta));
@@ -808,10 +805,9 @@
         });
 
         // =======================================================
-        // 6. FUNCIONES DE MODALES (INCLUIDAS)
+        // 6. FUNCIONES DE MODALES (CLIENTE)
         // =======================================================
 
-        // Modal Crear Cliente
         window.openCreateModal = function() {
             $('#formCliente')[0].reset();
             resetFormState();
@@ -944,7 +940,8 @@
 
             let total = obtenerTotalActual();
             let tipoComprobante = $('#tipo_comprobante').val();
-            let clienteId = $('#cliente_id_hidden').val(); // Si está vacío es "Cliente General"
+            let clienteId = $('#cliente_id_hidden').val();
+            syncClienteIdBackend(clienteId);
 
             // ---------------------------------------------------------
             // REGLA 1: FACTURAS SIEMPRE REQUIEREN CLIENTE CON RUC
@@ -957,12 +954,12 @@
                         icon: 'warning',
                         title: 'Falta Cliente (RUC)',
                         html: `
-                <p style="font-size: 1.1em; color: #555;">
-                    Para emitir una <b>FACTURA</b>, es obligatorio seleccionar una empresa con RUC válido.
-                </p>
-            `,
+                            <p style="font-size: 1.1em; color: #555;">
+                                Para emitir una <b>FACTURA</b>, es obligatorio seleccionar una empresa con RUC válido.
+                            </p>
+                        `,
                         confirmButtonText: '<i class="fas fa-search mr-1"></i> Buscar Cliente',
-                        confirmButtonColor: '#17a2b8', // Color Info
+                        confirmButtonColor: '#17a2b8',
                         allowOutsideClick: false
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -980,7 +977,6 @@
                 if (!clienteId || clienteId === '') {
                     e.preventDefault();
 
-                    // VENTANA ELEGANTE
                     Swal.fire({
                         icon: 'info',
                         title: 'Identificación Requerida',
@@ -1003,7 +999,7 @@
                         showCancelButton: true,
                         confirmButtonText: '<i class="fas fa-user-check mr-1"></i> Ingresar Cliente',
                         cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#28a745', // Verde éxito
+                        confirmButtonColor: '#28a745',
                         cancelButtonColor: '#6c757d',
                         reverseButtons: true,
                         allowOutsideClick: false,
