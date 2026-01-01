@@ -5,24 +5,29 @@
 @section('content')
 
 @php
-// Cálculos
-$totalVentas = $cajaSesion->ventas->sum('total_neto');
+// 1. FILTRAR VENTAS VÁLIDAS PARA CÁLCULOS
+// Usamos filter para excluir las anuladas solo de la suma, pero mantenerlas en la lista
+$ventasValidas = $cajaSesion->ventas->filter(function ($v) {
+return $v->estado !== 'ANULADO';
+});
+
+$totalVentas = $ventasValidas->sum('total_neto');
 $saldoTeorico = $cajaSesion->saldo_inicial + $totalVentas;
 $diferencia = $cajaSesion->saldo_real - $saldoTeorico;
 
-// Desglose
-$porMetodo = $cajaSesion->ventas->groupBy('medio_pago')->map->sum('total_neto');
+// Desglose por método (Solo válidas)
+$porMetodo = $ventasValidas->groupBy('medio_pago')->map->sum('total_neto');
+
 $isOpen = $cajaSesion->estado === 'ABIERTO';
 
-// Separar Observaciones (Truco PHP para dividir el texto)
-// El controlador guarda: "Texto Apertura | CIERRE: Texto Cierre"
+// Separar Observaciones
 $partesObs = explode(' | CIERRE: ', $cajaSesion->observaciones);
 $obsApertura = $partesObs[0] ?? '';
 $obsCierre = $partesObs[1] ?? null;
 @endphp
 
 <style>
-    /* VARIABLES BASE */
+    /* ... (TUS ESTILOS CSS IGUALES, NO LOS CAMBIES) ... */
     :root {
         --bg-light: #f4f6f9;
         --card-bg: #ffffff;
@@ -30,7 +35,6 @@ $obsCierre = $partesObs[1] ?? null;
         --border-color: #e9ecef;
     }
 
-    /* ESTILOS DE COMPONENTES */
     .compact-header,
     .mini-card,
     .audit-box {
@@ -72,13 +76,11 @@ $obsCierre = $partesObs[1] ?? null;
 
     .audit-box {
         background: rgba(0, 0, 0, 0.03);
-        /* Fondo sutil */
         border-style: dashed;
         text-align: center;
         padding: 0.5rem;
     }
 
-    /* TABLA LIMPIA */
     .table-clean th {
         border-top: none;
         font-size: 0.7rem;
@@ -96,9 +98,21 @@ $obsCierre = $partesObs[1] ?? null;
         color: var(--text-main);
     }
 
-    /* ============================================================
-       RESPONSIVIDAD MÓVIL (NUEVO)
-       ============================================================ */
+    /* Estilo para anulados */
+    .row-anulada td {
+        background-color: #fff5f5 !important;
+        color: #e3342f !important;
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
+
+    .badge-anulado {
+        background-color: #e3342f;
+        color: white;
+        text-decoration: none !important;
+    }
+
+    /* ... (RESTO DE TUS ESTILOS MOBILE Y DARK MODE IGUALES) ... */
     @media (max-width: 767.98px) {
         .compact-header {
             padding: 0.5rem 0.75rem;
@@ -111,7 +125,6 @@ $obsCierre = $partesObs[1] ?? null;
 
         .compact-header>div:first-child {
             max-width: 60%;
-            /* Evita que el texto de usuario sea demasiado largo */
         }
 
         .compact-header .mr-3 {
@@ -122,7 +135,6 @@ $obsCierre = $partesObs[1] ?? null;
             font-size: 0.9rem;
         }
 
-        /* Ajuste de cards de números para que sean 2x2 */
         .row.mb-3>div {
             flex: 0 0 50%;
             max-width: 50%;
@@ -132,7 +144,6 @@ $obsCierre = $partesObs[1] ?? null;
             font-size: 1rem;
         }
 
-        /* La card de tiempos y la de Auditoría deben ocupar todo el ancho */
         .row.mb-3>div:first-child,
         .row.mb-3>div:last-child {
             flex: 0 0 100%;
@@ -143,7 +154,6 @@ $obsCierre = $partesObs[1] ?? null;
             padding: 0.2rem 0 !important;
         }
 
-        /* Ajuste de movimientos para que sea compacto */
         .card-body.d-flex {
             flex-wrap: wrap;
         }
@@ -157,7 +167,6 @@ $obsCierre = $partesObs[1] ?? null;
             margin-bottom: 0.5rem !important;
         }
 
-        /* Ajuste de padding de la tabla */
         .table-clean th,
         .table-clean td {
             padding: 0.3rem 0.5rem !important;
@@ -166,13 +175,9 @@ $obsCierre = $partesObs[1] ?? null;
 
         .table-responsive {
             white-space: normal;
-            /* Permitir que el texto se ajuste */
         }
     }
 
-    /* ============================================================
-       MODO OSCURO (CORRECCIONES PROFUNDAS)
-       ============================================================ */
     .dark-mode {
         --bg-light: #454d55;
         --card-bg: #343a40;
@@ -180,7 +185,6 @@ $obsCierre = $partesObs[1] ?? null;
         --border-color: #6c757d;
     }
 
-    /* Forzar colores oscuros sobre Bootstrap utilities */
     .dark-mode .bg-white {
         background-color: #343a40 !important;
         color: #ffffff !important;
@@ -203,7 +207,6 @@ $obsCierre = $partesObs[1] ?? null;
         border-color: #6c757d !important;
     }
 
-    /* Ajuste específico para el Modal en modo oscuro */
     .dark-mode .modal-content {
         background-color: #343a40;
         color: #fff;
@@ -223,7 +226,13 @@ $obsCierre = $partesObs[1] ?? null;
         color: #fff;
         border-color: #6c757d;
     }
+
+    .dark-mode .row-anulada td {
+        background-color: rgba(231, 76, 60, 0.2) !important;
+        color: #ff6b6b !important;
+    }
 </style>
+
 <div class="container-fluid pt-2">
 
     {{-- 1. HEADER CON BOTONES --}}
@@ -241,13 +250,11 @@ $obsCierre = $partesObs[1] ?? null;
         </div>
 
         <div class="d-flex align-items-center">
-            {{-- BOTÓN OBSERVACIONES --}}
             <button class="btn btn-sm btn-outline-info mr-1" data-toggle="modal" data-target="#modalObservaciones" title="Ver Observaciones">
                 <i class="far fa-comment-dots mr-1 d-none d-sm-inline"></i> Obs.
             </button>
 
             @if($isOpen)
-            {{-- BOTÓN CERRAR CAJA (Solo si está abierta) --}}
             <button class="btn btn-sm btn-warning font-weight-bold mr-1 shadow-sm"
                 data-toggle="modal"
                 data-target="#modalCerrarCaja"
@@ -269,7 +276,6 @@ $obsCierre = $partesObs[1] ?? null;
     </div>
 
     {{-- 2. DASHBOARD DE NÚMEROS --}}
-    {{-- Usamos col-6 en móvil (xs) y col-md-X en desktop --}}
     <div class="row mb-3">
         <div class="col-12 col-md-3 mb-2">
             <div class="mini-card shadow-sm">
@@ -308,11 +314,9 @@ $obsCierre = $partesObs[1] ?? null;
             </div>
         </div>
 
-        {{-- CARD AUDITORÍA (CONDICIONAL) --}}
         <div class="col-12 col-md-3 mb-2">
             <div class="audit-box shadow-sm">
                 @if(!$isOpen)
-                {{-- SI ESTÁ CERRADA: MUESTRA DATOS REALES --}}
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span class="mini-label mb-0">Dinero Real</span>
                     <span class="font-weight-bold text-dark" style="font-size:1.1rem;">S/ {{ number_format($cajaSesion->saldo_real, 2) }}</span>
@@ -322,7 +326,6 @@ $obsCierre = $partesObs[1] ?? null;
                     <span style="opacity:0.8; font-weight:400; font-size:0.75rem;">({{ $diferencia == 0 ? 'OK' : ($diferencia < 0 ? 'Falta' : 'Sobra') }})</span>
                 </div>
                 @else
-                {{-- SI ESTÁ ABIERTA: MENSAJE ESPERA --}}
                 <div class="text-center py-2 text-muted">
                     <i class="fas fa-hourglass-half fa-lg mb-2 opacity-50"></i>
                     <h6 class="font-weight-bold mb-0 text-info">Caja en Curso</h6>
@@ -352,6 +355,7 @@ $obsCierre = $partesObs[1] ?? null;
         </div>
     </div>
 
+    {{-- TABLA DE VENTAS --}}
     <div class="card shadow-sm border-0">
         <div class="card-header bg-transparent py-2 border-bottom">
             <h6 class="font-weight-bold mb-0" style="font-size: 0.9rem;"><i class="fas fa-list mr-2 opacity-50"></i>Movimientos</h6>
@@ -370,10 +374,15 @@ $obsCierre = $partesObs[1] ?? null;
                 </thead>
                 <tbody>
                     @forelse ($cajaSesion->ventas as $venta)
-                    <tr>
+
+                    {{-- APLICAMOS ESTILO SI ESTÁ ANULADA --}}
+                    <tr class="{{ $venta->estado === 'ANULADO' ? 'row-anulada' : '' }}">
                         <td class="pl-3">
                             <span class="font-weight-bold">{{ $venta->tipo_comprobante }}</span>
                             <span class="small opacity-50 ml-1">{{ $venta->serie }}-{{ $venta->numero }}</span>
+                            @if($venta->estado === 'ANULADO')
+                            <span class="badge badge-anulado ml-1" style="font-size:0.6rem;">ANULADO</span>
+                            @endif
                         </td>
                         <td class="small d-none d-sm-table-cell">{{ $venta->fecha_emision->format('h:i A') }}</td>
                         <td class="small d-none d-md-table-cell">{{ Str::limit($venta->cliente->nombre ?? 'Público', 20) }}</td>
@@ -402,16 +411,15 @@ $obsCierre = $partesObs[1] ?? null;
 </div>
 
 {{-- MODALES --}}
-@include('ventas.cajas._modal_cierre') {{-- Reutilizamos el modal de cierre --}}
+@include('ventas.cajas._modal_cierre')
 @include('ventas.cajas._modal_observaciones', ['obsApertura' => $obsApertura, 'obsCierre' => $obsCierre])
-@include('ventas.cajas._modal_detalle_venta_js') {{-- O el HTML del modal de detalle que tenías --}}
+@include('ventas.cajas._modal_detalle_venta_js')
 
 @stop
 
 @push('js')
 <script>
     $(document).ready(function() {
-        // 1. LÓGICA MODAL CIERRE (Copiada del index para que funcione aquí también)
         $('#modalCerrarCaja').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
             var modal = $(this);
@@ -422,7 +430,6 @@ $obsCierre = $partesObs[1] ?? null;
             modal.find('#saldo_real').val('');
         });
 
-        // 2. LÓGICA MODAL DETALLE (La que ya tenías)
         $('#modalDetalleVenta').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
             var detalles = button.data('detalles');
@@ -431,10 +438,7 @@ $obsCierre = $partesObs[1] ?? null;
 
             if (detalles) {
                 detalles.forEach(function(item) {
-                    // 1. Obtener nombre del producto
                     var nombre = item.medicamento ? item.medicamento.nombre : 'General';
-
-                    // 2. Convertir valores a números para evitar errores de formato
                     var cantidad = item.cantidad;
                     var precioUnit = parseFloat(item.precio_unitario).toFixed(2);
                     var total = parseFloat(item.subtotal_neto).toFixed(2);
@@ -447,7 +451,6 @@ $obsCierre = $partesObs[1] ?? null;
                     <td class="text-right pr-3 font-weight-bold align-middle">${total}</td>
                 </tr>
             `;
-
                     tbody.append(fila);
                 });
             }

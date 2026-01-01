@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Ventas;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;     // <--- ¡ERROR 1! FALTABA ESTO
+use Illuminate\Support\Facades\DB;
 use App\Services\SucursalResolver;
 use App\Models\Ventas\CajaSesion;
-use App\Models\Sucursal;                 // <--- También necesitas esto
+use App\Models\Sucursal;
 use App\Models\User;
 
 class CajaSesionController extends Controller
@@ -20,8 +20,6 @@ class CajaSesionController extends Controller
         $this->sucursalResolver = $sucursalResolver;
     }
 
-    // En CajaSesionController.php
-
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -30,22 +28,23 @@ class CajaSesionController extends Controller
         // 1. CAPTURAR SUCURSAL ACTUAL
         $sucursalActualId = session('sucursal_id');
 
-        // 2. VALIDAR SI TIENE CAJA ABIERTA **SOLO EN ESTA SUCURSAL**
-        // Si tienes caja en Lima pero estás mirando Arequipa, esto dará FALSE
-        // y el botón "Abrir Caja" se activará.
+        // 2. VALIDAR SI TIENE CAJA ABIERTA
         $tieneCajaAbierta = false;
-
         if ($sucursalActualId) {
             $tieneCajaAbierta = CajaSesion::where('user_id', $user->id)
                 ->where('estado', 'ABIERTO')
-                ->where('sucursal_id', $sucursalActualId) // <--- FILTRO ESTRICTO
+                ->where('sucursal_id', $sucursalActualId)
                 ->exists();
         }
 
-        // 3. (El resto del código de la tabla sigue igual...)
+        // 3. CONSULTA (CORREGIDA)
         $query = CajaSesion::query()
             ->with(['sucursal', 'usuario'])
-            ->withSum('ventas', 'total_neto')
+            // === CORRECCIÓN AQUÍ: SUMAR SOLO SI NO ESTÁ ANULADO ===
+            ->withSum(['ventas' => function ($q) {
+                $q->where('estado', '!=', 'ANULADO');
+            }], 'total_neto')
+            // ======================================================
             ->orderBy('fecha_apertura', 'desc');
 
         if (!$ctx['es_admin']) {
@@ -55,7 +54,7 @@ class CajaSesionController extends Controller
             $query->whereIn('sucursal_id', $ctx['ids_filtro']);
         }
 
-        // ... (Tus filtros de búsqueda y fecha siguen igual) ...
+        // Filtros
         if ($request->filled('q')) {
             $query->whereHas('usuario', fn($q) => $q->where('name', 'LIKE', "%{$request->q}%"));
         }
@@ -91,42 +90,35 @@ class CajaSesionController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Pre-cargamos todo lo necesario
+        // 1. Pre-cargamos todo
         $query = CajaSesion::query()->with([
             'sucursal',
-            'usuario', // Dueño de la caja
+            'usuario',
             'ventas' => function ($ventaQuery) {
-                // Ordenar ventas por fecha, de más nueva a más vieja
                 $ventaQuery->orderBy('fecha_emision', 'desc');
             },
-            'ventas.cliente', // Cliente de cada venta
-            'ventas.usuario', // Vendedor de cada venta
-            'ventas.detalles.medicamento' // Detalles para el MODAL
+            'ventas.cliente',
+            'ventas.usuario',
+            'ventas.detalles.medicamento'
         ]);
 
-        // 2. Aplicar seguridad: Admin ve todo, Usuario solo lo suyo
         if (!$user->hasRole('Administrador')) {
             $query->where('user_id', $user->id);
         }
 
-        // 3. Buscar o fallar
         try {
             $cajaSesion = $query->findOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Si no lo encuentra (o no tiene permiso por el 'where'), redirigir
             return redirect()->route('cajas.index')
-                ->with('error', 'Sesión de caja no encontrada o no tiene permiso para verla.');
+                ->with('error', 'Sesión no encontrada o sin permiso.');
         }
 
-        // 4. Mandar a la vista
         return view('ventas.cajas.show', compact('cajaSesion'));
     }
 
     public function store(Request $request)
     {
         $user = Auth::user();
-
-        // 1. Validaciones básicas
         $data = $request->validate([
             'sucursal_id'   => ['required', 'integer', 'exists:sucursales,id'],
             'saldo_inicial' => ['required', 'numeric', 'min:0'],
@@ -135,18 +127,15 @@ class CajaSesionController extends Controller
 
         $sucursalId = (int)$data['sucursal_id'];
 
-        // 2. Permisos (Sin cambios)
         if (!$user->hasRole('Administrador')) {
             if (!$user->tieneSucursal($sucursalId)) {
                 return back()->withErrors(['sucursal_id' => 'No tienes acceso a esta sucursal.']);
             }
         }
 
-        // 3. VALIDACIÓN CORREGIDA (SOLO UNA POR SUCURSAL)
-        // Ya NO buscamos globalmente. Solo buscamos si ya tiene una abierta EN ESTA sucursal.
         $existeEnEstaSucursal = CajaSesion::where('user_id', $user->id)
             ->where('estado', 'ABIERTO')
-            ->where('sucursal_id', $sucursalId) // <--- CLAVE
+            ->where('sucursal_id', $sucursalId)
             ->exists();
 
         if ($existeEnEstaSucursal) {
@@ -155,7 +144,6 @@ class CajaSesionController extends Controller
             ])->withInput();
         }
 
-        // 4. Crear la sesión (Igual que antes)
         try {
             DB::transaction(function () use ($data, $user, $sucursalId) {
                 CajaSesion::create([
@@ -181,10 +169,9 @@ class CajaSesionController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validamos el saldo y la observación (opcional)
         $data = $request->validate([
             'saldo_real'    => ['required', 'numeric', 'min:0'],
-            'observaciones' => ['nullable', 'string', 'max:500'], // Validamos el texto
+            'observaciones' => ['nullable', 'string', 'max:500'],
         ]);
 
         try {
@@ -192,7 +179,6 @@ class CajaSesionController extends Controller
 
                 $caja = CajaSesion::findOrFail($id);
 
-                // ... (Tus validaciones de seguridad de siempre) ...
                 if (!$user->hasRole('Administrador') && $caja->user_id != $user->id) {
                     throw new \Exception('No tienes permiso para cerrar esta caja.');
                 }
@@ -200,18 +186,19 @@ class CajaSesionController extends Controller
                     throw new \Exception('Esta caja ya ha sido cerrada.');
                 }
 
-                // Cálculos
                 $saldo_real = (float)$data['saldo_real'];
-                $total_ventas = $caja->ventas()->sum('total_neto');
+
+                // === CORRECCIÓN AQUÍ: SUMAR SOLO VENTAS VALIDAS (NO ANULADAS) ===
+                $total_ventas = $caja->ventas()
+                    ->where('estado', '!=', 'ANULADO') // <--- FILTRO CRÍTICO
+                    ->sum('total_neto');
+                // ==============================================================
+
                 $saldo_teorico = $caja->saldo_inicial + $total_ventas;
                 $diferencia = $saldo_real - $saldo_teorico;
 
-                // --- LÓGICA DE OBSERVACIONES ---
-                // Si el usuario escribió algo al cerrar:
-                $textoFinal = $caja->observaciones; // Recuperamos lo que escribió al abrir
-
+                $textoFinal = $caja->observaciones;
                 if (!empty($data['observaciones'])) {
-                    // Si ya había texto, le agregamos un separador. Si no, lo ponemos directo.
                     if ($textoFinal) {
                         $textoFinal .= " | CIERRE: " . $data['observaciones'];
                     } else {
@@ -219,14 +206,13 @@ class CajaSesionController extends Controller
                     }
                 }
 
-                // Guardamos
                 $caja->update([
                     'fecha_cierre'  => now(),
                     'estado'        => 'CERRADO',
                     'saldo_real'    => $saldo_real,
                     'saldo_teorico' => $saldo_teorico,
                     'diferencia'    => $diferencia,
-                    'observaciones' => $textoFinal, // Guardamos el texto unido
+                    'observaciones' => $textoFinal,
                 ]);
             });
         } catch (\Exception $e) {

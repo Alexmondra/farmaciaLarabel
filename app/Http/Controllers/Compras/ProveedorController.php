@@ -116,7 +116,22 @@ class ProveedorController extends Controller
             'activo' => 'nullable|boolean',
         ];
 
-        $data = $request->validate($rules);
+        // === AQUÍ ESTÁ LA MAGIA DEL ESPAÑOL ===
+        $messages = [
+            'razon_social.required' => 'La Razón Social es obligatoria.',
+            'razon_social.max'      => 'La Razón Social no puede tener más de 180 caracteres.',
+
+            'ruc.required' => 'El RUC es obligatorio.',
+            'ruc.size'     => 'El RUC debe tener exactamente 11 dígitos.',
+            'ruc.unique'   => 'Este número de RUC ya ha sido registrado anteriormente.',
+
+            'email.email' => 'Debes ingresar un correo electrónico válido.',
+            'email.max'   => 'El correo es demasiado largo.',
+
+            'direccion.max' => 'La dirección es demasiado larga.',
+        ];
+
+        $data = $request->validate($rules, $messages);
 
         if ($request->has('activo')) {
             $data['activo'] = $request->boolean('activo');
@@ -124,7 +139,6 @@ class ProveedorController extends Controller
             if ($proveedor) {
                 $data['activo'] = false;
             } else {
-                // ESTAMOS CREANDO:
                 $data['activo'] = true;
             }
         }

@@ -13,8 +13,6 @@
         {{-- CAMBIO: Usar d-flex, flex-column, y flex-md-row para responsividad --}}
         <div class="d-flex align-items-center flex-wrap w-100">
 
-            {{-- BUSCADOR --}}
-            {{-- ELIMINAMOS 'style="max-width: 420px;"' para que ocupe todo el ancho en móvil --}}
             <form method="GET" action="{{ route('inventario.proveedores.index') }}" class="input-group flex-grow-1 mr-md-2" style="max-width: 420px;">
                 <div class="input-group-prepend">
                     <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
