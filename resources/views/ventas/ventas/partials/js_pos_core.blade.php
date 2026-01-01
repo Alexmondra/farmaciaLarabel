@@ -154,7 +154,6 @@
 
                     lotes.forEach(l => {
                         // A. GENERAR OPCIONES DE PRESENTACIÓN
-                        // Opción Base: Unidad
                         let options = `<option value="UNIDAD" data-precio="${l.precios.unidad}" data-factor="1">UNIDAD</option>`;
 
                         // Si tiene Blíster configurado (Factor > 1 y Precio > 0)
@@ -171,7 +170,13 @@
                         tbody.append(`
                             <tr data-lote-id="${l.id}" data-stock="${l.stock_actual}">
                                 <td class="align-middle small font-weight-bold">${l.codigo_lote}</td>
+                                
                                 <td class="align-middle small">${l.fecha_vencimiento || '-'}</td>
+
+                                <td class="align-middle text-center small text-info">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>${l.ubicacion || '-'}
+                                </td>
+
                                 <td class="text-center font-weight-bold align-middle text-primary">${l.stock_actual}</td>
                                 
                                 <td class="align-middle">

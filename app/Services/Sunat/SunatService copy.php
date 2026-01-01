@@ -65,7 +65,7 @@ class SunatService
             $xml = $see->getXmlSigned($invoice);
             $nombreArchivo = $invoice->getName();
 
-            // Guardar XML en carpeta 'facturas'
+            // --- CAMBIO 1: GUARDAR EN CARPETA 'FACTURAS' ---
             $rutaXml = 'sunat/xml/facturas/' . $nombreArchivo . '.xml';
             Storage::put($rutaXml, $xml);
 
@@ -77,8 +77,9 @@ class SunatService
             $result = $see->sendXml(get_class($invoice), $invoice->getName(), $xml);
 
             if ($result->isSuccess()) {
-                // Guardar CDR
+                // --- CAMBIO 2: GUARDAR CDR EN CARPETA 'FACTURAS' ---
                 $rutaCdr = 'sunat/cdr/facturas/R-' . $nombreArchivo . '.zip';
+
                 Storage::put($rutaCdr, $result->getCdrZip());
 
                 $venta->ruta_cdr = $rutaCdr;
@@ -94,6 +95,7 @@ class SunatService
             $venta->save();
             return $result->isSuccess();
         } catch (\Exception $e) {
+            // ... (Manejo de errores igual) ...
             Log::error("Error SUNAT Venta {$venta->id}: " . $e->getMessage());
             $venta->mensaje_sunat = "Error Conexión: " . $e->getMessage();
             $venta->save();
@@ -107,7 +109,7 @@ class SunatService
         $sucursal = $venta->sucursal;
         $tipoDoc = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
 
-        // Detectar si la Sucursal está en Amazonía (IGV 0%)
+        // Detectar si la Sucursal está en Amazonía (IGV 0%) para la Leyenda
         $sucursalEnAmazonia = ($sucursal->impuesto_porcentaje == 0);
 
         $invoice = new Invoice();
@@ -147,28 +149,14 @@ class SunatService
             ->setRznSocial($venta->cliente->nombre_completo);
         $invoice->setClient($client);
 
-        $descuentoGlobal = (float)($venta->total_descuento ?? 0);
-        $mtoOperGravadas = (float)$venta->op_gravada;
-        $mtoOperExoneradas = (float)$venta->op_exonerada;
-        $mtoOperInafectas = (float)($venta->op_inafecta ?? 0);
 
-        $baseTotal = $mtoOperGravadas + $mtoOperExoneradas + $mtoOperInafectas; // <-- QUITAMOS "+ $descuentoGlobal"
 
-        if ($descuentoGlobal > 0) {
-            $invoice->setDescuentos([
-                (new Charge())
-                    ->setCodTipo('02')
-                    ->setMontoBase($baseTotal)
-                    ->setFactor($descuentoGlobal / $baseTotal)
-                    ->setMonto($descuentoGlobal)
-            ]);
-        }
-
-        $invoice->setMtoOperGravadas($mtoOperGravadas)
-            ->setMtoOperExoneradas($mtoOperExoneradas)
+        // Totales (Usamos lo calculado en VentaService)
+        $invoice->setMtoOperGravadas($venta->op_gravada)
+            ->setMtoOperExoneradas($venta->op_exonerada)
             ->setMtoIGV($venta->total_igv)
             ->setTotalImpuestos($venta->total_igv)
-            ->setValorVenta($baseTotal)
+            ->setValorVenta($venta->op_gravada + $venta->op_exonerada)
             ->setSubTotal($venta->total_neto)
             ->setMtoImpVenta($venta->total_neto);
 
@@ -183,35 +171,20 @@ class SunatService
             $baseItem  = round((float)$det->subtotal_bruto, 2);
             $igvItem   = round((float)$det->igv, 2);
             $totalItem = round((float)$det->subtotal_neto, 2);
-            $precioUnit = round((float)$det->precio_unitario, 4);
-            $valorUnit  = round((float)$det->valor_unitario, 4);
 
-            $esGratuito = ($precioUnit <= 0);
+            $tieneIgv = ($igvItem > 0.00);
+            $tipoAfectacion = $det->tipo_afectacion ?? ($tieneIgv ? '10' : '20');
+            $porcentaje     = $tieneIgv ? 18.00 : 0.00;
 
-            if ($esGratuito) {
-                // En operaciones gratuitas, el precio unitario va en 0
-                // Pero necesitamos un Valor Referencial
-                $valorReferencial = $det->medicamento->precio_venta ?? 1.00; // Precio de lista o 1 sol
-                $item->setMtoValorGratuito($valorReferencial * $cantidad);
-
-                // Tipos de afectación gratuitos (Amazonía: 21, Gravado: 11, etc)
-                $tipoAfectacion = $sucursalEnAmazonia ? '21' : '11'; // 21 = Transf. Gratuita Exonerada
-                $precioUnit = 0;
-                $valorUnit = 0;
-                $baseItem = 0;
-                $totalItem = 0;
-            } else {
-                $tipoAfectacion = $det->tipo_afectacion ?? ($sucursalEnAmazonia ? '20' : '10');
-            }
-
-            $porcentajeIgv = ($igvItem > 0) ? 18.00 : 0.00;
+            $valorUnit  = round($baseItem / $cantidad, 4);
+            $precioUnit = round($totalItem / $cantidad, 4);
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')
                 ->setCantidad($cantidad)
                 ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO')
                 ->setMtoBaseIgv($baseItem)
-                ->setPorcentajeIgv($porcentajeIgv)
+                ->setPorcentajeIgv($porcentaje)
                 ->setIgv($igvItem)
                 ->setTipAfeIgv($tipoAfectacion)
                 ->setTotalImpuestos($igvItem)
@@ -223,6 +196,7 @@ class SunatService
         }
         $invoice->setDetails($items);
 
+
         // LEYENDAS
         $leyendas = [];
 
@@ -231,21 +205,14 @@ class SunatService
         $textoMonto = $formatter->toInvoice($venta->total_neto, 2, 'SOLES');
         $leyendas[] = (new Legend())->setCode('1000')->setValue('SON: ' . $textoMonto);
 
-        // 2. Leyenda Amazonía
+        // 2. Leyenda Obligatoria SOLO para zona de Amazonía
         if ($sucursalEnAmazonia) {
             $leyendas[] = (new Legend())
                 ->setCode('2000')
                 ->setValue('BIENES TRANSFERIDOS EN LA AMAZONÍA REGIÓN SELVA PARA SER CONSUMIDOS EN LA MISMA');
         }
 
-        // 3. Leyenda Transferencia Gratuita (Si aplica)
-        if ($venta->op_gratuita > 0) {
-            $leyendas[] = (new Legend())
-                ->setCode('1002')
-                ->setValue('TRANSFERENCIA GRATUITA DE UN BIEN Y/O SERVICIO PRESTADO GRATUITAMENTE');
-        }
-
-        // 4. Referencia
+        // 3. Referencia de Pago
         if ($venta->referencia_pago) {
             $leyendas[] = (new Legend())
                 ->setCode('2001')
@@ -265,6 +232,8 @@ class SunatService
         return $digestValue ? $digestValue->nodeValue : null;
     }
 
+
+
     public function transmitirNotaCredito(NotaCredito $nota, Venta $ventaOriginal)
     {
         try {
@@ -277,7 +246,7 @@ class SunatService
             $xml = $see->getXmlSigned($note);
             $nombreArchivo = $note->getName();
 
-            // Guardar XML NC
+            // --- CAMBIO 1: CONFIRMAMOS CARPETA 'NC' PARA XML ---
             $rutaXml = 'sunat/xml/nc/' . $nombreArchivo . '.xml';
             Storage::put($rutaXml, $xml);
 
@@ -289,8 +258,9 @@ class SunatService
             $result = $see->sendXml(get_class($note), $note->getName(), $xml);
 
             if ($result->isSuccess()) {
-                // Guardar CDR NC
+                // --- CAMBIO 2: GUARDAR CDR TAMBIÉN EN CARPETA 'NC' ---
                 $rutaCdr = 'sunat/cdr/nc/R-' . $nombreArchivo . '.zip';
+
                 Storage::put($rutaCdr, $result->getCdrZip());
 
                 $nota->ruta_cdr = $rutaCdr;
@@ -306,6 +276,7 @@ class SunatService
             $nota->save();
             return $result->isSuccess();
         } catch (\Exception $e) {
+            // ... (Manejo de errores igual) ...
             Log::error("Error SUNAT Nota Crédito {$nota->id}: " . $e->getMessage());
             $nota->mensaje_sunat = "Error Interno: " . $e->getMessage();
             $nota->save();
@@ -322,7 +293,7 @@ class SunatService
         $note
             ->setUblVersion('2.1')
             ->setTipDocAfectado($venta->tipo_comprobante == 'FACTURA' ? '01' : '03')
-            ->setNumDocfectado($venta->serie . '-' . $venta->numero)
+            ->setNumDocfectado($venta->serie . '-' . $venta->numero) // Referencia a la factura original
             ->setCodMotivo($nota->cod_motivo)
             ->setDesMotivo($nota->descripcion_motivo)
             ->setTipoDoc('07') // Tipo Nota de Crédito
@@ -331,7 +302,7 @@ class SunatService
             ->setFechaEmision(new \DateTime($nota->fecha_emision))
             ->setTipoMoneda('PEN');
 
-        // Emisor
+        // Emisor (Igual que la factura)
         $address = new Address();
         $address->setUbigueo($sucursal->ubigeo ?? '150101')
             ->setDepartamento($sucursal->departamento)
@@ -349,14 +320,14 @@ class SunatService
             ->setAddress($address);
         $note->setCompany($emisor);
 
-        // Cliente
+        // Cliente (Igual que la factura)
         $client = new Client();
         $client->setTipoDoc(strlen($venta->cliente->documento) == 11 ? '6' : '1')
             ->setNumDoc($venta->cliente->documento)
             ->setRznSocial($venta->cliente->nombre_completo);
         $note->setClient($client);
 
-        // Totales para NC (Copia fiel de la factura original)
+        // Totales (Reutilizamos los de la venta porque es anulación total)
         $note->setMtoOperGravadas($venta->op_gravada)
             ->setMtoOperExoneradas($venta->op_exonerada)
             ->setMtoIGV($venta->total_igv)
@@ -365,27 +336,22 @@ class SunatService
             ->setSubTotal($venta->total_neto)
             ->setMtoImpVenta($venta->total_neto);
 
-        // Detalles
+        // Detalles (Deben ser idénticos a la venta original)
         $items = [];
         foreach ($venta->detalles as $det) {
             $item = new SaleDetail();
 
             $baseItem = $det->valor_unitario * $det->cantidad;
-            $igvItem = $det->igv;
-
-            // Replicamos lógica de afectación
-            $porcentaje = ($igvItem > 0) ? 18.00 : 0.00;
-            $tipoAfectacion = $det->tipo_afectacion ?? (($igvItem > 0) ? '10' : '20');
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')
                 ->setCantidad($det->cantidad)
-                ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO')
+                ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO') // Ojo: asegúrate de cargar la relación medicamento en el controller
                 ->setMtoBaseIgv($baseItem)
-                ->setPorcentajeIgv($porcentaje)
-                ->setIgv($igvItem)
-                ->setTipAfeIgv($tipoAfectacion)
-                ->setTotalImpuestos($igvItem)
+                ->setPorcentajeIgv($det->igv > 0 ? 18.00 : 0.00)
+                ->setIgv($det->igv)
+                ->setTipAfeIgv($det->tipo_afectacion ?? ($det->igv > 0 ? '10' : '20'))
+                ->setTotalImpuestos($det->igv)
                 ->setMtoValorVenta($baseItem)
                 ->setMtoValorUnitario($det->valor_unitario)
                 ->setMtoPrecioUnitario($det->precio_unitario);

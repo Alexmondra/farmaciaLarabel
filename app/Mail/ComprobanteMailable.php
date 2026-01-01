@@ -2,11 +2,11 @@
 
 namespace App\Mail;
 
+use App\Models\Ventas\Venta;
+use App\Services\ComprobanteService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class ComprobanteMailable extends Mailable
@@ -15,18 +15,23 @@ class ComprobanteMailable extends Mailable
 
     public $venta;
 
-    public function __construct($venta)
+    public function __construct(Venta $venta)
     {
         $this->venta = $venta;
     }
 
-    public function build()
+    // Inyectamos el servicio aquí automáticamente
+    public function build(ComprobanteService $comprobanteService)
     {
-        $pdf = \PDF::loadView('reportes.pdf_venta', ['venta' => $this->venta]); // Usa tu vista de PDF actual
+        // 1. Pedimos al servicio que genere el PDF en modo 'content' (datos crudos)
+        $pdfContent = $comprobanteService->generarPdf($this->venta, 'content');
 
-        return $this->subject('Tu Comprobante Electrónico - ' . config('app.name'))
-            ->view('emails.comprobante') // Vista simple del cuerpo del correo
-            ->attachData($pdf->output(), "Comprobante-{$this->venta->serie}-{$this->venta->numero}.pdf", [
+        // 2. Definimos el nombre del archivo
+        $nombreArchivo = "{$this->venta->ruc_emisor}-{$this->venta->tipo_comprobante}-{$this->venta->serie}-{$this->venta->numero}.pdf";
+
+        return $this->subject('Tu Comprobante Electrónico')
+            ->view('emails.comprobante') // La vista del cuerpo del correo (el HTML simple)
+            ->attachData($pdfContent, $nombreArchivo, [
                 'mime' => 'application/pdf',
             ]);
     }

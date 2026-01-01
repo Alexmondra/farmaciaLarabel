@@ -403,7 +403,7 @@ class VentaController extends Controller
                     'codigo_lote'       => $lote->codigo_lote,
                     'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('d/m/Y'),
                     'stock_actual'      => $lote->stock_actual, // Stock siempre en unidades
-
+                    'ubicacion'         => $lote->ubicacion ?? 'General',
                     'precios'           => $precios,
                     'factores'          => $factores,
                     'precio_oferta'     => $lote->precio_oferta ? (float)$lote->precio_oferta : null,

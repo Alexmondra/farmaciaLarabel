@@ -110,6 +110,10 @@ class ComprobanteService
         if ($tipo === 'download') {
             return $pdf->download($nombreArchivo);
         }
+
+        if ($tipo === 'content') {
+            return $pdf->output();
+        }
         return $pdf->stream($nombreArchivo);
     }
 

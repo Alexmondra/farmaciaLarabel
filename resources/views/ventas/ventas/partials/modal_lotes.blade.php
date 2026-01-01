@@ -18,18 +18,19 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-hover table-striped mb-0" style="font-size: 0.9rem;">
                         <thead class="thead-light">
-                            <tr>
-                                <th>Lote</th>
-                                <th>Vence</th>
-                                <th class="text-center">Stock (Unid)</th>
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Lote</th>
+                                    <th>Vence</th>
+                                    <th class="text-center" style="width: 100px;">Ubicación</th>
 
-                                {{-- NUEVA COLUMNA --}}
-                                <th style="width: 140px;">Presentación</th>
-
-                                <th style="width: 80px;">Cant.</th>
-                                <th class="text-right">Precio</th>
-                                <th></th>
-                            </tr>
+                                    <th class="text-center">Stock (Unid)</th>
+                                    <th style="width: 140px;">Presentación</th>
+                                    <th style="width: 80px;">Cant.</th>
+                                    <th class="text-right">Precio</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
                         </thead>
                         <tbody id="modal-lotes-tbody"></tbody>
                     </table>

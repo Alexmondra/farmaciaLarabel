@@ -9,14 +9,12 @@
     </h1>
 
     <div class="btn-group shadow-sm">
-        @can('stock.ajustar')
         <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-dolly-flatbed mr-2"></i> Operaciones
         </button>
-        @endcan
 
         <div class="dropdown-menu dropdown-menu-right">
-            @can('compras.crear ')
+            @can('compras.crear')
             <a class="dropdown-item" href="{{ route('compras.create') }}"> {{-- Pon aquí tu ruta real --}}
                 <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Compra (Ingreso)
             </a>
@@ -52,49 +50,62 @@
 
 {{-- BARRA DE BÚSQUEDA Y FILTROS --}}
 <div class="row justify-content-center mb-4">
-    <div class="col-lg-10">
-        <div class="card shadow-sm border-0">
-            <div class="card-body py-3" style="background-color: #f8f9fa;">
+    <div class="col-12">
+        <div class="card shadow border-0" style="border-radius: 12px; overflow: hidden;">
+            {{-- 1. Quitamos 'bg-white' del body --}}
+            <div class="card-body p-3">
                 <form id="filterForm">
-                    <div class="row align-items-center">
-                        <div class="col-md-6 mb-2 mb-md-0">
+                    <div class="row align-items-center g-3">
+
+                        {{-- 1. BARRA DE BÚSQUEDA --}}
+                        <div class="col-12 col-lg-5 mb-2 mb-lg-0">
                             <div class="input-group">
                                 <div class="input-group-prepend">
-                                    <span class="input-group-text bg-white border-right-0">
-                                        <i class="fas fa-search text-primary"></i>
+                                    {{-- Quitamos 'bg-light' y 'border-0' para que se vea bien el borde en ambos modos --}}
+                                    <span class="input-group-text text-primary pl-3">
+                                        <i class="fas fa-search"></i>
                                     </span>
                                 </div>
-                                <input type="text" id="searchInput" class="form-control border-left-0"
+                                {{-- Quitamos 'bg-light' del input --}}
+                                <input type="text" id="searchInput"
+                                    class="form-control py-2"
                                     placeholder="Buscar medicamento, código, laboratorio..."
-                                    autofocus autocomplete="off">
+                                    autofocus autocomplete="off"
+                                    style="font-size: 0.95rem;">
                             </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center justify-content-end">
-                                <span class="text-muted mr-2 font-weight-bold small text-uppercase">Precio:</span>
-                                <div class="input-group input-group-sm mr-2" style="width: 100px;">
-                                    <div class="input-group-prepend"><span class="input-group-text">Min</span></div>
-                                    <input type="number" id="minPrice" class="form-control" placeholder="0">
+                        {{-- 2. FILTRO DE PRECIOS --}}
+                        <div class="col-12 col-md-8 col-lg-5 mb-2 mb-md-0">
+                            {{-- Usamos 'border' en lugar de 'bg-light' para agrupar visualmente --}}
+                            <div class="d-flex align-items-center justify-content-lg-center border rounded px-3 py-1">
+                                <span class="text-muted mr-2 small"><i class="fas fa-tag"></i></span>
+
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="minPrice" class="form-control border-0 bg-transparent text-center" placeholder="Min (S/)" style="box-shadow: none;">
                                 </div>
-                                <span class="text-muted mr-2">-</span>
-                                <div class="input-group input-group-sm" style="width: 100px;">
-                                    <div class="input-group-prepend"><span class="input-group-text">Max</span></div>
-                                    <input type="number" id="maxPrice" class="form-control" placeholder="Inf">
+
+                                <span class="text-muted mx-1" style="opacity: 0.5;">|</span>
+
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="maxPrice" class="form-control border-0 bg-transparent text-center" placeholder="Max (S/)" style="box-shadow: none;">
                                 </div>
                             </div>
                         </div>
+
+                        {{-- 3. SWITCH SOLO STOCK --}}
+                        <div class="col-12 col-md-4 col-lg-2 d-flex justify-content-md-end align-items-center">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="chkConStock">
+                                {{-- Quitamos 'text-dark' para que el texto sea blanco en modo oscuro automáticamente --}}
+                                <label class="custom-control-label font-weight-bold small pt-1" for="chkConStock" style="cursor: pointer;">
+                                    <i class="fas fa-box-open mr-1 text-success"></i> En Stock
+                                </label>
+                            </div>
+                        </div>
+
                     </div>
                 </form>
-            </div>
-
-            <div class="col-md-2 d-flex align-items-center justify-content-center">
-                <div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" id="chkConStock">
-                    <label class="custom-control-label font-weight-bold text-dark" for="chkConStock">
-                        Solo con Stock
-                    </label>
-                </div>
             </div>
         </div>
     </div>
