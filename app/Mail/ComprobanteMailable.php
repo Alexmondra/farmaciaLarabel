@@ -20,17 +20,14 @@ class ComprobanteMailable extends Mailable
         $this->venta = $venta;
     }
 
-    // Inyectamos el servicio aquí automáticamente
     public function build(ComprobanteService $comprobanteService)
     {
-        // 1. Pedimos al servicio que genere el PDF en modo 'content' (datos crudos)
         $pdfContent = $comprobanteService->generarPdf($this->venta, 'content');
 
-        // 2. Definimos el nombre del archivo
         $nombreArchivo = "{$this->venta->ruc_emisor}-{$this->venta->tipo_comprobante}-{$this->venta->serie}-{$this->venta->numero}.pdf";
 
         return $this->subject('Tu Comprobante Electrónico')
-            ->view('emails.comprobante') // La vista del cuerpo del correo (el HTML simple)
+            ->view('emails.comprobante')
             ->attachData($pdfContent, $nombreArchivo, [
                 'mime' => 'application/pdf',
             ]);

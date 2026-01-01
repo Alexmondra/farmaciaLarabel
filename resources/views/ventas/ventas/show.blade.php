@@ -24,7 +24,7 @@
 @section('content')
 <div class="container-fluid pb-5 animate__animated animate__fadeIn">
 
-    {{-- === BARRA DE ACCIONES (FUTURISTA) === --}}
+    {{-- === BARRA DE ACCIONES === --}}
     <div class="card shadow-lg no-print mb-4 border-0 card-glass">
         <div class="card-body p-3">
             <div class="row align-items-center">
@@ -101,13 +101,14 @@
             @if($venta->estado == 'ANULADO')
             <div class="watermark">ANULADO</div>
             @endif
+
             {{-- CABECERA --}}
             <div class="text-center mb-2">
                 @if(isset($logoBase64))
                 <img src="{{ $logoBase64 }}" style="max-height: 55px; margin-bottom: 5px; filter: grayscale(100%);">
                 <br>
                 @endif
-                <h5 class="font-weight-bold mb-1 text-uppercase" style="font-size: 1.1rem;">{{ $venta->sucursal->nombre }}</h5>
+                <h5 class="mb-1">{{ $venta->sucursal->nombre }}</h5>
                 <p class="mb-0 small">{{ $venta->sucursal->direccion }}</p>
                 <p class="mb-0 small font-weight-bold">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</p>
                 <p class="mb-0 small">Tel: {{ $venta->sucursal->telefono }}</p>
@@ -149,11 +150,9 @@
                 </tbody>
             </table>
 
-            {{-- TOTALES CORREGIDOS (TICKET) --}}
+            {{-- TOTALES --}}
             <div class="border-top border-dark pt-1">
                 <table class="w-100 mb-1 small">
-
-                    {{-- 1. OPERACIÓN GRAVADA (Solo si existe) --}}
                     @if($venta->op_gravada > 0)
                     <tr>
                         <td class="text-right pr-2">OP. GRAVADA:</td>
@@ -161,7 +160,6 @@
                     </tr>
                     @endif
 
-                    {{-- 2. OPERACIÓN EXONERADA (ESTO FALTABA) --}}
                     @if($venta->op_exonerada > 0)
                     <tr>
                         <td class="text-right pr-2">OP. EXONERADA:</td>
@@ -169,13 +167,11 @@
                     </tr>
                     @endif
 
-                    {{-- 3. IGV --}}
                     <tr>
                         <td class="text-right pr-2">IGV (18%):</td>
                         <td class="text-right font-weight-bold">{{ number_format($venta->total_igv, 2) }}</td>
                     </tr>
 
-                    {{-- 4. DESCUENTO --}}
                     @if($venta->total_descuento > 0)
                     <tr>
                         <td class="text-right pr-2">DESCUENTO:</td>
@@ -183,19 +179,19 @@
                     </tr>
                     @endif
 
-                    {{-- 5. TOTAL --}}
-                    <tr style="font-size: 13px; border-top: 1px dashed #000;">
+                    <tr class="total-row">
                         <td class="text-right pr-2 pt-1"><b>TOTAL:</b></td>
                         <td class="text-right pt-1 text-nowrap"><b>S/ {{ number_format($venta->total_neto, 2) }}</b></td>
                     </tr>
                 </table>
 
-                <p class="text-center mt-1 mb-2 small text-uppercase">SON: {{ $montoLetras }}</p>
+                <p class="text-center mt-1 mb-2 small text-uppercase" style="font-size: 13px !important;">SON: {{ $montoLetras }}</p>
 
                 <div class="text-center mt-2">
                     <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 85px; height: 85px;">
-                    <p class="mt-1 mb-0 font-weight-bold" style="font-size: 9px;">GRACIAS POR SU PREFERENCIA</p>
-                    <p class="mb-0 mt-1" style="font-size: 8px; line-height: 1.3; color: #000;">
+                    <p class="mt-1 mb-0 font-weight-bold" style="font-size: 11px;">GRACIAS POR SU PREFERENCIA</p>
+                    {{-- AQUÍ APLICAMOS LA CLASE LEGAL-TEXT --}}
+                    <p class="mb-0 mt-1 legal-text">
                         Representación impresa de la<br>
                         <strong class="text-uppercase">{{ $venta->tipo_comprobante }} ELECTRÓNICA</strong><br>
                         Revisar en: <b>mundofarma.online/consulta</b>
@@ -206,14 +202,14 @@
     </div>
 
     {{-- ======================================================= --}}
-    {{-- VISTA A4 (DISEÑO IDÉNTICO AL PDF) --}}
+    {{-- VISTA A4 --}}
     {{-- ======================================================= --}}
     <div id="wrapper-a4" class="d-none justify-content-center view-container">
         <div class="a4-box bg-white elevation-3 position-relative">
             @if($venta->estado == 'ANULADO')
             <div class="watermark">ANULADO</div>
             @endif
-            {{-- HEADER A4 --}}
+
             <table class="w-100 mb-4">
                 <tr>
                     <td width="20%" class="align-middle">
@@ -239,7 +235,6 @@
                 </tr>
             </table>
 
-            {{-- CLIENTE A4 --}}
             <div class="client-box mb-4">
                 <div class="row m-0">
                     <div class="col-8 pl-0">
@@ -257,7 +252,6 @@
                 </div>
             </div>
 
-            {{-- ITEMS A4 --}}
             <table class="table-items w-100 mb-4">
                 <thead>
                     <tr>
@@ -286,10 +280,8 @@
                 </tbody>
             </table>
 
-            {{-- FOOTER A4 (TOTALES CORREGIDOS) --}}
             <div class="footer-print-area">
                 <div class="row m-0">
-                    {{-- QR y Legales --}}
                     <div class="col-8 pl-0">
                         <div class="d-flex">
                             <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 85px; height: 85px;">
@@ -303,7 +295,6 @@
                             </div>
                         </div>
                     </div>
-                    {{-- Totales --}}
                     <div class="col-4 pr-0">
                         <table class="w-100 small mb-2">
                             @if($venta->op_gravada > 0)
@@ -312,19 +303,16 @@
                                 <td class="text-right">S/ {{ number_format($venta->op_gravada, 2) }}</td>
                             </tr>
                             @endif
-
                             @if($venta->op_exonerada > 0)
                             <tr>
                                 <td class="text-right font-weight-bold">OP. EXONERADA:</td>
                                 <td class="text-right">S/ {{ number_format($venta->op_exonerada, 2) }}</td>
                             </tr>
                             @endif
-
                             <tr>
                                 <td class="text-right font-weight-bold">I.G.V. (18%):</td>
                                 <td class="text-right">S/ {{ number_format($venta->total_igv, 2) }}</td>
                             </tr>
-
                             @if($venta->total_descuento > 0)
                             <tr>
                                 <td class="text-right font-weight-bold text-danger">DESCUENTO:</td>
@@ -339,7 +327,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -347,46 +334,31 @@
 
 @section('js')
 <script>
-    // 1. DETECTAR TECLA ENTER PARA IMPRIMIR
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
-            event.preventDefault(); // Evita que el Enter haga scroll o click en otro lado
-            window.print(); // Abre el diálogo de impresión
+            event.preventDefault();
+            window.print();
         }
     });
 
-    // 2. FUNCIONES DE VISTA (TICKET / A4)
     function cambiarVista(tipo) {
         if (tipo === 'ticket') {
             $('#wrapper-ticket').removeClass('d-none').addClass('d-flex');
             $('#wrapper-a4').addClass('d-none').removeClass('d-flex');
-
-            // Estilos de botones
             $('#btn-ticket').addClass('active-view').removeClass('btn-outline-dark').addClass('btn-dark');
             $('#btn-a4').removeClass('active-view').addClass('btn-outline-dark').removeClass('btn-dark');
         } else {
             $('#wrapper-ticket').addClass('d-none').removeClass('d-flex');
             $('#wrapper-a4').removeClass('d-none').addClass('d-flex');
-
-            // Estilos de botones
             $('#btn-ticket').removeClass('active-view').addClass('btn-outline-dark').removeClass('btn-dark');
             $('#btn-a4').addClass('active-view').removeClass('btn-outline-dark').addClass('btn-dark');
         }
     }
 
-    // 3. FUNCIONES DE ENVÍO (WHATSAPP Y CORREO)
-
     function enviarWhatsApp(numero, nombre, urlPdf) {
-        // Código de país (51 Perú). Si tu sistema es multi-país, esto debería venir de la BD.
         let codigoPais = '51';
-
-        // Mensaje personalizado
         let mensaje = `Hola *${nombre}*, gracias por tu compra.\n\nPuedes descargar tu comprobante electrónico aquí:\n${urlPdf}`;
-
-        // Codificar para URL
         let textoEncode = encodeURIComponent(mensaje);
-
-        // Abrir WhatsApp
         let url = `https://wa.me/${codigoPais}${numero}?text=${textoEncode}`;
         window.open(url, '_blank');
     }
@@ -403,8 +375,6 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-
-                // Mostrar Loading
                 Swal.fire({
                     title: 'Enviando...',
                     text: 'Conectando con el servidor de correo',
@@ -413,10 +383,8 @@
                         Swal.showLoading()
                     }
                 });
-
-                // Petición AJAX al servidor
                 $.ajax({
-                    url: `/ventas/${ventaId}/enviar-email`, // Ruta que crearemos abajo
+                    url: `/ventas/${ventaId}/enviar-email`,
                     method: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}'
@@ -440,26 +408,16 @@
 
 @section('css')
 <style>
-    /* === VARIABLES PARA MODO OSCURO (AdminLTE support) === */
     :root {
         --paper-bg: #fff;
         --paper-text: #000;
     }
 
-    /* En modo oscuro, ajustamos la UI de pantalla, pero NO el papel */
     .dark-mode .card-glass {
         background: rgba(52, 58, 64, 0.9);
         backdrop-filter: blur(10px);
     }
 
-    .dark-mode .ticket-box,
-    .dark-mode .a4-box {
-        border: 5px solid #444;
-    }
-
-    /* Borde visual en pantalla */
-
-    /* === ESTILOS VISUALES GENERALES === */
     .card-glass {
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
@@ -484,7 +442,7 @@
         }
     }
 
-    /* ESTILOS INTERNOS DE LOS DOCUMENTOS */
+    /* ESTILOS COMUNES */
     .ruc-box {
         border: 2px solid #000;
         border-radius: 8px;
@@ -530,17 +488,75 @@
         color: #000;
     }
 
-    /* === VISTA PANTALLA TICKET === */
-    .ticket-box {
-        width: 80mm;
-        margin: 20px auto;
-        padding: 15px;
-        background: #fff;
-        color: #000;
-        font-family: 'Courier New', Courier, monospace;
+    .footer-print-area {
+        position: absolute;
+        bottom: 15mm;
+        left: 15mm;
+        right: 15mm;
     }
 
-    /* === VISTA PANTALLA A4 === */
+    /* ======================================================= */
+    /* VISTA PANTALLA TICKET (MODIFICADO - LETRA GRANDE) */
+    /* ======================================================= */
+    .ticket-box {
+        width: 80mm;
+        margin: 0 auto;
+        background: #fff;
+        color: #000;
+        font-family: 'Arial', sans-serif;
+        /* Arial se lee mejor en impresoras térmicas */
+    }
+
+    /* FORZAR TAMAÑO Y NEGRITA EN TODO EL TICKET */
+    .ticket-box,
+    .ticket-box * {
+        font-size: 15px !important;
+        /* Aumentado a 15px */
+        font-weight: 600 !important;
+        /* Seminegrita para mejor impresión */
+        line-height: 1.2 !important;
+    }
+
+    /* Títulos GIGANTES */
+    .ticket-box h5,
+    .ticket-box .h5 {
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase;
+        margin-bottom: 5px !important;
+    }
+
+    /* Encabezados y celdas tabla */
+    .ticket-box th {
+        font-size: 16px !important;
+        border-bottom: 2px solid #000 !important;
+        padding-bottom: 2px !important;
+    }
+
+    .ticket-box td {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+    }
+
+    /* Totales (TOTAL A PAGAR) */
+    .ticket-box .total-row,
+    .ticket-box .total-row td,
+    .ticket-box b {
+        font-size: 18px !important;
+        font-weight: 900 !important;
+    }
+
+    /* Clase especial para texto legal pequeño (QR y web) */
+    .ticket-box .legal-text,
+    .ticket-box .legal-text * {
+        font-size: 11px !important;
+        font-weight: normal !important;
+        line-height: 1.1 !important;
+    }
+
+    /* ======================================================= */
+    /* VISTA PANTALLA A4 (ESTANDAR) */
+    /* ======================================================= */
     .a4-box {
         width: 210mm;
         min-height: 297mm;
@@ -550,19 +566,44 @@
         color: #000;
         font-family: Arial, Helvetica, sans-serif;
         position: relative;
-        /* Para el footer absoluto */
     }
 
-    /* Footer en Pantalla (Simulado) */
-    .footer-print-area {
+    /* ANULADO WATERMARK */
+    .watermark {
         position: absolute;
-        bottom: 15mm;
-        left: 15mm;
-        right: 15mm;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-weight: 900;
+        text-transform: uppercase;
+        color: rgba(0, 0, 0, 0.2);
+        border: 4px dashed rgba(0, 0, 0, 0.2);
+        padding: 10px 50px;
+        z-index: 0;
+        pointer-events: none;
+        white-space: nowrap;
     }
 
+    .ticket-box .watermark {
+        font-size: 1.5rem;
+        padding: 5px 20px;
+        border-width: 3px;
+    }
 
-    /* === MODO IMPRESIÓN (CROSS-BROWSER FIJO) === */
+    .a4-box .watermark {
+        font-size: 5rem;
+        opacity: 0.5;
+    }
+
+    .ticket-box,
+    .a4-box {
+        position: relative !important;
+        z-index: 1;
+    }
+
+    /* ======================================================= */
+    /* MODO IMPRESIÓN (MEDIA PRINT) */
+    /* ======================================================= */
     @media print {
         @page {
             size: auto;
@@ -576,7 +617,6 @@
             color: #000 !important;
         }
 
-        /* Ocultar interfaz */
         .no-print,
         nav,
         footer,
@@ -596,14 +636,21 @@
             background: #fff !important;
         }
 
-        /* TICKET */
+        /* TICKET PRINT */
         #wrapper-ticket:not(.d-none) {
             display: block !important;
-            width: 80mm !important;
-            margin: 0 !important;
+            width: 100% !important;
         }
 
-        /* A4 */
+        .ticket-box {
+            width: 78mm !important;
+            /* Ancho ajustado para evitar márgenes */
+            margin: 0 auto !important;
+            padding: 2mm !important;
+            border: none !important;
+        }
+
+        /* A4 PRINT */
         #wrapper-a4:not(.d-none) {
             display: block !important;
             width: 100% !important;
@@ -616,15 +663,12 @@
         .a4-box {
             width: 210mm !important;
             height: 296mm !important;
-            /* Altura forzada A4 */
             margin: 0 !important;
             padding: 15mm !important;
             border: none !important;
-            box-shadow: none !important;
             position: relative !important;
         }
 
-        /* Footer Clavado */
         .footer-print-area {
             position: absolute !important;
             bottom: 15mm !important;
@@ -634,7 +678,7 @@
             background: #fff;
         }
 
-        /* Correcciones visuales */
+        /* Helpers */
         .bg-dark {
             background-color: #000 !important;
             color: #fff !important;
@@ -653,51 +697,6 @@
         .col-4 {
             width: 33.333333% !important;
         }
-    }
-
-    /* lo del anulado  */
-
-    .watermark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-
-        /* Estilo del texto */
-        font-weight: 900;
-        text-transform: uppercase;
-        color: rgba(0, 0, 0, 0.2);
-        /* Negro al 20% de opacidad (gris suave) */
-        border: 4px dashed rgba(0, 0, 0, 0.2);
-        padding: 10px 50px;
-        z-index: 0;
-        /* Detrás del texto si es posible, o encima con transparencia */
-        pointer-events: none;
-        /* Permite hacer clic a través de ella */
-        white-space: nowrap;
-    }
-
-    /* Ajuste específico para el TICKET (más pequeño) */
-    .ticket-box .watermark {
-        font-size: 1.5rem;
-        /* Tamaño letra ticket */
-        padding: 5px 20px;
-        border-width: 3px;
-    }
-
-    /* Ajuste específico para A4 (más grande) */
-    .a4-box .watermark {
-        font-size: 5rem;
-        /* Tamaño letra A4 gigante */
-        opacity: 0.5;
-        /* Un poco más visible en A4 */
-    }
-
-    /* Asegurar que los contenedores permitan posicionamiento absoluto */
-    .ticket-box,
-    .a4-box {
-        position: relative !important;
-        z-index: 1;
     }
 </style>
 @stop
