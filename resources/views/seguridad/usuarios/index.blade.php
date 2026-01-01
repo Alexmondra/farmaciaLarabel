@@ -45,6 +45,7 @@
           <tr>
             <td class="text-center align-middle" data-label="Foto">
               @if($u->imagen_perfil)
+              {{-- Si tiene imagen subida --}}
               <img src="{{ route('seguridad.usuarios.imagen', $u->id) }}"
                 alt="{{ $u->name }}"
                 class="rounded-circle"
@@ -52,8 +53,8 @@
                 height="50"
                 style="object-fit: cover;">
               @else
-              <img src="{{ asset('img/default-avatar.png') }}"
-                alt="Sin foto"
+              <img src="https://api.dicebear.com/9.x/lorelei/svg?seed={{ urlencode($u->name) }}"
+                alt="{{ $u->name }}"
                 class="rounded-circle"
                 width="50"
                 height="50">

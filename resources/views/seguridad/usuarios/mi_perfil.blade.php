@@ -145,21 +145,33 @@
                     <div class="col-md-6">
                         <div class="cyber-input-group">
                             <label class="cyber-label">Nueva Contraseña</label>
-                            <input type="password" name="password" class="cyber-input @error('password') is-invalid @enderror"
-                                placeholder="••••••••">
+
+                            <input type="password"
+                                name="password"
+                                id="new_password"
+                                class="cyber-input @error('password') is-invalid @enderror"
+                                placeholder="Ingresa nueva clave (Opcional)"
+                                autocomplete="new-password"
+                                value="">
+
                             <small class="text-muted ml-2">Déjalo vacío si no deseas cambiarla</small>
                             @error('password') <span class="text-danger small d-block pl-2">{{ $message }}</span> @enderror
                         </div>
                     </div>
+
                     <div class="col-md-6">
                         <div class="cyber-input-group">
                             <label class="cyber-label">Confirmar Contraseña</label>
-                            <input type="password" name="password_confirmation" class="cyber-input"
-                                placeholder="••••••••">
+
+                            <input type="password"
+                                name="password_confirmation"
+                                class="cyber-input"
+                                placeholder="Repite la nueva clave"
+                                autocomplete="new-password"
+                                value="">
                         </div>
                     </div>
                 </div>
-
                 {{-- BOTONES DE ACCIÓN --}}
                 <div class="d-flex justify-content-end align-items-center mt-4">
                     {{-- Botón CANCELAR --}}
@@ -427,21 +439,27 @@
 </style>
 @stop
 
-{{-- ======================================================= --}}
-{{-- SCRIPTS JS --}}
-{{-- ======================================================= --}}
+
 @section('js')
 <script>
-    // Script para previsualizar la imagen al seleccionarla
+    $(document).ready(function() {
+        setTimeout(function() {
+            $('input[type="password"]').each(function() {
+                if (!$(this).is(':focus')) {
+                    $(this).val('');
+                }
+            });
+        }, 150);
+
+        $('input[type="password"]').attr('autocomplete', 'new-password');
+    });
+
     function previewImage(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
-
             reader.onload = function(e) {
-                // Cambiamos el src de la imagen de perfil por la nueva data
                 $('#preview_img').attr('src', e.target.result);
             }
-
             reader.readAsDataURL(input.files[0]);
         }
     }

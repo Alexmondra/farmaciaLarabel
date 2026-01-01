@@ -88,7 +88,7 @@
         $user = Auth::user();
         $imgUrl = $user->imagen_perfil
         ? route('seguridad.usuarios.imagen', $user->id) . '?t=' . time()
-        : asset('img/default-avatar.png');
+        : 'https://api.dicebear.com/9.x/lorelei/svg?seed=' . urlencode($user->name);
         @endphp
 
         <li class="nav-item dropdown user-menu">
