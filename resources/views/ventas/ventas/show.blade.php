@@ -691,6 +691,7 @@
         }
 
         .col-8 {
+
             width: 66.666667% !important;
         }
 
