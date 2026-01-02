@@ -428,13 +428,9 @@
     .watermark-ticket {
         position: absolute;
         top: 50%;
-        /* Centrado vertical */
         left: 50%;
-        /* Centrado horizontal */
         transform: translate(-50%, -50%) rotate(-45deg);
-        /* Centrado perfecto y rotación */
         font-size: 55px;
-        /* Tamaño ajustado para no desbordar */
         color: rgba(0, 0, 0, 0.1) !important;
         z-index: 1000;
         pointer-events: none;

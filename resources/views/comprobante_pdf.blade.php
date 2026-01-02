@@ -101,19 +101,38 @@
 
         .table-items th {
             background: #eee;
+            border-top: 1px solid #000;
             border-bottom: 2px solid #000;
-            padding: 6px;
+            padding: 8px 5px;
             font-size: 10px;
             font-weight: bold;
             text-align: center;
+            /* Centra los títulos del encabezado */
             text-transform: uppercase;
         }
 
         .table-items td {
             border-bottom: 1px solid #ddd;
-            padding: 8px;
+            padding: 10px 5px;
             font-size: 10px;
             vertical-align: middle;
+            /* Centrado vertical de los datos */
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .text-left {
+            text-align: left !important;
+        }
+
+        .font-bold {
+            font-weight: bold;
         }
 
         /* === FOOTER FIJO AL FINAL === */
@@ -222,11 +241,11 @@
     <table class="table-items">
         <thead>
             <tr>
-                <th width="8%">CANT</th>
-                <th width="10%">UND</th>
-                <th>DESCRIPCIÓN</th>
-                <th width="12%">P.UNIT</th>
-                <th width="12%">TOTAL</th>
+                <th width="10%">CANT</th>
+                <th width="12%">UND</th>
+                <th class="text-left" style="padding-left: 15px;">DESCRIPCIÓN</th>
+                <th width="15%" class="text-right">P.UNIT</th>
+                <th width="15%" class="text-right">TOTAL</th>
             </tr>
         </thead>
         <tbody>
@@ -234,10 +253,12 @@
             <tr>
                 <td class="text-center">{{ $det->cantidad }}</td>
                 <td class="text-center">NIU</td>
-                <td>
-                    {{ $det->medicamento->nombre }}
+                <td class="text-left" style="padding-left: 15px;">
+                    <div class="font-bold" style="text-transform: uppercase;">
+                        {{ $det->medicamento->nombre }}
+                    </div>
                     @if($det->medicamento->presentacion)
-                    <br><small style="color:#666; font-size:9px;">{{ $det->medicamento->presentacion }}</small>
+                    <small style="color:#666; font-size:9px;">{{ $det->medicamento->presentacion }}</small>
                     @endif
                 </td>
                 <td class="text-right">{{ number_format($det->precio_unitario, 2) }}</td>
@@ -264,8 +285,8 @@
                                     Representación impresa de la {{ $venta->tipo_comprobante }} ELECTRÓNICA.<br>
                                     Autorizado mediante Resolución de Superintendencia N.° 300-2014/SUNAT.<br>
                                     Consulte la validez de este documento en: <br>
-                                    <a href="https://mundofarma.online/consulta-comprobante" target="_blank" style="text-decoration: none; color: #000; font-weight: bold;">
-                                        mundofarma.online/consulta-comprobante
+                                    <a href="https://mundofarma.online/consultar" target="_blank" style="text-decoration: none; color: #000; font-weight: bold;">
+                                        mundofarma.online/consultar
                                     </a>
                                 </div>
                             </td>
