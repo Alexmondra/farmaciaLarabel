@@ -25,7 +25,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('reporte.ver')) {
+        if (!$user->can('reportes.ver')) {
             return redirect()->route('cajas.index')
                 ->with('info', 'No tienes permisos para ver el dashboard, se te ha redirigido a Caja.');
         }

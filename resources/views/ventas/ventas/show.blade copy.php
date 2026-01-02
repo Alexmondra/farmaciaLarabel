@@ -93,9 +93,8 @@
         </div>
     </div>
 
-
     {{-- ======================================================= --}}
-    {{-- VISTA TICKET (80mm) - ACTUALIZADO CON DESGLOSE --}}
+    {{-- VISTA TICKET (80mm) --}}
     {{-- ======================================================= --}}
     <div id="wrapper-ticket" class="d-flex justify-content-center view-container">
         <div class="ticket-box elevation-3">
@@ -107,26 +106,26 @@
             <div class="text-center mb-2 mt-1">
                 @if(isset($logoBase64) && !empty($logoBase64))
                 <div style="width: 100%; text-align: center; margin-bottom: 5px;">
-                    <img src="{{ $logoBase64 }}" style="width: 160px;" alt="Logo">
+                    <img src="{{ $logoBase64 }}" class="ticket-logo" alt="Logo">
                 </div>
                 @endif
 
                 <h5 class="mb-1 mt-1">{{ $venta->sucursal->nombre }}</h5>
-                <p class="mb-0">{{ $venta->sucursal->direccion }}</p>
-                <p class="mb-0 font-weight-bold">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</p>
-                <p class="mb-2">Tel: {{ $venta->sucursal->telefono }}</p>
+                <p class="mb-0 small">{{ $venta->sucursal->direccion }}</p>
+                <p class="mb-0 small font-weight-bold">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</p>
+                <p class="mb-0 small">Tel: {{ $venta->sucursal->telefono }}</p>
             </div>
 
             {{-- INFO VENTA --}}
-            <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0; margin-bottom: 8px;">
-                <div class="d-flex justify-content-between font-weight-bold">
+            <div class="border-top border-bottom border-dark py-2 mb-2">
+                <div class="d-flex justify-content-between font-weight-bold small">
                     <span>{{ $venta->tipo_comprobante }}</span>
                     <span>{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</span>
                 </div>
-                <div class="mt-1" style="font-size: 14px !important;">
+                <div class="mt-1 small" style="line-height: 1.3;">
                     <div>Fecha: {{ $venta->fecha_emision->format('d/m/Y H:i') }}</div>
                     <div>Pago: <b>{{ $venta->medio_pago }}</b></div>
-                    <div>Cliente: {{ Str::limit($venta->cliente->nombre_completo, 30) }}</div>
+                    <div>Cliente: {{ Str::limit($venta->cliente->nombre_completo, 22) }}</div>
                     @if($venta->cliente->documento != '00000000')
                     <div>{{ $venta->cliente->tipo_documento }}: {{ $venta->cliente->documento }}</div>
                     @endif
@@ -134,69 +133,68 @@
             </div>
 
             {{-- ITEMS --}}
-            <table class="table-items-ticket mb-2">
-                <thead>
-                    <tr>
-                        <th class="text-left" style="width: 15%;">CANT</th>
-                        <th class="text-left" style="width: 55%;">DESCRIPCIÓN</th>
-                        <th class="text-right" style="width: 30%;">TOTAL</th>
+            <table class="table table-sm table-borderless mb-2 w-100">
+                <thead class="border-bottom border-dark">
+                    <tr class="small text-uppercase">
+                        <th class="pl-0 text-left" style="width: 15%; padding-bottom: 5px;">Cant</th>
+                        <th class="text-left" style="width: 55%; padding-bottom: 5px;">Descrip.</th>
+                        <th class="text-right pr-0" style="width: 30%; padding-bottom: 5px;">Total</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="small">
                     @foreach($venta->detalles as $det)
                     <tr>
-                        <td class="font-weight-bold">{{ (int)$det->cantidad }}</td>
-                        <td class="text-uppercase">{{ $det->medicamento->nombre }}</td>
-                        <td class="text-right">{{ number_format($det->subtotal_neto, 2) }}</td>
+                        <td class="pl-0 text-left align-top font-weight-bold pt-1">{{ $det->cantidad }}</td>
+                        <td class="text-left align-top pt-1">{{ Str::limit($det->medicamento->nombre, 18) }}</td>
+                        <td class="text-right pr-0 align-top pt-1">{{ number_format($det->subtotal_neto, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
 
-            {{-- TOTALES DESGLOSADOS --}}
-            <div style="border-top: 1px solid #000; padding-top: 8px;">
-                <table style="width: 90%; margin: 0 auto; font-size: 15px !important; line-height: 1.4; border-collapse: collapse;">
+            {{-- TOTALES --}}
+            <div class="border-top border-dark pt-2">
+                <table class="w-100 mb-2 small" style="line-height: 1.2;">
                     @if($venta->op_gravada > 0)
                     <tr>
-                        <td class="text-left" style="width: 60%;">OP. GRAVADA:</td>
-                        <td class="text-right font-weight-bold" style="width: 40%;">S/ {{ number_format($venta->op_gravada, 2) }}</td>
+                        <td class="text-right pr-2">OP. GRAVADA:</td>
+                        <td class="text-right font-weight-bold">{{ number_format($venta->op_gravada, 2) }}</td>
                     </tr>
                     @endif
 
                     @if($venta->op_exonerada > 0)
                     <tr>
-                        <td class="text-left">OP. EXONERADA:</td>
-                        <td class="text-right font-weight-bold">S/ {{ number_format($venta->op_exonerada, 2) }}</td>
+                        <td class="text-right pr-2">OP. EXONERADA:</td>
+                        <td class="text-right font-weight-bold">{{ number_format($venta->op_exonerada, 2) }}</td>
                     </tr>
                     @endif
 
                     <tr>
-                        <td class="text-left">I.G.V. (18%):</td>
-                        <td class="text-right font-weight-bold">S/ {{ number_format($venta->total_igv, 2) }}</td>
+                        <td class="text-right pr-2">IGV (18%):</td>
+                        <td class="text-right font-weight-bold">{{ number_format($venta->total_igv, 2) }}</td>
                     </tr>
 
                     @if($venta->total_descuento > 0)
                     <tr>
-                        <td class="text-left text-danger">DESCUENTO:</td>
-                        <td class="text-right font-weight-bold text-danger">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
+                        <td class="text-right pr-2">DESCUENTO:</td>
+                        <td class="text-right font-weight-bold">-{{ number_format($venta->total_descuento, 2) }}</td>
                     </tr>
                     @endif
 
-                    <tr class="total-row-big" style="border-top: 2px solid #000;">
-                        <td class="pt-2" style="font-size: 24px !important;">TOTAL:</td>
-                        <td class="text-right pt-2" style="font-size: 24px !important;">S/ {{ number_format($venta->total_neto, 2) }}</td>
+                    <tr class="total-row">
+                        <td class="text-right pr-2 pt-2" style="font-size: 1.1em;"><b>TOTAL:</b></td>
+                        <td class="text-right pt-2 text-nowrap" style="font-size: 1.1em;"><b>S/ {{ number_format($venta->total_neto, 2) }}</b></td>
                     </tr>
                 </table>
 
-                <p class="text-center mt-2 mb-3 small text-uppercase" style="line-height: 1.2;">SON: {{ $montoLetras }}</p>
+                <p class="text-center mt-2 mb-3 small text-uppercase" style="font-size: 12px !important; line-height: 1.2;">SON: {{ $montoLetras }}</p>
 
-                {{-- QR Y PIE --}}
                 <div class="text-center mt-2">
-                    <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 110px; height: 110px;">
-                    <p class="mt-2 mb-0 font-weight-bold text-uppercase" style="font-size: 13px; white-space: pre-line;">
+                    <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 95px; height: 95px;">
+                    <p class="mt-2 mb-0 font-weight-bold text-uppercase" style="font-size: 12px; white-space: pre-line;">
                         {{ $config->mensaje_ticket ?? 'GRACIAS POR SU PREFERENCIA' }}
                     </p>
-                    <p class="mb-0 mt-1" style="font-size: 11px !important; line-height: 1.3;">
+                    <p class="mb-0 mt-1 legal-text" style="line-height: 1.3;">
                         Representación impresa de la<br>
                         <strong class="text-uppercase">{{ $venta->tipo_comprobante }} ELECTRÓNICA</strong><br>
                         Revisar en: <b>mundofarma.online/consultar</b>
@@ -205,6 +203,7 @@
             </div>
         </div>
     </div>
+
     {{-- ======================================================= --}}
     {{-- VISTA A4 (Sin cambios solicitados, se mantiene igual) --}}
     {{-- ======================================================= --}}
@@ -412,12 +411,67 @@
 
 @section('css')
 <style>
-    /* ==========================================================
-   1) AJUSTES DE PANTALLA (NO AFECTA IMPRESIÓN)
-========================================================== */
+    .ticket-box {
+        width: 80mm;
+        min-height: 200px;
+        background: #fff;
+        padding: 22px 15px;
+        border-radius: 8px;
+        color: #000;
+        position: relative;
+        /* VITAL para que la marca de agua se centre aquí */
+        overflow: hidden;
+        /* Evita que la palabra 'ANULADO' se salga del papel */
+    }
+
+    /* MARCA DE AGUA TICKET CENTRADA */
+    .watermark-ticket {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 55px;
+        color: rgba(0, 0, 0, 0.1) !important;
+        z-index: 1000;
+        pointer-events: none;
+        font-weight: bold;
+        text-transform: uppercase;
+        border: 5px solid rgba(0, 0, 0, 0.1);
+        padding: 5px 15px;
+        white-space: nowrap;
+    }
+
+    @media print {
+
+        .watermark,
+        .watermark-ticket {
+            display: block !important;
+            color: #d0d0d0 !important;
+            /* Gris claro que la térmica reconoce */
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .table-items th.text-right,
+        .table-items td.text-right {
+            text-align: right !important;
+        }
+    }
+
+    :root {
+        --paper-bg: #fff;
+        --paper-text: #000;
+    }
+
+    .dark-mode .card-glass {
+        background: rgba(52, 58, 64, 0.9);
+        backdrop-filter: blur(10px);
+    }
+
     .card-glass {
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
+        transition: all 0.3s;
     }
 
     .pulse-btn {
@@ -438,81 +492,52 @@
         }
     }
 
-    img {
-        max-width: 100%;
-        height: auto;
-    }
-
-
-    /* ==========================================================
-   2) TICKET (80mm) - DISEÑO
-========================================================== */
-    .ticket-box {
-        width: 80mm;
-        /* ancho de diseño */
-        background: #fff;
-        padding: 10px 2px;
-        font-family: 'Arial Narrow', Arial, sans-serif;
-        position: relative;
-        overflow: hidden;
-
-        /* CLAVE: evita que padding sume ancho y corte el ticket */
-        box-sizing: border-box;
-    }
-
-    /* Tabla ticket (para que no se desborde fácil) */
-    .table-items-ticket {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .table-items-ticket td {
-        font-size: 15px !important;
-        padding: 4px 0;
-
-        /* CLAVE: nombres largos no rompen columnas */
-        word-break: break-word;
-        overflow-wrap: anywhere;
-    }
-
-    .total-row-big td {
-        font-size: 24px !important;
-        font-weight: 900 !important;
-        padding-top: 10px;
-    }
-
-    /* Sello ANULADO (Ticket) */
-    #wrapper-ticket .watermark-ticket {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-30deg);
-        font-size: 60px;
-        color: rgba(255, 0, 0, 0.12) !important;
-        border: 6px solid rgba(255, 0, 0, 0.12);
+    /* ESTILOS COMUNES */
+    .ruc-box {
+        border: 2px solid #000;
+        border-radius: 8px;
+        text-align: center;
         padding: 10px;
-        z-index: 100;
-        font-weight: bold;
-        white-space: nowrap;
-        pointer-events: none;
-    }
-
-
-    /* ==========================================================
-   3) A4 - DISEÑO
-========================================================== */
-    .a4-box {
-        width: 210mm;
-        height: 297mm;
-        padding: 15mm;
         background: #fff;
-        position: relative;
-
-        /* CLAVE: padding no debe aumentar tamaño final */
-        box-sizing: border-box;
+        width: 100%;
+        color: #000;
     }
 
-    /* Footer A4 al fondo */
+    .doc-type-box {
+        background: #000;
+        color: #fff;
+        padding: 5px;
+        margin: 6px 0;
+        font-weight: bold;
+        display: block;
+    }
+
+    .client-box {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 11px;
+        color: #333;
+    }
+
+    .table-items thead th {
+        background: #eee;
+        border-bottom: 2px solid #000;
+        padding: 8px;
+        font-size: 10px;
+        font-weight: bold;
+        text-align: center;
+        color: #000;
+    }
+
+    .table-items td {
+        border-bottom: 1px solid #eee;
+        padding: 8px;
+        font-size: 11px;
+        vertical-align: middle;
+        color: #000;
+    }
+
     .footer-print-area {
         position: absolute;
         bottom: 15mm;
@@ -520,94 +545,102 @@
         right: 15mm;
     }
 
-    /* Sello ANULADO (A4) */
-    #wrapper-a4 .watermark {
+    /* ESTILOS TICKET (80mm) */
+    .ticket-box {
+        width: 80mm;
+        min-height: 200px;
+        background: #fff;
+        /* AJUSTE: Aumentado el padding superior e inferior para dar "aire" */
+        padding: 22px 15px;
+        border-radius: 8px;
+        color: #000;
+        position: relative;
+    }
+
+    .ticket-logo {
+        max-width: 50%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .legal-text {
+        font-size: 9px;
+        color: #555;
+    }
+
+    /* ESTILOS A4 */
+    .a4-box {
+        width: 210mm;
+        height: 297mm;
+        padding: 15mm;
+        background: #fff;
+        color: #000;
+        overflow: hidden;
+    }
+
+    .watermark {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 120px;
-        color: rgba(220, 53, 69, 0.1);
+        font-size: 10rem;
+        color: rgba(220, 53, 69, 0.15);
+        z-index: 0;
+        pointer-events: none;
         font-weight: bold;
     }
 
-
-    /* ==========================================================
-   4) IMPRESIÓN (CRÍTICO PARA EPSON TM-T20III / NAVEGADOR)
-========================================================== */
-    @page {
-        margin: 0;
-    }
-
+    /* ESTILOS DE IMPRESIÓN */
     @media print {
-
         .no-print {
             display: none !important;
         }
 
-        html,
         body {
             background: #fff !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            color: #000 !important;
         }
 
         .view-container {
-            display: block !important;
-            padding: 0 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
             margin: 0 !important;
+            padding: 0 !important;
         }
 
-
-        body * {
-            visibility: hidden !important;
-        }
-
-        #wrapper-ticket:not(.d-none),
-        #wrapper-ticket:not(.d-none) * {
-            visibility: visible !important;
-        }
-
-        #wrapper-a4:not(.d-none),
-        #wrapper-a4:not(.d-none) * {
-            visibility: visible !important;
-        }
-
-        #wrapper-ticket:not(.d-none),
-        #wrapper-a4:not(.d-none) {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-        }
-
-        #wrapper-ticket.d-flex,
-        #wrapper-a4.d-flex {
-            display: block !important;
-        }
-
-        /* 4.3 Ancho seguro en térmica */
-        #wrapper-ticket:not(.d-none) .ticket-box {
-            width: 76mm !important;
+        /* Si es TICKET */
+        #wrapper-ticket.d-flex .ticket-box {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            width: 80mm !important;
+            /* Mantenemos el padding extra en la impresión */
+            padding: 20px 5px !important;
             margin: 0 auto !important;
+            page-break-after: always;
         }
 
-        #wrapper-a4:not(.d-none) .a4-box {
+        /* Si es A4 */
+        #wrapper-a4.d-flex .a4-box {
+            box-shadow: none !important;
             width: 210mm !important;
             height: 297mm !important;
-            margin: 0 !important;
+            padding: 15mm !important;
+            margin: 0 auto !important;
+            page-break-after: always;
         }
+    }
 
-        table,
-        tr,
-        td,
-        th {
-            page-break-inside: avoid !important;
-        }
+    /* Modo oscuro ajuste */
+    .dark-mode .ticket-box,
+    .dark-mode .a4-box {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .dark-mode .ticket-logo {
+        filter: none !important;
     }
 </style>
 @stop
