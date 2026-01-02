@@ -9,7 +9,7 @@ $configData = [
 
 $userPermisos = [
 'canCreate' => auth()->user()->can('clientes.crear'),
-'canEdit' => auth()->user()->can('config.editar'),
+'canEdit' => auth()->user()->can('clientes.editar'),
 'canDelete' => auth()->user()->can('clientes.eliminar'),
 ];
 @endphp
