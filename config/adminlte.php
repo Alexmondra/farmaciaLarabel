@@ -269,16 +269,16 @@ return [
             'text'    => 'Control SUNAT', // Título del menú desplegable
             'icon'    => 'fas fa-university', // Ícono de institución/gobierno
             'submenu' => [
-                // 1. MONITOR DE ENVÍOS
+                // 1. MONITOR DE FACTURAS Y BOLETAS
                 [
                     'text'       => 'Monitor de Envíos',
                     'url'        => 'facturacion/pendientes',
-                    'can'     => 'sunat.monitor',
+                    'can'        => 'sunat.monitor',
                     'icon'       => 'fas fa-satellite-dish',
-                    'icon_color' => 'orange', // Se mantiene la alerta naranja
+                    'icon_color' => 'orange',
                 ],
 
-                // 2. REPOSITORIO XML / CDR / PDF
+                // 2. ARCHIVOS DE FACTURAS Y BOLETAS
                 [
                     'text'        => 'Archivos y Auditoría',
                     'url'         => 'facturacion/comprobantes',
@@ -286,6 +286,25 @@ return [
                     'icon'        => 'fas fa-file-archive',
                     'label'       => 'XML/CDR',
                     'label_color' => 'info',
+                ],
+
+                // 3. MONITOR EXCLUSIVO PARA NOTAS (NC / ND)
+                [
+                    'text'       => 'Monitor de Notas',
+                    'url'        => 'facturacion/monitor-notas',
+                    'can'        => 'sunat.monitor',
+                    'icon'       => 'fas fa-exclamation-circle',
+                    'icon_color' => 'yellow',
+                ],
+
+                // 4. ARCHIVOS EXCLUSIVOS PARA NOTAS (NC / ND)
+                [
+                    'text'        => 'Visor de Notas',
+                    'url'         => 'facturacion/archivos-notas',
+                    'can'         => 'sunat.archivos',
+                    'icon'        => 'far fa-circle',
+                    'label'       => 'XML/CDR',
+                    'label_color' => 'secondary',
                 ],
             ],
         ],

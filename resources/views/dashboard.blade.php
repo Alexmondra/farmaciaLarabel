@@ -219,7 +219,7 @@
                         <div class="list-group list-group-flush">
                             @forelse($alertasVencimiento as $alerta)
                             @php $dias = floor(now()->diffInDays($alerta->fecha_vencimiento, false)); @endphp
-                            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-3 py-2">
+                            <a href="reportes/vencimientos" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-3 py-2">
                                 <div style="max-width: 65%">
                                     <span class="d-block font-weight-bold text-truncate small">{{ $alerta->medicamento->nombre }}</span>
                                     <small class="text-muted" style="font-size: 0.7rem;">Lote: {{ $alerta->codigo_lote }}</small>
@@ -236,7 +236,7 @@
                     <div class="tab-pane fade" id="stock-content" role="tabpanel">
                         <div class="list-group list-group-flush">
                             @forelse($alertasStock as $stock)
-                            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-3 py-2">
+                            <a href="reportes/stock-bajo" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-3 py-2">
                                 <div style="max-width: 70%">
                                     <span class="d-block font-weight-bold text-truncate small">{{ $stock->medicamento->nombre }}</span>
                                     <small class="text-muted" style="font-size: 0.7rem;">{{ $stock->sucursal->nombre }}</small>

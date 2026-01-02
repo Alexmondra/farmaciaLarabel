@@ -299,7 +299,6 @@ class VentaController extends Controller
      * MÉTODO AJAX
      */
 
-
     public function lookupMedicamentos(Request $request)
     {
         $request->validate([
@@ -310,37 +309,29 @@ class VentaController extends Controller
 
         $hoy = now()->format('Y-m-d');
 
+        // 1. QUERY BASE
         $query = MedicamentoSucursal::with('medicamento')
             ->where('sucursal_id', $request->sucursal_id)
-            ->activos()
-            ->whereExists(function ($sub) use ($request, $hoy) {
-                $sub->selectRaw(1)
-                    ->from('lotes')
-                    ->whereColumn('lotes.medicamento_id', 'medicamento_sucursal.medicamento_id')
-                    ->where('lotes.sucursal_id', $request->sucursal_id)
-                    ->where('lotes.stock_actual', '>', 0)
-                    ->where(function ($q2) use ($hoy) {
-                        $q2->whereDate('lotes.fecha_vencimiento', '>=', $hoy)
-                            ->orWhereNull('lotes.fecha_vencimiento');
-                    });
-            });
-
+            ->activos();
         if ($request->filled('q')) {
             $term = $request->q;
 
             $query->whereHas('medicamento', function ($sub) use ($term) {
-
+                // Si es numérico y largo, asumimos código de barras (Búsqueda exacta rápida)
                 if (is_numeric($term) && strlen($term) >= 8) {
                     $sub->where(function ($q) use ($term) {
                         $q->where('codigo_barra', $term)
                             ->orWhere('codigo', $term);
                     });
                 } else {
+                    // Búsqueda de texto (Incluida descripción)
                     $sub->where(function ($q) use ($term) {
                         $q->where('nombre', 'LIKE', "%{$term}%")
                             ->orWhere('codigo', 'LIKE', "%{$term}%")
                             ->orWhere('laboratorio', 'LIKE', "%{$term}%")
-                            ->orWhere('codigo_barra', 'LIKE', "%{$term}%");
+                            ->orWhere('codigo_barra', 'LIKE', "%{$term}%")
+                            // AQUI ESTÁ EL NUEVO CAMPO:
+                            ->orWhere('descripcion', 'LIKE', "%{$term}%");
                     });
                 }
             });
@@ -370,6 +361,7 @@ class VentaController extends Controller
         return response()->json($medicamentos);
     }
 
+
     public function lookupLotes(Request $request)
     {
         $request->validate([
@@ -377,56 +369,83 @@ class VentaController extends Controller
             'sucursal_id'    => 'required|integer',
         ]);
 
-        $hoy = now()->format('Y-m-d');
+        $hoy = now()->toDateString();
 
-        // 1. OBTENER PRECIOS Y DATOS DEL PRODUCTO
-        $ms = MedicamentoSucursal::with('medicamento') // Cargamos la relación del medicamento
+        // 1) precios del producto (SIEMPRE)
+        $ms = MedicamentoSucursal::with('medicamento')
             ->where('medicamento_id', $request->medicamento_id)
             ->where('sucursal_id', $request->sucursal_id)
             ->first();
 
         if (!$ms) return response()->json([]);
 
-        // Preparamos datos maestros
         $precios = [
             'unidad'  => (float) $ms->precio_venta,
             'blister' => (float) $ms->precio_blister,
-            'caja'    => (float) $ms->precio_caja
+            'caja'    => (float) $ms->precio_caja,
         ];
 
         $factores = [
             'blister' => $ms->medicamento->unidades_por_blister ?? 0,
-            'caja'    => $ms->medicamento->unidades_por_envase ?? 1
+            'caja'    => $ms->medicamento->unidades_por_envase ?? 1,
         ];
 
-        // 2. BUSCAR LOTES
-        $lotes = Lote::where('medicamento_id', $request->medicamento_id)
+        // 2) base de lotes vigentes (no vencidos)
+        $base = Lote::where('medicamento_id', $request->medicamento_id)
             ->where('sucursal_id', $request->sucursal_id)
-            ->where('stock_actual', '>', 0)
             ->where(function ($q) use ($hoy) {
                 $q->whereDate('fecha_vencimiento', '>=', $hoy)
                     ->orWhereNull('fecha_vencimiento');
-            })
-            ->orderBy('fecha_vencimiento', 'asc')
-            ->get()
-            ->map(function ($lote) use ($precios, $factores) {
-                return [
-                    'id'                => $lote->id,
-                    'codigo_lote'       => $lote->codigo_lote,
-                    'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('d/m/Y'),
-                    'stock_actual'      => $lote->stock_actual, // Stock siempre en unidades
-                    'ubicacion'         => $lote->ubicacion ?? 'General',
-                    'precios'           => $precios,
-                    'factores'          => $factores,
-                    'precio_oferta'     => $lote->precio_oferta ? (float)$lote->precio_oferta : null,
-                ];
             });
 
-        return response()->json($lotes);
+        // 3) normal: lotes con stock (máx 5)
+        $lotes = (clone $base)
+            ->where('stock_actual', '>', 0)
+            ->orderBy('fecha_vencimiento', 'asc')
+            ->limit(5)
+            ->get();
+
+        // 4) si no hay stock: devolver 1 lote cualquiera (aunque stock 0)
+        if ($lotes->isEmpty()) {
+            $loteCualquiera = (clone $base)
+                ->orderBy('fecha_vencimiento', 'asc')
+                ->first();
+
+            if ($loteCualquiera) {
+                $lotes = collect([$loteCualquiera]);
+            } else {
+                // 5) si NO hay ni lotes: devolver 1 "lote virtual" para mostrar precios
+                return response()->json([[
+                    'id'                => null,
+                    'codigo_lote'       => null,
+                    'fecha_vencimiento' => null,
+                    'stock_actual'      => 0,
+                    'ubicacion'         => 'General',
+                    'precios'           => $precios,
+                    'factores'          => $factores,
+                    'precio_oferta'     => null,
+                    'virtual'           => true,
+                ]]);
+            }
+        }
+
+        // 6) mapeo final (lotes reales)
+        $data = $lotes->map(function ($lote) use ($precios, $factores) {
+            return [
+                'id'                => $lote->id,
+                'codigo_lote'       => $lote->codigo_lote,
+                'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('d/m/Y'),
+                'stock_actual'      => (int) $lote->stock_actual,
+                'ubicacion'         => $lote->ubicacion ?? 'General',
+                'precios'           => $precios,
+                'factores'          => $factores,
+                'precio_oferta'     => $lote->precio_oferta ? (float) $lote->precio_oferta : null,
+                'virtual'           => false,
+            ];
+        });
+
+        return response()->json($data);
     }
-
-
-
 
     public function anular(Request $request, $id)
     {

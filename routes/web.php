@@ -19,6 +19,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SunatVerificacion\FacturacionController;
 use App\Http\Controllers\Reportes\DigemidReporteController;
 use App\Http\Controllers\SunatVerificacion\SunatArchivosController;
+use App\Http\Controllers\SunatVerificacion\NotasCredito\NotaCreditoMonitorController;
 // =========================================================================
 // 1. RUTAS PÚBLICAS
 // =========================================================================
@@ -204,7 +205,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/download-cdr/{venta}', [SunatArchivosController::class, 'descargarCdr'])
             ->name('download.cdr');
     });
+    // Rutas para Notas de Crédito
+    Route::prefix('facturacion')->name('notas.')->group(function () {
+        Route::get('monitor-notas', [NotaCreditoMonitorController::class, 'monitor'])->name('monitor.index');
+        Route::get('archivos-notas', [NotaCreditoMonitorController::class, 'visor'])->name('visor.index');
 
+        Route::get('download-xml/nc/{nota}', [NotaCreditoMonitorController::class, 'descargarXml'])->name('download.xml');
+        Route::get('download-cdr/nc/{nota}', [NotaCreditoMonitorController::class, 'descargarCdr'])->name('download.cdr');
+
+
+        Route::post('monitor-notas/reenviar/{nota}', [NotaCreditoMonitorController::class, 'reenviar'])->name('monitor.reenviar');
+    });
 
 
 

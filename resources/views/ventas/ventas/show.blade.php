@@ -99,13 +99,11 @@
     <div id="wrapper-ticket" class="d-flex justify-content-center view-container">
         <div class="ticket-box elevation-3">
             @if($venta->estado == 'ANULADO')
-            <div class="watermark">ANULADO</div>
+            <div class="watermark-ticket">ANULADO</div>
             @endif
 
             {{-- CABECERA --}}
-            {{-- AJUSTE: Agregado mt-1 para un pequeño espacio extra arriba --}}
             <div class="text-center mb-2 mt-1">
-                {{-- LOGO --}}
                 @if(isset($logoBase64) && !empty($logoBase64))
                 <div style="width: 100%; text-align: center; margin-bottom: 5px;">
                     <img src="{{ $logoBase64 }}" class="ticket-logo" alt="Logo">
@@ -192,13 +190,14 @@
                 <p class="text-center mt-2 mb-3 small text-uppercase" style="font-size: 12px !important; line-height: 1.2;">SON: {{ $montoLetras }}</p>
 
                 <div class="text-center mt-2">
-                    {{-- QR un poco más grande --}}
                     <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 95px; height: 95px;">
-                    <p class="mt-2 mb-0 font-weight-bold" style="font-size: 12px;">GRACIAS POR SU PREFERENCIA</p>
+                    <p class="mt-2 mb-0 font-weight-bold text-uppercase" style="font-size: 12px; white-space: pre-line;">
+                        {{ $config->mensaje_ticket ?? 'GRACIAS POR SU PREFERENCIA' }}
+                    </p>
                     <p class="mb-0 mt-1 legal-text" style="line-height: 1.3;">
                         Representación impresa de la<br>
                         <strong class="text-uppercase">{{ $venta->tipo_comprobante }} ELECTRÓNICA</strong><br>
-                        Revisar en: <b>mundofarma.online/consulta</b>
+                        Revisar en: <b>mundofarma.online/consultar</b>
                     </p>
                 </div>
             </div>
@@ -262,8 +261,8 @@
                         <th width="8%">CANT</th>
                         <th width="10%">UND</th>
                         <th class="text-left pl-3">DESCRIPCIÓN</th>
-                        <th width="12%">P.UNIT</th>
-                        <th width="12%">TOTAL</th>
+                        <th width="15%" class="text-right pr-4">P.UNIT</th> {{-- Alineado derecha con padding --}}
+                        <th width="15%" class="text-right pr-2">TOTAL</th> {{-- Alineado derecha con padding --}}
                     </tr>
                 </thead>
                 <tbody>
@@ -272,13 +271,13 @@
                         <td class="text-center">{{ $det->cantidad }}</td>
                         <td class="text-center">NIU</td>
                         <td class="pl-3">
-                            <span class="font-weight-bold">{{ $det->medicamento->nombre }}</span>
+                            <span class="font-weight-bold text-uppercase">{{ $det->medicamento->nombre }}</span>
                             @if($det->medicamento->presentacion)
                             <br><small class="text-muted">{{ $det->medicamento->presentacion }}</small>
                             @endif
                         </td>
-                        <td class="text-right">{{ number_format($det->precio_unitario, 2) }}</td>
-                        <td class="text-right font-weight-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
+                        <td class="text-right pr-4">{{ number_format($det->precio_unitario, 2) }}</td>
+                        <td class="text-right pr-2 font-weight-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -294,7 +293,7 @@
                                 <div style="font-size: 10px; color: #666; line-height: 1.4;">
                                     Representación impresa de la {{ $venta->tipo_comprobante }} ELECTRÓNICA.<br>
                                     Autorizado mediante Resolución N.° 300-2014/SUNAT.<br>
-                                    Consulte validez en: <a href="https://mundofarma.online" class="text-dark font-weight-bold text-decoration-none">mundofarma.online</a>
+                                    Consulte validez en: <a href="https://mundofarma.online/consultar" class="text-dark font-weight-bold text-decoration-none">mundofarma.online/consultar</a>
                                 </div>
                             </div>
                         </div>
@@ -412,6 +411,57 @@
 
 @section('css')
 <style>
+    .ticket-box {
+        width: 80mm;
+        min-height: 200px;
+        background: #fff;
+        padding: 22px 15px;
+        border-radius: 8px;
+        color: #000;
+        position: relative;
+        /* VITAL para que la marca de agua se centre aquí */
+        overflow: hidden;
+        /* Evita que la palabra 'ANULADO' se salga del papel */
+    }
+
+    /* MARCA DE AGUA TICKET CENTRADA */
+    .watermark-ticket {
+        position: absolute;
+        top: 50%;
+        /* Centrado vertical */
+        left: 50%;
+        /* Centrado horizontal */
+        transform: translate(-50%, -50%) rotate(-45deg);
+        /* Centrado perfecto y rotación */
+        font-size: 55px;
+        /* Tamaño ajustado para no desbordar */
+        color: rgba(0, 0, 0, 0.1) !important;
+        z-index: 1000;
+        pointer-events: none;
+        font-weight: bold;
+        text-transform: uppercase;
+        border: 5px solid rgba(0, 0, 0, 0.1);
+        padding: 5px 15px;
+        white-space: nowrap;
+    }
+
+    @media print {
+
+        .watermark,
+        .watermark-ticket {
+            display: block !important;
+            color: #d0d0d0 !important;
+            /* Gris claro que la térmica reconoce */
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .table-items th.text-right,
+        .table-items td.text-right {
+            text-align: right !important;
+        }
+    }
+
     :root {
         --paper-bg: #fff;
         --paper-text: #000;

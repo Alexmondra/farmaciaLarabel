@@ -58,9 +58,9 @@ class SunatService
     public function transmitirAComprobante(Venta $venta)
     {
         try {
+            $config = Configuracion::first();
             $see = $this->getSee();
             $invoice = $this->generarComprobante($venta);
-
             // 1. Firmar XML
             $xml = $see->getXmlSigned($invoice);
             $nombreArchivo = $invoice->getName();
