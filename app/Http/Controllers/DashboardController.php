@@ -25,6 +25,11 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        if (!$user->can('reporte.ver')) {
+            return redirect()->route('cajas.index')
+                ->with('info', 'No tienes permisos para ver el dashboard, se te ha redirigido a Caja.');
+        }
+
         // 1. Resolver contexto
         $ctx = $this->sucursalResolver->resolverPara($user);
         $sucursalesIds = $ctx['ids_filtro'];
@@ -120,12 +125,9 @@ class DashboardController extends Controller
             ->whereDate('fecha_vencimiento', '<=', Carbon::today()->addDays(45))
             ->orderBy('fecha_vencimiento', 'asc')
             ->with(['medicamento', 'sucursal'])
-            ->limit(10) // Traemos un poco más
+            ->limit(10)
             ->get();
 
-        // --- NUEVO: ALERTAS DE BAJO STOCK ---
-        // Asumimos bajo stock si es menor a 10 unidades. 
-        // Si tienes columna 'stock_minimo' en tabla medicamentos, úsala: 'stock_actual', '<=', 'medicamentos.stock_minimo'
         $alertasStock = Lote::query()
             ->when(!empty($sucursalesIds), fn($q) => $q->whereIn('sucursal_id', $sucursalesIds))
             ->where('stock_actual', '>', 0)
@@ -135,7 +137,6 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // --- TOP PRODUCTOS ---
         $topProductos = DetalleVenta::select(
             'medicamentos.id',
             'medicamentos.nombre',
@@ -167,7 +168,7 @@ class DashboardController extends Controller
             'ticketsAyer',
             'chartLabels',
             'globalData',
-            'datasetsPorSucursal', // Datos gráficos nuevos
+            'datasetsPorSucursal',
             'rankingSucursales',
             'alertasVencimiento',
             'alertasStock',

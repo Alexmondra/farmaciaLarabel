@@ -261,8 +261,8 @@
                         <th width="8%">CANT</th>
                         <th width="10%">UND</th>
                         <th class="text-left pl-3">DESCRIPCIÓN</th>
-                        <th width="15%" class="text-right pr-4">P.UNIT</th> {{-- Alineado derecha con padding --}}
-                        <th width="15%" class="text-right pr-2">TOTAL</th> {{-- Alineado derecha con padding --}}
+                        <th width="15%" class="text-right pr-4">P.UNIT</th>
+                        <th width="15%" class="text-right pr-2">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
