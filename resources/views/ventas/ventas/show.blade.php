@@ -416,8 +416,17 @@
        1) AJUSTES DE PANTALLA (NO AFECTA IMPRESIÓN)
     ========================================================== */
     .card-glass {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(10px);
+        position: relative;
+        z-index: 1050 !important;
+    }
+
+    .dropdown-menu {
+        z-index: 1060 !important;
+    }
+
+    .view-container {
+        position: relative;
+        z-index: 1;
     }
 
     .pulse-btn {
@@ -584,11 +593,7 @@
             print-color-adjust: exact !important;
         }
 
-        .view-container {
-            display: block !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
+
 
         body * {
             visibility: hidden !important;
