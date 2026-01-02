@@ -53,11 +53,11 @@
 
                             @if($tieneWsp)
                             <button type="button" class="dropdown-item"
-                                onclick="enviarWhatsApp(
-                                        '{{ $telefono }}', 
-                                        '{{ $venta->cliente->nombre_completo }}', 
-                                        '{{ URL::signedRoute('publico.descargar', ['id' => $venta->id]) }}'
-                                    )">
+                                onclick='enviarWhatsApp(
+                                    @json($telefono),
+                                    @json($venta->cliente->nombre_completo),
+                                    @json(URL::signedRoute("publico.descargar", ["id" => $venta->id]))
+                                    )'>
                                 <i class="fab fa-whatsapp text-success mr-2"></i> Enviar a WhatsApp
                             </button>
                             @else
@@ -66,6 +66,7 @@
                             </a>
                             @endif
 
+
                             <div class="dropdown-divider"></div>
                             @php
                             $email = $venta->cliente->email;
@@ -73,7 +74,8 @@
                             @endphp
 
                             @if($tieneEmail)
-                            <button type="button" class="dropdown-item" onclick="enviarCorreo('{{ $venta->id }}', '{{ $email }}')">
+                            <button type="button" class="dropdown-item"
+                                onclick='enviarCorreo(@json($venta->id), @json($email))'>
                                 <i class="fas fa-envelope text-primary mr-2"></i> Enviar a Correo
                             </button>
                             @else
@@ -81,6 +83,7 @@
                                 <i class="fas fa-envelope text-secondary mr-2"></i> Correo (Sin Email)
                             </a>
                             @endif
+
                         </div>
                     </div>
 
@@ -272,11 +275,14 @@
                         <td class="text-center">{{ $det->cantidad }}</td>
                         <td class="text-center">NIU</td>
                         <td class="pl-3">
-                            <span class="font-weight-bold text-uppercase">{{ $det->medicamento->nombre }}</span>
-                            @if($det->medicamento->presentacion)
-                            <br><small class="text-muted">{{ $det->medicamento->presentacion }}</small>
+                            <span class="font-weight-bold text-uppercase">
+                                {{ optional($det->medicamento)->nombre ?? 'PRODUCTO NO DISPONIBLE' }}
+                            </span>
+                            @if(optional($det->medicamento)->presentacion)
+                            <br><small class="text-muted">{{ optional($det->medicamento)->presentacion }}</small>
                             @endif
                         </td>
+
                         <td class="text-right pr-4">{{ number_format($det->precio_unitario, 2) }}</td>
                         <td class="text-right pr-2 font-weight-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
                     </tr>
@@ -409,24 +415,39 @@
     }
 </script>
 @stop
-
 @section('css')
 <style>
     /* ==========================================================
-       1) AJUSTES DE PANTALLA (NO AFECTA IMPRESIÓN)
+       1) ADAPTACIÓN INTERFAZ (DARK/LIGHT MODE)
     ========================================================== */
     .card-glass {
         position: relative;
-        z-index: 1050 !important;
+        /* Z-index alto para que el dropdown no se corte */
+        z-index: 1020 !important;
+        /* Usamos variables de AdminLTE para el fondo */
+        background-color: var(--lte-card-bg, #fff) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
+    /* Solución definitiva para el menú Enviar que se corta */
     .dropdown-menu {
-        z-index: 1060 !important;
+        z-index: 2000 !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
     }
 
     .view-container {
         position: relative;
         z-index: 1;
+        /* Menor que la barra de acciones */
+    }
+
+    /* Estilos para el modo oscuro en la vista previa */
+    .dark-mode .ticket-box,
+    .dark-mode .a4-box {
+        color: #000 !important;
+        /* El comprobante siempre se lee negro en pantalla */
+        background-color: #fff !important;
     }
 
     .pulse-btn {
@@ -447,13 +468,8 @@
         }
     }
 
-    img {
-        max-width: 100%;
-        height: auto;
-    }
-
     /* ==========================================================
-       2) TICKET (80mm) - DISEÑO (SIN CAMBIOS)
+       2) TICKET (80mm) - DISEÑO
     ========================================================== */
     .ticket-box {
         width: 80mm;
@@ -499,7 +515,7 @@
     }
 
     /* ==========================================================
-       3) A4 - DISEÑO (CORREGIDO PARA RECUPERAR CUADROS Y BORDES)
+       3) A4 - DISEÑO (RECUPERACIÓN DE BORDES)
     ========================================================== */
     .a4-box {
         width: 210mm;
@@ -510,10 +526,8 @@
         box-sizing: border-box;
     }
 
-    /* Recuadro del RUC y Tipo de Comprobante */
     .ruc-box {
         border: 2px solid #000 !important;
-        /* Recupera el cuadro de la cabecera */
         border-radius: 8px;
         text-align: center;
         padding: 10px;
@@ -521,14 +535,12 @@
 
     .doc-type-box {
         background: #000 !important;
-        /* Recupera el fondo negro del título */
         color: #fff !important;
         padding: 5px;
         margin: 6px 0;
         font-weight: bold;
     }
 
-    /* Tabla de Productos con bordes visibles */
     .table-items {
         width: 100%;
         border-collapse: collapse !important;
@@ -536,9 +548,7 @@
 
     .table-items thead th {
         background: #eee !important;
-        /* Recupera el fondo gris de cabecera */
         border: 1px solid #000 !important;
-        /* Recupera bordes de cabecera */
         padding: 8px;
         font-size: 12px;
         text-align: center;
@@ -546,7 +556,6 @@
 
     .table-items tbody td {
         border: 1px solid #ddd !important;
-        /* Recupera bordes de las celdas */
         padding: 8px;
         font-size: 12px;
     }
@@ -569,7 +578,7 @@
     }
 
     /* ==========================================================
-       4) IMPRESIÓN (MANTENIENDO VISIBILIDAD DE BORDES)
+       4) IMPRESIÓN (BLINDADA CONTRA MODO OSCURO)
     ========================================================== */
     @page {
         margin: 0;
@@ -580,37 +589,36 @@
             display: none !important;
         }
 
+        /* Aseguramos que el papel siempre sea blanco incluso en modo oscuro */
         html,
-        body {
-            background: #fff !important;
+        body,
+        .ticket-box,
+        .a4-box {
+            background-color: #fff !important;
+            color: #000 !important;
             margin: 0 !important;
             padding: 0 !important;
         }
 
-        /* Forzar impresión de colores y bordes */
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
 
-
-
         body * {
             visibility: hidden !important;
         }
 
-        /* Visibilidad del Ticket */
+        /* Visibilidad de los comprobantes */
         #wrapper-ticket:not(.d-none),
-        #wrapper-ticket:not(.d-none) * {
-            visibility: visible !important;
-        }
-
-        /* Visibilidad del A4 y sus bordes internos */
+        #wrapper-ticket:not(.d-none) *,
         #wrapper-a4:not(.d-none),
         #wrapper-a4:not(.d-none) * {
             visibility: visible !important;
-            border-color: inherit;
-            /* Permite que hereden los bordes negros definidos */
+        }
+
+        #wrapper-a4:not(.d-none) * {
+            border-color: #000 !important;
         }
 
         #wrapper-ticket:not(.d-none),
@@ -625,7 +633,6 @@
             display: block !important;
         }
 
-        /* Anchos finales */
         #wrapper-ticket:not(.d-none) .ticket-box {
             width: 76mm !important;
             margin: 0 auto !important;
