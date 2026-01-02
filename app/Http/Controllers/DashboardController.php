@@ -9,6 +9,7 @@ use App\Services\SucursalResolver;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\DetalleVenta;
 use App\Models\Inventario\Lote;
+use App\Models\Sucursal;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -24,50 +25,85 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->can('reportes.ver')) {
-            return redirect()->route('cajas.index');
-        }
-
-        // 1. Resolver contexto (¿Es admin global o local?)
+        // 1. Resolver contexto
         $ctx = $this->sucursalResolver->resolverPara($user);
         $sucursalesIds = $ctx['ids_filtro'];
 
-        // Query Base para Ventas (Excluyendo anuladas)
+        // Query Base
         $ventasQuery = Venta::query()->where('estado', '!=', 'ANULADO');
 
         if (!empty($sucursalesIds)) {
             $ventasQuery->whereIn('sucursal_id', $sucursalesIds);
         }
 
-        // --- KPI 1: VENTAS DE HOY ---
-        $ventasHoy = (clone $ventasQuery)
-            ->whereDate('fecha_emision', Carbon::today())
-            ->sum('total_neto');
+        // --- KPIS BÁSICOS ---
+        $ventasHoy = (clone $ventasQuery)->whereDate('fecha_emision', Carbon::today())->sum('total_neto');
+        $ventasMes = (clone $ventasQuery)->whereMonth('fecha_emision', Carbon::now()->month)->sum('total_neto');
+        $ticketsHoy = (clone $ventasQuery)->whereDate('fecha_emision', Carbon::today())->count();
+        $ticketsAyer = (clone $ventasQuery)->whereDate('fecha_emision', Carbon::yesterday())->count();
 
-        // --- KPI 2: VENTAS DEL MES ---
-        $ventasMes = (clone $ventasQuery)
-            ->whereMonth('fecha_emision', Carbon::now()->month)
-            ->whereYear('fecha_emision', Carbon::now()->year)
-            ->sum('total_neto');
+        // --- LÓGICA AVANZADA DE GRÁFICOS (7 DÍAS) ---
 
-        // --- KPI 3: CANTIDAD TICKETS HOY ---
-        $ticketsHoy = (clone $ventasQuery)
-            ->whereDate('fecha_emision', Carbon::today())
-            ->count();
+        // 1. Generar los últimos 7 días como base (para que no falten fechas en el gráfico)
+        $fechasBase = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $fechasBase[$date->format('Y-m-d')] = [
+                'label' => $date->format('d/m'),
+                'valor' => 0
+            ];
+        }
 
-        // --- GRÁFICO: VENTAS ÚLTIMOS 7 DÍAS ---
-        $ventasSemana = (clone $ventasQuery)
+        // 2. Obtener ventas globales agrupadas por día
+        $rawVentasSemana = (clone $ventasQuery)
             ->select(DB::raw('DATE(fecha_emision) as fecha'), DB::raw('SUM(total_neto) as total'))
-            ->where('fecha_emision', '>=', Carbon::now()->subDays(7))
+            ->where('fecha_emision', '>=', Carbon::now()->subDays(6)->startOfDay())
             ->groupBy('fecha')
-            ->orderBy('fecha', 'asc')
-            ->get();
+            ->get()
+            ->keyBy('fecha'); // Indexamos por fecha para fácil acceso
 
-        $chartLabels = $ventasSemana->pluck('fecha');
-        $chartData   = $ventasSemana->pluck('total');
+        // 3. Rellenar los datos globales (merge con fechas base)
+        $globalData = [];
+        $chartLabels = [];
+        foreach ($fechasBase as $fechaYMD => $info) {
+            $total = isset($rawVentasSemana[$fechaYMD]) ? $rawVentasSemana[$fechaYMD]->total : 0;
+            $globalData[] = $total;
+            $chartLabels[] = $info['label'];
+        }
 
-        // --- RANKING DE SUCURSALES (Para Admin/Dueño) ---
-        // Muestra cuánto vendió cada sucursal HOY
+        // 4. Obtener datos individuales POR SUCURSAL (Solo si es Admin o ve varias)
+        $datasetsPorSucursal = [];
+
+        // Si no hay filtro específico (ve todas) o tiene acceso a varias, traemos el detalle
+        $sucursalesAAnalizar = (!empty($sucursalesIds))
+            ? Sucursal::whereIn('id', $sucursalesIds)->get()
+            : Sucursal::all();
+
+        foreach ($sucursalesAAnalizar as $suc) {
+            // Consulta específica por sucursal
+            $ventasSuc = Venta::query()
+                ->where('sucursal_id', $suc->id)
+                ->where('estado', '!=', 'ANULADO')
+                ->where('fecha_emision', '>=', Carbon::now()->subDays(6)->startOfDay())
+                ->select(DB::raw('DATE(fecha_emision) as fecha'), DB::raw('SUM(total_neto) as total'))
+                ->groupBy('fecha')
+                ->pluck('total', 'fecha'); // Devuelve array [fecha => total]
+
+            // Rellenar ceros para esta sucursal
+            $dataSuc = [];
+            foreach ($fechasBase as $fechaYMD => $info) {
+                $dataSuc[] = $ventasSuc[$fechaYMD] ?? 0;
+            }
+
+            $datasetsPorSucursal[] = [
+                'id' => $suc->id,
+                'nombre' => $suc->nombre,
+                'data' => $dataSuc,
+                'color' => $this->getColorPorId($suc->id) // Función auxiliar o random
+            ];
+        }
+
+        // --- RANKING SUCURSALES (TABLA) ---
         $rankingSucursales = (clone $ventasQuery)
             ->select('sucursal_id', DB::raw('SUM(total_neto) as total_dia'), DB::raw('COUNT(*) as transacciones'))
             ->whereDate('fecha_emision', Carbon::today())
@@ -76,19 +112,32 @@ class DashboardController extends Controller
             ->orderByDesc('total_dia')
             ->get();
 
-        // --- ALERTAS DE VENCIMIENTO (Top 5 Urgentes) ---
+        // --- ALERTAS DE VENCIMIENTO ---
         $alertasVencimiento = Lote::query()
             ->when(!empty($sucursalesIds), fn($q) => $q->whereIn('sucursal_id', $sucursalesIds))
             ->where('stock_actual', '>', 0)
-            ->whereDate('fecha_vencimiento', '>=', Carbon::today()) // No vencidos aun
-            ->whereDate('fecha_vencimiento', '<=', Carbon::today()->addDays(30)) // Próximos 30 días
+            ->whereDate('fecha_vencimiento', '>=', Carbon::today())
+            ->whereDate('fecha_vencimiento', '<=', Carbon::today()->addDays(45))
             ->orderBy('fecha_vencimiento', 'asc')
             ->with(['medicamento', 'sucursal'])
-            ->limit(5)
+            ->limit(10) // Traemos un poco más
             ->get();
 
-        // --- TOP 5 PRODUCTOS MÁS VENDIDOS (DEL MES) ---
+        // --- NUEVO: ALERTAS DE BAJO STOCK ---
+        // Asumimos bajo stock si es menor a 10 unidades. 
+        // Si tienes columna 'stock_minimo' en tabla medicamentos, úsala: 'stock_actual', '<=', 'medicamentos.stock_minimo'
+        $alertasStock = Lote::query()
+            ->when(!empty($sucursalesIds), fn($q) => $q->whereIn('sucursal_id', $sucursalesIds))
+            ->where('stock_actual', '>', 0)
+            ->where('stock_actual', '<=', 10) // <--- UMBRAL DE BAJO STOCK
+            ->with(['medicamento', 'sucursal'])
+            ->orderBy('stock_actual', 'asc') // Los que tienen menos primero
+            ->limit(10)
+            ->get();
+
+        // --- TOP PRODUCTOS ---
         $topProductos = DetalleVenta::select(
+            'medicamentos.id',
             'medicamentos.nombre',
             'medicamentos.imagen_path',
             DB::raw('SUM(detalle_ventas.cantidad) as total_vendido'),
@@ -104,24 +153,44 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // --- ÚLTIMAS 5 VENTAS ---
+        // --- ÚLTIMAS VENTAS ---
         $ultimasVentas = (clone $ventasQuery)
             ->with(['sucursal', 'usuario'])
             ->orderByDesc('created_at')
-            ->limit(5)
+            ->limit(6)
             ->get();
 
         return view('dashboard', compact(
             'ventasHoy',
             'ventasMes',
             'ticketsHoy',
+            'ticketsAyer',
             'chartLabels',
-            'chartData',
+            'globalData',
+            'datasetsPorSucursal', // Datos gráficos nuevos
+            'rankingSucursales',
+            'alertasVencimiento',
+            'alertasStock',
             'topProductos',
             'ultimasVentas',
-            'ctx',
-            'rankingSucursales',
-            'alertasVencimiento'
+            'ctx'
         ));
+    }
+
+    // Pequeño helper para dar colores consistentes a las sucursales
+    private function getColorPorId($id)
+    {
+        // Paleta de colores "Neon" que se ven bien en modo oscuro y claro
+        $colors = [
+            '#4e73df',
+            '#1cc88a',
+            '#36b9cc',
+            '#f6c23e',
+            '#e74a3b',
+            '#6f42c1',
+            '#fd7e14',
+            '#20c997',
+        ];
+        return $colors[$id % count($colors)];
     }
 }

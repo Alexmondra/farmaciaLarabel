@@ -23,11 +23,10 @@
             height="50"
             style="object-fit: cover;">
           @else
-          <img src="{{ 'https://robohash.org/' . $usuario->id }}" alt="avatar"
-            alt="Sin foto"
-            class="rounded-circle"
-            width="50"
-            height="50">
+          <img src="https://api.dicebear.com/9.x/lorelei/svg?seed={{ urlencode($usuario->name) }}"
+            alt="{{ $usuario->name }}"
+            class="rounded-circle shadow-sm"
+            style="width: 150px; height: 150px; object-fit: cover;">
           @endif
         </div>
 

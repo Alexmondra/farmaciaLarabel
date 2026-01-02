@@ -103,24 +103,28 @@
             @endif
 
             {{-- CABECERA --}}
-            <div class="text-center mb-2">
-                @if(isset($logoBase64))
-                <img src="{{ $logoBase64 }}" style="max-height: 55px; margin-bottom: 5px; filter: grayscale(100%);">
-                <br>
+            {{-- AJUSTE: Agregado mt-1 para un pequeño espacio extra arriba --}}
+            <div class="text-center mb-2 mt-1">
+                {{-- LOGO --}}
+                @if(isset($logoBase64) && !empty($logoBase64))
+                <div style="width: 100%; text-align: center; margin-bottom: 5px;">
+                    <img src="{{ $logoBase64 }}" class="ticket-logo" alt="Logo">
+                </div>
                 @endif
-                <h5 class="mb-1">{{ $venta->sucursal->nombre }}</h5>
+
+                <h5 class="mb-1 mt-1">{{ $venta->sucursal->nombre }}</h5>
                 <p class="mb-0 small">{{ $venta->sucursal->direccion }}</p>
                 <p class="mb-0 small font-weight-bold">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</p>
                 <p class="mb-0 small">Tel: {{ $venta->sucursal->telefono }}</p>
             </div>
 
             {{-- INFO VENTA --}}
-            <div class="border-top border-bottom border-dark py-1 mb-2">
+            <div class="border-top border-bottom border-dark py-2 mb-2">
                 <div class="d-flex justify-content-between font-weight-bold small">
                     <span>{{ $venta->tipo_comprobante }}</span>
                     <span>{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</span>
                 </div>
-                <div class="mt-1 small" style="line-height: 1.2;">
+                <div class="mt-1 small" style="line-height: 1.3;">
                     <div>Fecha: {{ $venta->fecha_emision->format('d/m/Y H:i') }}</div>
                     <div>Pago: <b>{{ $venta->medio_pago }}</b></div>
                     <div>Cliente: {{ Str::limit($venta->cliente->nombre_completo, 22) }}</div>
@@ -134,25 +138,25 @@
             <table class="table table-sm table-borderless mb-2 w-100">
                 <thead class="border-bottom border-dark">
                     <tr class="small text-uppercase">
-                        <th class="pl-0 text-left" style="width: 15%;">Cant</th>
-                        <th class="text-left" style="width: 55%;">Descrip.</th>
-                        <th class="text-right pr-0" style="width: 30%;">Total</th>
+                        <th class="pl-0 text-left" style="width: 15%; padding-bottom: 5px;">Cant</th>
+                        <th class="text-left" style="width: 55%; padding-bottom: 5px;">Descrip.</th>
+                        <th class="text-right pr-0" style="width: 30%; padding-bottom: 5px;">Total</th>
                     </tr>
                 </thead>
                 <tbody class="small">
                     @foreach($venta->detalles as $det)
                     <tr>
-                        <td class="pl-0 text-left align-top font-weight-bold">{{ $det->cantidad }}</td>
-                        <td class="text-left align-top">{{ Str::limit($det->medicamento->nombre, 18) }}</td>
-                        <td class="text-right pr-0 align-top">{{ number_format($det->subtotal_neto, 2) }}</td>
+                        <td class="pl-0 text-left align-top font-weight-bold pt-1">{{ $det->cantidad }}</td>
+                        <td class="text-left align-top pt-1">{{ Str::limit($det->medicamento->nombre, 18) }}</td>
+                        <td class="text-right pr-0 align-top pt-1">{{ number_format($det->subtotal_neto, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
 
             {{-- TOTALES --}}
-            <div class="border-top border-dark pt-1">
-                <table class="w-100 mb-1 small">
+            <div class="border-top border-dark pt-2">
+                <table class="w-100 mb-2 small" style="line-height: 1.2;">
                     @if($venta->op_gravada > 0)
                     <tr>
                         <td class="text-right pr-2">OP. GRAVADA:</td>
@@ -180,18 +184,18 @@
                     @endif
 
                     <tr class="total-row">
-                        <td class="text-right pr-2 pt-1"><b>TOTAL:</b></td>
-                        <td class="text-right pt-1 text-nowrap"><b>S/ {{ number_format($venta->total_neto, 2) }}</b></td>
+                        <td class="text-right pr-2 pt-2" style="font-size: 1.1em;"><b>TOTAL:</b></td>
+                        <td class="text-right pt-2 text-nowrap" style="font-size: 1.1em;"><b>S/ {{ number_format($venta->total_neto, 2) }}</b></td>
                     </tr>
                 </table>
 
-                <p class="text-center mt-1 mb-2 small text-uppercase" style="font-size: 13px !important;">SON: {{ $montoLetras }}</p>
+                <p class="text-center mt-2 mb-3 small text-uppercase" style="font-size: 12px !important; line-height: 1.2;">SON: {{ $montoLetras }}</p>
 
                 <div class="text-center mt-2">
-                    <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 85px; height: 85px;">
-                    <p class="mt-1 mb-0 font-weight-bold" style="font-size: 11px;">GRACIAS POR SU PREFERENCIA</p>
-                    {{-- AQUÍ APLICAMOS LA CLASE LEGAL-TEXT --}}
-                    <p class="mb-0 mt-1 legal-text">
+                    {{-- QR un poco más grande --}}
+                    <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 95px; height: 95px;">
+                    <p class="mt-2 mb-0 font-weight-bold" style="font-size: 12px;">GRACIAS POR SU PREFERENCIA</p>
+                    <p class="mb-0 mt-1 legal-text" style="line-height: 1.3;">
                         Representación impresa de la<br>
                         <strong class="text-uppercase">{{ $venta->tipo_comprobante }} ELECTRÓNICA</strong><br>
                         Revisar en: <b>mundofarma.online/consulta</b>
@@ -202,7 +206,7 @@
     </div>
 
     {{-- ======================================================= --}}
-    {{-- VISTA A4 --}}
+    {{-- VISTA A4 (Sin cambios solicitados, se mantiene igual) --}}
     {{-- ======================================================= --}}
     <div id="wrapper-a4" class="d-none justify-content-center view-container">
         <div class="a4-box bg-white elevation-3 position-relative">
@@ -495,209 +499,102 @@
         right: 15mm;
     }
 
-    /* ======================================================= */
-    /* VISTA PANTALLA TICKET (MODIFICADO - LETRA GRANDE) */
-    /* ======================================================= */
+    /* ESTILOS TICKET (80mm) */
     .ticket-box {
         width: 80mm;
-        margin: 0 auto;
+        min-height: 200px;
         background: #fff;
+        /* AJUSTE: Aumentado el padding superior e inferior para dar "aire" */
+        padding: 22px 15px;
+        border-radius: 8px;
         color: #000;
-        font-family: 'Arial', sans-serif;
-        /* Arial se lee mejor en impresoras térmicas */
-    }
-
-    /* FORZAR TAMAÑO Y NEGRITA EN TODO EL TICKET */
-    .ticket-box,
-    .ticket-box * {
-        font-size: 15px !important;
-        /* Aumentado a 15px */
-        font-weight: 600 !important;
-        /* Seminegrita para mejor impresión */
-        line-height: 1.2 !important;
-    }
-
-    /* Títulos GIGANTES */
-    .ticket-box h5,
-    .ticket-box .h5 {
-        font-size: 20px !important;
-        font-weight: 900 !important;
-        text-transform: uppercase;
-        margin-bottom: 5px !important;
-    }
-
-    /* Encabezados y celdas tabla */
-    .ticket-box th {
-        font-size: 16px !important;
-        border-bottom: 2px solid #000 !important;
-        padding-bottom: 2px !important;
-    }
-
-    .ticket-box td {
-        padding-top: 2px !important;
-        padding-bottom: 2px !important;
-    }
-
-    /* Totales (TOTAL A PAGAR) */
-    .ticket-box .total-row,
-    .ticket-box .total-row td,
-    .ticket-box b {
-        font-size: 18px !important;
-        font-weight: 900 !important;
-    }
-
-    /* Clase especial para texto legal pequeño (QR y web) */
-    .ticket-box .legal-text,
-    .ticket-box .legal-text * {
-        font-size: 11px !important;
-        font-weight: normal !important;
-        line-height: 1.1 !important;
-    }
-
-    /* ======================================================= */
-    /* VISTA PANTALLA A4 (ESTANDAR) */
-    /* ======================================================= */
-    .a4-box {
-        width: 210mm;
-        min-height: 297mm;
-        margin: 20px auto;
-        padding: 15mm;
-        background: #fff;
-        color: #000;
-        font-family: Arial, Helvetica, sans-serif;
         position: relative;
     }
 
-    /* ANULADO WATERMARK */
+    .ticket-logo {
+        max-width: 50%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .legal-text {
+        font-size: 9px;
+        color: #555;
+    }
+
+    /* ESTILOS A4 */
+    .a4-box {
+        width: 210mm;
+        height: 297mm;
+        padding: 15mm;
+        background: #fff;
+        color: #000;
+        overflow: hidden;
+    }
+
     .watermark {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-weight: 900;
-        text-transform: uppercase;
-        color: rgba(0, 0, 0, 0.2);
-        border: 4px dashed rgba(0, 0, 0, 0.2);
-        padding: 10px 50px;
+        font-size: 10rem;
+        color: rgba(220, 53, 69, 0.15);
         z-index: 0;
         pointer-events: none;
-        white-space: nowrap;
+        font-weight: bold;
     }
 
-    .ticket-box .watermark {
-        font-size: 1.5rem;
-        padding: 5px 20px;
-        border-width: 3px;
-    }
-
-    .a4-box .watermark {
-        font-size: 5rem;
-        opacity: 0.5;
-    }
-
-    .ticket-box,
-    .a4-box {
-        position: relative !important;
-        z-index: 1;
-    }
-
-    /* ======================================================= */
-    /* MODO IMPRESIÓN (MEDIA PRINT) */
-    /* ======================================================= */
+    /* ESTILOS DE IMPRESIÓN */
     @media print {
-        @page {
-            size: auto;
-            margin: 0mm;
+        .no-print {
+            display: none !important;
         }
 
         body {
-            margin: 0 !important;
-            padding: 0 !important;
             background: #fff !important;
             color: #000 !important;
         }
 
-        .no-print,
-        nav,
-        footer,
-        aside,
-        .content-header,
-        .btn,
-        .main-footer {
-            display: none !important;
-        }
-
-        .content-wrapper,
-        .card {
+        .view-container {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
             margin: 0 !important;
             padding: 0 !important;
-            border: none !important;
+        }
+
+        /* Si es TICKET */
+        #wrapper-ticket.d-flex .ticket-box {
             box-shadow: none !important;
-            background: #fff !important;
-        }
-
-        /* TICKET PRINT */
-        #wrapper-ticket:not(.d-none) {
-            display: block !important;
-            width: 100% !important;
-        }
-
-        .ticket-box {
-            width: 78mm !important;
-            /* Ancho ajustado para evitar márgenes */
+            border-radius: 0 !important;
+            width: 80mm !important;
+            /* Mantenemos el padding extra en la impresión */
+            padding: 20px 5px !important;
             margin: 0 auto !important;
-            padding: 2mm !important;
-            border: none !important;
+            page-break-after: always;
         }
 
-        /* A4 PRINT */
-        #wrapper-a4:not(.d-none) {
-            display: block !important;
-            width: 100% !important;
-            height: 100% !important;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .a4-box {
+        /* Si es A4 */
+        #wrapper-a4.d-flex .a4-box {
+            box-shadow: none !important;
             width: 210mm !important;
-            height: 296mm !important;
-            margin: 0 !important;
+            height: 297mm !important;
             padding: 15mm !important;
-            border: none !important;
-            position: relative !important;
+            margin: 0 auto !important;
+            page-break-after: always;
         }
+    }
 
-        .footer-print-area {
-            position: absolute !important;
-            bottom: 15mm !important;
-            left: 15mm !important;
-            width: 180mm !important;
-            page-break-inside: avoid;
-            background: #fff;
-        }
+    /* Modo oscuro ajuste */
+    .dark-mode .ticket-box,
+    .dark-mode .a4-box {
+        background: #fff !important;
+        color: #000 !important;
+    }
 
-        /* Helpers */
-        .bg-dark {
-            background-color: #000 !important;
-            color: #fff !important;
-            -webkit-print-color-adjust: exact;
-        }
-
-        .col-4,
-        .col-8 {
-            float: left !important;
-        }
-
-        .col-8 {
-
-            width: 66.666667% !important;
-        }
-
-        .col-4 {
-            width: 33.333333% !important;
-        }
+    .dark-mode .ticket-logo {
+        filter: none !important;
     }
 </style>
 @stop

@@ -69,15 +69,31 @@ class VentaController extends Controller
 
         // 3. Lógica de Búsqueda Inteligente
         if ($request->filled('search_q')) {
-            // A. Si el usuario escribe algo (Ticket o Cliente), buscamos en TODO el historial
-            $busqueda = $request->search_q;
+            $busqueda = trim($request->search_q);
             $query->where(function ($q) use ($busqueda) {
-                $q->where('numero', 'LIKE', "%$busqueda%")
-                    ->orWhere(DB::raw("CONCAT(serie, '-', numero)"), 'LIKE', "%$busqueda%")
-                    ->orWhereHas('cliente', fn($c) => $c->where('nombre', 'LIKE', "%$busqueda%"));
+                $q->whereHas('cliente', fn($c) => $c->where('nombre', 'LIKE', "%$busqueda%"));
+
+                if (is_numeric($busqueda)) {
+                    $q->orWhereRaw('CAST(numero AS UNSIGNED) = ?', [(int)$busqueda]);
+                } elseif (str_contains($busqueda, '-')) {
+                    $partes = explode('-', $busqueda);
+                    if (count($partes) == 2) {
+                        $serie = trim($partes[0]);
+                        $numero = trim($partes[1]);
+
+                        if (is_numeric($numero)) {
+                            $q->orWhere(function ($sub) use ($serie, $numero) {
+                                $sub->where('serie', 'LIKE', "%$serie%")
+                                    ->whereRaw('CAST(numero AS UNSIGNED) = ?', [(int)$numero]);
+                            });
+                        }
+                    }
+                    $q->orWhere(DB::raw("CONCAT(serie, '-', numero)"), 'LIKE', "%$busqueda%");
+                } else {
+                    $q->orWhere('serie', 'LIKE', "%$busqueda%");
+                }
             });
         } else {
-            // B. Si NO busca nada específico, filtramos por FECHA (Por defecto: HOY)
             $desde = $request->get('fecha_desde', now()->format('Y-m-d'));
             $hasta = $request->get('fecha_hasta', now()->format('Y-m-d'));
 
@@ -134,11 +150,7 @@ class VentaController extends Controller
             return back()->withErrors('El carrito está vacío o es inválido.');
         }
 
-
-
-        // 2. DELEGAR AL SERVICIO
         try {
-            // Toda la magia ocurre aquí dentro
             $venta = $this->ventaService->registrarVenta($user, $data);
 
             return redirect()->route('ventas.show', $venta->id)
