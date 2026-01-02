@@ -413,8 +413,8 @@
 @section('css')
 <style>
     /* ==========================================================
-   1) AJUSTES DE PANTALLA (NO AFECTA IMPRESIÓN)
-========================================================== */
+       1) AJUSTES DE PANTALLA (NO AFECTA IMPRESIÓN)
+    ========================================================== */
     .card-glass {
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
@@ -443,24 +443,19 @@
         height: auto;
     }
 
-
     /* ==========================================================
-   2) TICKET (80mm) - DISEÑO
-========================================================== */
+       2) TICKET (80mm) - DISEÑO (SIN CAMBIOS)
+    ========================================================== */
     .ticket-box {
         width: 80mm;
-        /* ancho de diseño */
         background: #fff;
         padding: 10px 2px;
         font-family: 'Arial Narrow', Arial, sans-serif;
         position: relative;
         overflow: hidden;
-
-        /* CLAVE: evita que padding sume ancho y corte el ticket */
         box-sizing: border-box;
     }
 
-    /* Tabla ticket (para que no se desborde fácil) */
     .table-items-ticket {
         width: 100%;
         border-collapse: collapse;
@@ -469,8 +464,6 @@
     .table-items-ticket td {
         font-size: 15px !important;
         padding: 4px 0;
-
-        /* CLAVE: nombres largos no rompen columnas */
         word-break: break-word;
         overflow-wrap: anywhere;
     }
@@ -481,7 +474,6 @@
         padding-top: 10px;
     }
 
-    /* Sello ANULADO (Ticket) */
     #wrapper-ticket .watermark-ticket {
         position: absolute;
         top: 50%;
@@ -497,22 +489,59 @@
         pointer-events: none;
     }
 
-
     /* ==========================================================
-   3) A4 - DISEÑO
-========================================================== */
+       3) A4 - DISEÑO (CORREGIDO PARA RECUPERAR CUADROS Y BORDES)
+    ========================================================== */
     .a4-box {
         width: 210mm;
         height: 297mm;
         padding: 15mm;
         background: #fff;
         position: relative;
-
-        /* CLAVE: padding no debe aumentar tamaño final */
         box-sizing: border-box;
     }
 
-    /* Footer A4 al fondo */
+    /* Recuadro del RUC y Tipo de Comprobante */
+    .ruc-box {
+        border: 2px solid #000 !important;
+        /* Recupera el cuadro de la cabecera */
+        border-radius: 8px;
+        text-align: center;
+        padding: 10px;
+    }
+
+    .doc-type-box {
+        background: #000 !important;
+        /* Recupera el fondo negro del título */
+        color: #fff !important;
+        padding: 5px;
+        margin: 6px 0;
+        font-weight: bold;
+    }
+
+    /* Tabla de Productos con bordes visibles */
+    .table-items {
+        width: 100%;
+        border-collapse: collapse !important;
+    }
+
+    .table-items thead th {
+        background: #eee !important;
+        /* Recupera el fondo gris de cabecera */
+        border: 1px solid #000 !important;
+        /* Recupera bordes de cabecera */
+        padding: 8px;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .table-items tbody td {
+        border: 1px solid #ddd !important;
+        /* Recupera bordes de las celdas */
+        padding: 8px;
+        font-size: 12px;
+    }
+
     .footer-print-area {
         position: absolute;
         bottom: 15mm;
@@ -520,7 +549,6 @@
         right: 15mm;
     }
 
-    /* Sello ANULADO (A4) */
     #wrapper-a4 .watermark {
         position: absolute;
         top: 50%;
@@ -531,16 +559,14 @@
         font-weight: bold;
     }
 
-
     /* ==========================================================
-   4) IMPRESIÓN (CRÍTICO PARA EPSON TM-T20III / NAVEGADOR)
-========================================================== */
+       4) IMPRESIÓN (MANTENIENDO VISIBILIDAD DE BORDES)
+    ========================================================== */
     @page {
         margin: 0;
     }
 
     @media print {
-
         .no-print {
             display: none !important;
         }
@@ -552,6 +578,7 @@
             padding: 0 !important;
         }
 
+        /* Forzar impresión de colores y bordes */
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -563,19 +590,22 @@
             margin: 0 !important;
         }
 
-
         body * {
             visibility: hidden !important;
         }
 
+        /* Visibilidad del Ticket */
         #wrapper-ticket:not(.d-none),
         #wrapper-ticket:not(.d-none) * {
             visibility: visible !important;
         }
 
+        /* Visibilidad del A4 y sus bordes internos */
         #wrapper-a4:not(.d-none),
         #wrapper-a4:not(.d-none) * {
             visibility: visible !important;
+            border-color: inherit;
+            /* Permite que hereden los bordes negros definidos */
         }
 
         #wrapper-ticket:not(.d-none),
@@ -590,7 +620,7 @@
             display: block !important;
         }
 
-        /* 4.3 Ancho seguro en térmica */
+        /* Anchos finales */
         #wrapper-ticket:not(.d-none) .ticket-box {
             width: 76mm !important;
             margin: 0 auto !important;
