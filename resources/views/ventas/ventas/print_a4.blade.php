@@ -5,7 +5,6 @@
     <meta charset="utf-8">
     <title>A4 {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</title>
     <style>
-        /* CONFIGURACIÓN DE PÁGINA */
         @page {
             size: A4;
             margin: 1cm;
@@ -14,61 +13,56 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 12px;
             color: #000;
-            /* IMPORTANTE: Dejamos espacio abajo para el footer fijo */
-            margin-bottom: 5.5cm;
+            /* Espacio abajo para que el texto no tape el footer fijo */
+            margin-bottom: 5cm;
         }
 
-        /* CABECERA */
+        /* Estilos Generales */
+        .w-100 {
+            width: 100%;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .text-red {
+            color: red !important;
+        }
+
+        /* Cabecera */
         .header-table {
             width: 100%;
-            border-collapse: collapse;
             margin-bottom: 15px;
         }
 
-        .col-logo {
-            width: 25%;
-            vertical-align: top;
-        }
-
-        .col-empresa {
-            width: 45%;
-            text-align: center;
-            vertical-align: top;
-            padding: 0 10px;
-        }
-
-        .col-ruc {
-            width: 30%;
-            vertical-align: top;
-        }
-
-        /* CUADRO RUC */
         .ruc-box {
             border: 2px solid #000;
             border-radius: 8px;
             text-align: center;
-            padding: 10px 5px;
-            background: #fff;
+            padding: 10px;
         }
 
-        .ruc-label {
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .doc-type-box {
+        .doc-type {
             background: #000;
             color: #fff;
-            padding: 5px;
-            margin: 6px 0;
             font-weight: bold;
-            display: block;
+            padding: 4px;
+            margin: 5px 0;
         }
 
-        /* CLIENTE */
+        /* Cliente */
         .client-box {
             border: 1px solid #000;
             border-radius: 5px;
@@ -77,12 +71,7 @@
             width: 100%;
         }
 
-        .label {
-            font-weight: bold;
-            margin-right: 5px;
-        }
-
-        /* TABLA ITEMS */
+        /* Tabla Items */
         .items-table {
             width: 100%;
             border-collapse: collapse;
@@ -94,51 +83,29 @@
             background: #eee;
             padding: 6px;
             font-size: 11px;
-            text-align: center;
         }
 
         .items-table td {
             border: 1px solid #000;
             padding: 6px;
             font-size: 11px;
-            vertical-align: middle;
         }
 
-        /* UTILIDADES */
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .text-left {
-            text-align: left;
-        }
-
-        .font-bold {
-            font-weight: bold;
-        }
-
-        /* === FOOTER FIJO AL FINAL === */
+        /* === FOOTER FIJO === */
         footer {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 5cm;
-            /* Altura reservada para el pie */
-            background-color: #fff;
+            height: 4.5cm;
+            /* Altura del footer */
+            background: #fff;
+            border-top: 1px solid #ccc;
+            /* Separador sutil opcional */
             padding-top: 10px;
         }
 
-        .footer-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        /* Totales */
+        /* Tabla de Totales (Estilo Imagen) */
         .totals-table {
             width: 100%;
             border-collapse: collapse;
@@ -149,15 +116,13 @@
             padding: 3px 0;
         }
 
-        .total-final {
+        .total-final-row {
             border-top: 2px solid #000;
-            font-size: 15px;
+            /* La línea negra gruesa */
+            font-size: 16px;
             font-weight: bold;
-            padding-top: 5px;
-            margin-top: 5px;
         }
 
-        /* Marca de Agua */
         .anulado {
             position: fixed;
             top: 40%;
@@ -165,9 +130,6 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             font-size: 100px;
             color: rgba(200, 0, 0, 0.2);
-            border: 10px solid rgba(200, 0, 0, 0.2);
-            padding: 20px;
-            border-radius: 20px;
             z-index: -1;
             pointer-events: none;
         }
@@ -182,24 +144,20 @@
 
     <table class="header-table">
         <tr>
-            <td class="col-logo">
+            <td width="25%">
                 @if(isset($logoBase64) && !empty($logoBase64))
-                <img src="{{ $logoBase64 }}" style="max-width: 100%; max-height: 80px;">
+                <img src="{{ $logoBase64 }}" style="max-height: 80px;">
                 @endif
             </td>
-            <td class="col-empresa">
+            <td width="45%" class="text-center">
                 <div style="font-size: 16px; font-weight: bold;">{{ $venta->sucursal->nombre }}</div>
-                <div style="font-size: 11px; margin-top: 5px;">
-                    {{ $venta->sucursal->direccion }}<br>
-                    @if($venta->sucursal->telefono) Tel: {{ $venta->sucursal->telefono }} @endif
-                    @if($venta->sucursal->email) - {{ $venta->sucursal->email }} @endif
-                </div>
+                <div style="font-size: 11px;">{{ $venta->sucursal->direccion }}</div>
             </td>
-            <td class="col-ruc">
+            <td width="30%">
                 <div class="ruc-box">
-                    <div class="ruc-label">R.U.C. {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
-                    <div class="doc-type-box">{{ $venta->tipo_comprobante }} ELECTRÓNICA</div>
-                    <div class="ruc-label">{{ $venta->serie }} - {{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</div>
+                    <div class="font-bold">R.U.C. {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
+                    <div class="doc-type">{{ $venta->tipo_comprobante }} ELECTRÓNICA</div>
+                    <div class="font-bold">{{ $venta->serie }} - {{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</div>
                 </div>
             </td>
         </tr>
@@ -208,14 +166,13 @@
     <table class="client-box">
         <tr>
             <td width="60%">
-                <span class="label">Cliente:</span> {{ $venta->cliente->nombre_completo }}<br>
-                <span class="label">{{ $venta->cliente->tipo_documento }}:</span> {{ $venta->cliente->documento }}<br>
-                <span class="label">Dirección:</span> {{ Str::limit($venta->cliente->direccion, 80, '...') }}
+                <b>Cliente:</b> {{ $venta->cliente->nombre_completo }}<br>
+                <b>{{ $venta->cliente->tipo_documento }}:</b> {{ $venta->cliente->documento }}<br>
+                <b>Dirección:</b> {{ Str::limit($venta->cliente->direccion, 80) }}
             </td>
             <td width="40%" style="vertical-align: top;">
-                <span class="label">Fecha Emisión:</span> {{ $venta->fecha_emision->format('d/m/Y H:i:s') }}<br>
-                <span class="label">Moneda:</span> SOLES<br>
-                <span class="label">Forma de Pago:</span> {{ $venta->medio_pago }}
+                <b>Fecha:</b> {{ $venta->fecha_emision->format('d/m/Y H:i:s') }}<br>
+                <b>Forma Pago:</b> {{ $venta->medio_pago }}
             </td>
         </tr>
     </table>
@@ -223,18 +180,16 @@
     <table class="items-table">
         <thead>
             <tr>
-                <th width="8%">CANT</th>
-                <th width="10%">UND</th>
+                <th>CANT</th>
                 <th class="text-left">DESCRIPCIÓN</th>
-                <th width="12%">P. UNIT</th>
-                <th width="12%">IMPORTE</th>
+                <th>P. UNIT</th>
+                <th>IMPORTE</th>
             </tr>
         </thead>
         <tbody>
             @foreach($venta->detalles as $det)
             <tr>
                 <td class="text-center">{{ $det->cantidad }}</td>
-                <td class="text-center">NIU</td>
                 <td>{{ $det->medicamento->nombre }}</td>
                 <td class="text-right">{{ number_format($det->precio_unitario, 2) }}</td>
                 <td class="text-right font-bold">{{ number_format($det->subtotal_neto, 2) }}</td>
@@ -244,20 +199,17 @@
     </table>
 
     <footer>
-        <table class="footer-table">
+        <table style="width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top;">
                     <table width="100%">
                         <tr>
-                            <td width="90">
-                                <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" width="85" height="85">
-                            </td>
-                            <td style="vertical-align: top; padding-left: 10px;">
-                                <div class="font-bold" style="font-size: 11px; margin-bottom: 5px;">SON: {{ $montoLetras }}</div>
-                                <div style="font-size: 10px; color: #555;">
+                            <td width="90"><img src="data:image/svg+xml;base64,{{ $qrBase64 }}" width="85" height="85"></td>
+                            <td style="padding-left: 10px;">
+                                <div class="font-bold small">SON: {{ $montoLetras }}</div>
+                                <div style="font-size: 9px; color: #555; margin-top: 5px;">
                                     Representación impresa de la {{ $venta->tipo_comprobante }} ELECTRÓNICA.<br>
-                                    Autorizado mediante Resolución de Superintendencia N.° 300-2014/SUNAT.<br>
-                                    Consulte validez en: <b>mundofarma.online/consultar</b>
+                                    Consulte en: <b>mundofarma.online/consultar</b>
                                 </div>
                             </td>
                         </tr>
@@ -287,18 +239,18 @@
 
                         @if($venta->total_descuento > 0)
                         <tr>
-                            <td class="text-right font-bold" style="color:red">Descuento:</td>
-                            <td class="text-right" style="color:red">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
+                            <td class="text-right font-bold text-red">Descuento:</td>
+                            <td class="text-right font-bold text-red">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
                         </tr>
                         @endif
 
                         <tr>
-                            <td colspan="2">
-                                <div class="total-final" style="display: flex; justify-content: space-between;">
-                                    <span>IMPORTE TOTAL:</span>
-                                    <span>S/ {{ number_format($venta->total_neto, 2) }}</span>
-                                </div>
-                            </td>
+                            <td colspan="2" style="padding-top: 5px;"></td>
+                        </tr>
+
+                        <tr class="total-final-row">
+                            <td class="text-right" style="padding-top: 5px;">IMPORTE TOTAL:</td>
+                            <td class="text-right" style="padding-top: 5px;">S/ {{ number_format($venta->total_neto, 2) }}</td>
                         </tr>
                     </table>
                 </td>

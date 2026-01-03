@@ -5,31 +5,28 @@
     <meta charset="utf-8">
     <title>Ticket {{ $venta->serie }}-{{ $venta->numero }}</title>
     <style>
-        /* RESET TOTAL */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
-        /* CONFIGURACIÓN BÁSICA */
         body {
             font-family: 'Arial Narrow', sans-serif;
-            /* Fuente estrecha ahorra papel */
-            font-size: 13px;
+            font-size: 12px;
+            /* Letra un poco más compacta */
             color: #000;
             background: #fff;
             width: 100%;
         }
 
-        /* CONTENEDOR PRINCIPAL FLUIDO */
         .ticket-wrapper {
             width: 100%;
-            /* Arriba: 0 | Der: 2mm | Abajo: 5mm (para corte) | Izq: 2mm */
             padding: 0 2mm 5mm 2mm;
+            /* Márgenes mínimos */
         }
 
-        /* UTILIDADES */
+        /* Utilidades de Texto */
         .text-center {
             text-align: center;
         }
@@ -38,24 +35,32 @@
             text-align: right;
         }
 
-        .text-uppercase {
-            text-transform: uppercase;
+        .text-left {
+            text-align: left;
         }
 
         .font-bold {
             font-weight: bold;
         }
 
-        .mb-1 {
-            margin-bottom: 4px;
+        .text-red {
+            color: red !important;
         }
 
+        /* Para el descuento */
+
+        /* Líneas */
         .border-dashed {
             border-top: 1px dashed #000;
-            margin: 5px 0;
+            margin: 4px 0;
         }
 
-        /* TABLA ITEMS */
+        .border-solid {
+            border-top: 1px solid #000;
+            margin: 4px 0;
+        }
+
+        /* Tablas */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -63,21 +68,19 @@
 
         td,
         th {
-            padding: 3px 0;
+            padding: 2px 0;
             vertical-align: top;
         }
 
-        /* LOGO */
+        /* Logo */
         img {
-            max-width: 80%;
+            max-width: 75%;
             height: auto;
-            /* Filtros para asegurar nitidez en impresora térmica */
             filter: grayscale(100%) contrast(150%);
-            /* Margen inferior pequeño */
             margin-bottom: 2px;
         }
 
-        /* MARCA DE AGUA ANULADO */
+        /* Marca de Agua */
         .watermark {
             position: fixed;
             top: 30%;
@@ -85,33 +88,34 @@
             transform: rotate(-45deg);
             font-size: 40px;
             border: 3px dashed #000;
-            padding: 10px;
             opacity: 0.3;
+            padding: 10px;
         }
     </style>
 </head>
 
 <body>
-
     <div class="ticket-wrapper">
         @if($venta->estado == 'ANULADO')
         <div class="watermark">ANULADO</div>
         @endif
 
-        <div class="text-center" style="padding-top: 2px;">
+        <div class="text-center">
             @if(isset($logoBase64) && !empty($logoBase64))
             <img src="{{ $logoBase64 }}" alt="Logo">
             @endif
-
-            <div style="font-size: 14px; font-weight: bold; line-height: 1.1;">{{ $venta->sucursal->nombre }}</div>
-            <div style="font-size: 11px; margin-top: 2px;">{{ $venta->sucursal->direccion }}</div>
+            <div style="font-size: 14px; font-weight: bold; line-height: 1;">{{ $venta->sucursal->nombre }}</div>
+            <div style="font-size: 10px; margin-top: 2px;">{{ $venta->sucursal->direccion }}</div>
             <div class="font-bold" style="margin-top: 2px;">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
         </div>
 
         <div class="border-dashed"></div>
 
-        <div>
-            <div><b>{{ $venta->tipo_comprobante }}:</b> {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</div>
+        <div style="font-size: 11px;">
+            <div style="display:flex; justify-content:space-between;">
+                <b>{{ $venta->tipo_comprobante }}:</b>
+                <span>{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</span>
+            </div>
             <div><b>Fecha:</b> {{ $venta->fecha_emision->format('d/m/Y H:i') }}</div>
             <div><b>Cliente:</b> {{ Str::limit($venta->cliente->nombre_completo, 25) }}</div>
             @if($venta->cliente->documento != '00000000')
@@ -121,10 +125,10 @@
 
         <div class="border-dashed"></div>
 
-        <table>
+        <table style="font-size: 11px;">
             <thead>
                 <tr>
-                    <th class="text-left" style="width: 15%;">C.</th>
+                    <th class="text-left" style="width: 10%;">Cant.</th>
                     <th class="text-left">DESCRIPCIÓN</th>
                     <th class="text-right">TOT.</th>
                 </tr>
@@ -133,7 +137,7 @@
                 @foreach($venta->detalles as $det)
                 <tr>
                     <td class="font-bold">{{ (int)$det->cantidad }}</td>
-                    <td style="font-size: 12px;">{{ $det->medicamento->nombre }}</td>
+                    <td>{{ $det->medicamento->nombre }}</td>
                     <td class="text-right">{{ number_format($det->subtotal_neto, 2) }}</td>
                 </tr>
                 @endforeach
@@ -142,40 +146,65 @@
 
         <div class="border-dashed"></div>
 
-        <table style="font-size: 12px;">
+        <table style="font-size: 11px; margin-top: 2px;">
+            {{-- 1. Op. Gravada --}}
             @if($venta->op_gravada > 0)
             <tr>
-                <td>OP. GRAVADA</td>
-                <td class="text-right">S/ {{ number_format($venta->op_gravada, 2) }}</td>
+                <td class="text-right">Op. Gravada:</td>
+                <td class="text-right" style="width: 35%;">S/ {{ number_format($venta->op_gravada, 2) }}</td>
             </tr>
             @endif
 
+            {{-- 2. Op. Exonerada --}}
+            @if($venta->op_exonerada > 0)
             <tr>
-                <td>I.G.V.</td>
+                <td class="text-right">Op. Exonerada:</td>
+                <td class="text-right">S/ {{ number_format($venta->op_exonerada, 2) }}</td>
+            </tr>
+            @endif
+
+            {{-- 3. Op. Inafecta --}}
+            @if($venta->op_inafecta > 0)
+            <tr>
+                <td class="text-right">Op. Inafecta:</td>
+                <td class="text-right">S/ {{ number_format($venta->op_inafecta, 2) }}</td>
+            </tr>
+            @endif
+
+            {{-- 4. IGV --}}
+            <tr>
+                <td class="text-right">I.G.V. (18%):</td>
                 <td class="text-right">S/ {{ number_format($venta->total_igv, 2) }}</td>
             </tr>
 
+            {{-- 5. DESCUENTO (ROJO) --}}
             @if($venta->total_descuento > 0)
             <tr>
-                <td>DESCUENTO</td>
-                <td class="text-right">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
+                <td class="text-right font-bold text-red">DESCUENTO:</td>
+                <td class="text-right font-bold text-red">- S/ {{ number_format($venta->total_descuento, 2) }}</td>
             </tr>
             @endif
 
-            <tr style="font-size: 16px;">
-                <td class="font-bold" style="padding-top: 5px;">TOTAL</td>
-                <td class="text-right font-bold" style="padding-top: 5px;">S/ {{ number_format($venta->total_neto, 2) }}</td>
+            {{-- 6. TOTAL FINAL (LINEA NEGRA ARRIBA) --}}
+            <tr>
+                <td colspan="2" style="padding: 0;">
+                    <div style="border-top: 1px solid #000; margin-top: 3px;"></div>
+                </td>
+            </tr>
+            <tr style="font-size: 15px;">
+                <td class="font-bold" style="padding-top: 2px;">TOTAL:</td>
+                <td class="text-right font-bold" style="padding-top: 2px;">S/ {{ number_format($venta->total_neto, 2) }}</td>
             </tr>
         </table>
 
-        <div class="text-center" style="margin-top: 5px; font-size: 11px;">
+        <div class="text-center" style="margin-top: 5px; font-size: 10px; text-transform: uppercase;">
             SON: {{ $montoLetras }}
         </div>
 
-        <div class="text-center" style="margin-top: 10px;">
-            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 100px; height: 100px;">
-            <div style="font-weight: bold; margin-top: 5px; font-size: 11px;">GRACIAS POR SU COMPRA</div>
-            <div style="font-size: 10px;">Consulta: mundofarma.online</div>
+        <div class="text-center" style="margin-top: 8px;">
+            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 90px; height: 90px;">
+            <div style="font-weight: bold; margin-top: 4px; font-size: 10px;">GRACIAS POR SU PREFERENCIA</div>
+            <div style="font-size: 9px;">Consulta en: mundofarma.online</div>
         </div>
     </div>
 
