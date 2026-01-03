@@ -31,10 +31,10 @@
                 <div class="col-md-4 mb-2 mb-md-0">
                     <div class="btn-group w-100 shadow-sm custom-toggle" role="group">
                         <button type="button" class="btn btn-outline-dark active-view" id="btn-ticket" onclick="cambiarVista('ticket')">
-                            <i class="fas fa-receipt mr-2"></i> Ticket (80mm)
+                            <i class="fas fa-receipt mr-2"></i> Ticket
                         </button>
                         <button type="button" class="btn btn-outline-dark" id="btn-a4" onclick="cambiarVista('a4')">
-                            <i class="far fa-file-pdf mr-2"></i> Hoja A4
+                            <i class="far fa-file-pdf mr-2"></i> PDF
                         </button>
                     </div>
                 </div>
@@ -532,7 +532,7 @@
     ========================================================== */
     @media print {
 
-        /* 1. RESET DE MODO OSCURO */
+        /* 1. RESET GENERAL Y MODO OSCURO */
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -550,6 +550,7 @@
             display: none !important;
         }
 
+        /* RESTAURAR COLORES */
         .doc-type-box {
             background: #000 !important;
             color: #fff !important;
@@ -565,24 +566,19 @@
             border: 2px solid #000 !important;
         }
 
-        /* MODO TICKET */
+        /* =========================================
+           MODO TICKET (ADAPTABLE / ELÁSTICO)
+           ========================================= */
         body.mode-ticket @page {
-            size: 80mm auto;
-            margin: 0;
+            size: auto;
+            /* <--- CLAVE: Se adapta a la impresora (Epson) */
+            margin: 0mm;
         }
 
         body.mode-ticket {
-            background: #fff !important;
+            width: 100% !important;
             margin: 0 !important;
-        }
-
-        body.mode-ticket * {
-            visibility: hidden;
-        }
-
-        body.mode-ticket #wrapper-ticket,
-        body.mode-ticket #wrapper-ticket * {
-            visibility: visible !important;
+            background: #fff !important;
         }
 
         body.mode-ticket #wrapper-ticket {
@@ -595,21 +591,74 @@
 
         body.mode-ticket .ticket-box {
             width: 100% !important;
-            border: none;
-            padding: 5px 2px !important;
+            /* Ocupa todo el papel */
+            max-width: none !important;
+            border: none !important;
+            padding: 5px 0 !important;
         }
 
-        /* MODO A4 */
+        /* OCULTAR EL RESTO EN TICKET */
+        body.mode-ticket * {
+            visibility: hidden;
+        }
+
+        body.mode-ticket #wrapper-ticket,
+        body.mode-ticket #wrapper-ticket * {
+            visibility: visible !important;
+        }
+
+
+        /* =========================================
+           MODO A4 (DISEÑO LINDO + SEGURIDAD)
+           ========================================= */
         body.mode-a4 @page {
             size: A4;
-            margin: 0mm;
+            margin: 0;
         }
 
         body.mode-a4 {
             background: #fff !important;
             margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            /* 👇 TRUCO DEL CÓDIGO VIEJO: Evita hoja en blanco extra */
+            overflow: hidden !important;
         }
 
+        body.mode-a4 #wrapper-a4 {
+            position: fixed !important;
+            /* Fijo para asegurar posición */
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: #fff !important;
+            z-index: 9999 !important;
+            display: block !important;
+        }
+
+        body.mode-a4 .a4-box {
+            /* BORDE Y DISEÑO (Del nuevo) */
+            border: 2px solid #000 !important;
+            border-radius: 15px !important;
+
+            /* TAMAÑO SEGURO (Fusión) */
+            width: 100% !important;
+            /* Usamos 98vh para asegurar que el borde entre en la hoja */
+            height: 98vh !important;
+
+            margin: 0 !important;
+
+            /* MÁRGENES "LINDO LINDO" (Del nuevo) */
+            /* Arriba | Der | Abajo | Izq */
+            padding: 10mm 25mm 5mm 25mm !important;
+
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+        }
+
+        /* OCULTAR EL RESTO EN A4 */
         body.mode-a4 * {
             visibility: hidden !important;
         }
@@ -617,27 +666,6 @@
         body.mode-a4 #wrapper-a4,
         body.mode-a4 #wrapper-a4 * {
             visibility: visible !important;
-        }
-
-        body.mode-a4 #wrapper-a4 {
-            position: absolute;
-            inset: 0;
-            display: block !important;
-            width: 100% !important;
-            height: 100% !important;
-        }
-
-        body.mode-a4 .a4-box {
-            border: 2px solid #000 !important;
-            border-radius: 15px !important;
-            width: 100% !important;
-            height: 98vh !important;
-            margin: 0 !important;
-            padding: 10mm 25mm 5mm 25mm !important;
-            box-shadow: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
         }
     }
 </style>
