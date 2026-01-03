@@ -92,22 +92,91 @@
 </div>
 
 <style>
-    /* ... (Estilos Dark Mode existentes) ... */
+    /* === AJUSTES MODO OSCURO PARA EL MODAL === */
+    .dark-mode .modal-content {
+        background-color: #343a40;
+        color: #fff;
+    }
 
-    .dark-mode .nav-tabs .nav-link:not(.active) {
+    /* Sidebar del perfil (Izquierda) */
+    .dark-mode .profile-sidebar {
+        background-color: #3f474e !important;
+        /* Reemplaza el bg-light */
+        border-right-color: #6c757d !important;
+        border-bottom-color: #6c757d !important;
+    }
+
+    .dark-mode .profile-sidebar h4,
+    .dark-mode .profile-sidebar p,
+    .dark-mode .profile-sidebar label {
+        color: #e9ecef !important;
+    }
+
+    /* Tarjeta de Puntos */
+    .dark-mode .profile-sidebar .card {
+        background-color: #454d55 !important;
+        color: #fff !important;
+    }
+
+    .dark-mode .profile-sidebar .card h3 {
+        color: #fff !important;
+    }
+
+    /* Área de Tabs (Derecha) */
+    .dark-mode .bg-white {
+        background-color: #343a40 !important;
+    }
+
+    .dark-mode .nav-tabs .nav-link {
         color: #adb5bd;
-        /* Hace que el tab inactivo sea legible en dark mode */
         background-color: #3f474e;
         border-color: #56606a;
+    }
+
+    .dark-mode .nav-tabs .nav-link.active {
+        color: #fff;
+        background-color: #343a40;
+        border-bottom-color: #343a40;
     }
 
     .dark-mode .nav-tabs {
         border-bottom-color: #56606a;
     }
 
-    @media (max-width: 767.98px) {
+    /* --- TABLA DE HISTORIAL EN MODO OSCURO --- */
+    .dark-mode .table {
+        color: #e9ecef;
+        background-color: #343a40;
+    }
 
-        /* Fuerza padding reducido en móvil para el contenido */
+    .dark-mode .table thead th {
+        border-color: #6c757d;
+        background-color: #454d55 !important;
+        /* Cabecera oscura */
+        color: #fff;
+    }
+
+    .dark-mode .table-hover tbody tr:hover {
+        background-color: #3f474e;
+        color: #fff;
+    }
+
+    .dark-mode .table td,
+    .dark-mode .table th {
+        border-top-color: #6c757d;
+    }
+
+    /* TEXTOS */
+    .dark-mode .text-dark {
+        color: #f8f9fa !important;
+    }
+
+    .dark-mode .text-muted {
+        color: #ced4da !important;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 767.98px) {
         .tab-content.p-4 {
             padding: 1.5rem !important;
         }
@@ -115,11 +184,6 @@
         .profile-sidebar {
             border-right: none !important;
             border-bottom: 1px solid #e9ecef;
-            /* Separador cuando se apila */
-        }
-
-        .dark-mode .profile-sidebar {
-            border-bottom-color: #56606a !important;
         }
 
         .modal-body .row .col-md-6,

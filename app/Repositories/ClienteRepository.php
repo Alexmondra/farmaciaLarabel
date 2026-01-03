@@ -9,19 +9,21 @@ class ClienteRepository
 
     public function getStats()
     {
+        // También lo quitamos de los contadores para que los números sean reales
         return [
-            'total'    => Cliente::count(),
-            'personas' => Cliente::where('tipo_documento', '!=', 'RUC')->count(), // Asumimos todo lo que no es RUC es persona
-            'empresas' => Cliente::where('tipo_documento', 'RUC')->count(),
+            'total'    => Cliente::where('id', '!=', 1)->count(),
+            'personas' => Cliente::where('tipo_documento', '!=', 'RUC')->where('id', '!=', 1)->count(), // Asumimos todo lo que no es RUC es persona
+            'empresas' => Cliente::where('tipo_documento', 'RUC')->where('id', '!=', 1)->count(),
         ];
     }
 
-    /**
-     * Lógica avanzada de búsqueda y filtrado
-     */
     public function search($filters = [], $perPage = 10)
     {
-        $query = Cliente::where('activo', true);
+        // === AQUÍ ESTÁ EL CANDADO ===
+        // Agregamos ->where('id', '!=', 1) a la base de la consulta.
+        // Esto se aplica ANTES de que el usuario busque nada.
+        $query = Cliente::where('activo', true)
+            ->where('id', '!=', 1);
 
         // 1. Filtro por Tipo (Botones)
         if (isset($filters['type']) && $filters['type'] !== 'all') {
@@ -32,7 +34,6 @@ class ClienteRepository
             }
         }
 
-        // 2. Filtro por Texto (Input Buscador)
         if (isset($filters['q']) && !empty($filters['q'])) {
             $busqueda = $filters['q'];
             $query->where(function ($q) use ($busqueda) {
@@ -46,9 +47,7 @@ class ClienteRepository
         return $query->orderBy('id', 'desc')->paginate($perPage);
     }
 
-    /**
-     * Verifica si un documento existe (excluyendo un ID opcional)
-     */
+
     public function checkDocumento($documento, $exceptId = null)
     {
         $query = Cliente::where('documento', $documento);

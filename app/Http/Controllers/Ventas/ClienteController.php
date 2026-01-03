@@ -14,12 +14,10 @@ class ClienteController extends Controller
 {
     protected $clienteRepo;
 
-    // Inyectamos el Repositorio en el constructor
     public function __construct(ClienteRepository $clienteRepo)
     {
         $this->clienteRepo = $clienteRepo;
 
-        // Permisos
         $this->middleware('can:clientes.ver')->only(['index', 'search']);
         $this->middleware('can:clientes.crear')->only(['store']);
         $this->middleware('can:clientes.editar')->only(['update']);
@@ -28,6 +26,7 @@ class ClienteController extends Controller
 
     public function index()
     {
+        // Código limpio: El repositorio ya se encarga de esconder al ID 1
         $stats = $this->clienteRepo->getStats();
         $clientes = $this->clienteRepo->search([]);
         $config = Configuracion::first();
@@ -35,7 +34,7 @@ class ClienteController extends Controller
         return view('ventas.clientes.index', array_merge(
             [
                 'clientes' => $clientes,
-                'config' => $config     // <--- AQUÍ ESTÁ LA CLAVE
+                'config' => $config
             ],
             $stats
         ));
@@ -59,9 +58,7 @@ class ClienteController extends Controller
         return response()->json([
             'exists' => !!$cliente,
             'data'   => $cliente,
-            'config' => [
-                'valor_punto' => $config->valor_punto_canje ?? 0.02
-            ]
+            'config' => ['valor_punto' => $config->valor_punto_canje ?? 0.02]
         ]);
     }
 
@@ -71,34 +68,24 @@ class ClienteController extends Controller
             'ventas' => function ($query) {
                 $query->orderBy('created_at', 'desc')->limit(50);
             },
-
             'ventas.detalle_ventas.medicamento'
         ])->find($id);
 
-        if (!$cliente) {
-            return response()->json(['success' => false, 'message' => 'Cliente no encontrado']);
-        }
+        if (!$cliente) return response()->json(['success' => false, 'message' => 'Cliente no encontrado']);
 
         $config = Configuracion::first();
-
         return response()->json([
             'success' => true,
             'data' => $cliente,
-            'config' => [
-                'valor_punto' => $config->valor_punto_canje ?? 0.02
-            ]
+            'config' => ['valor_punto' => $config->valor_punto_canje ?? 0.02]
         ]);
     }
+
     public function store(StoreClienteRequest $request)
     {
         $cliente = Cliente::create($request->validated());
-
         if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Cliente registrado correctamente.',
-                'data'    => $cliente
-            ]);
+            return response()->json(['success' => true, 'message' => 'Cliente registrado correctamente.', 'data' => $cliente]);
         }
         return redirect()->route('clientes.index');
     }
@@ -107,7 +94,6 @@ class ClienteController extends Controller
     {
         $cliente = Cliente::findOrFail($id);
         $cliente->update($request->validated());
-
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Cliente actualizado correctamente.']);
         }
@@ -118,22 +104,16 @@ class ClienteController extends Controller
     {
         $cliente = Cliente::findOrFail($id);
         $cliente->update(['activo' => false]);
-
         return response()->json(['success' => true, 'message' => 'Cliente eliminado (desactivado).']);
     }
 
-
-
-
     public function updateConfig(Request $request)
     {
-        $conf = Configuracion::first(); // Asegúrate de llamar al modelo correcto
-
+        $conf = Configuracion::first();
         $conf->update([
             'puntos_por_moneda' => $request->puntos_por_moneda,
             'valor_punto_canje' => $request->valor_punto_canje,
         ]);
-
         return response()->json(['success' => true]);
     }
 }

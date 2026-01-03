@@ -53,9 +53,28 @@ $userPermisos = [
                 .always(() => toggleOverlay(false));
         };
 
-        $('#searchInput').on('keyup', () => {
+        let lastQuery = '';
+
+        $('#searchInput').on('input', function() {
             clearTimeout(AppState.searchTimer);
-            AppState.searchTimer = setTimeout(() => reloadTable(), 300);
+            let query = $(this).val().trim();
+            if (query === lastQuery) return;
+            if (query.length === 0) {
+                if (lastQuery !== '') {
+                    lastQuery = '';
+                    reloadTable();
+                }
+                return;
+            }
+            if (query.length < 3) {
+                return;
+            }
+            AppState.searchTimer = setTimeout(() => {
+                if (query !== lastQuery) {
+                    lastQuery = query;
+                    reloadTable();
+                }
+            }, 500);
         });
 
         $(document).on('click', '.pagination a', function(e) {
