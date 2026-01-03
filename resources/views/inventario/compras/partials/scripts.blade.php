@@ -278,11 +278,142 @@
         // ============================================================
 
         // Auto-código al escribir nombre (Nuevo)
-        $('#formNuevoMedicamentoRapid input[name="nombre"]').on('input', function() {
-            let texto = $(this).val().toUpperCase();
-            let limpio = texto.replace(/[^A-Z0-9]/g, '');
-            let prefijo = limpio.substring(0, 6) || "NEW";
-            $('#crear_codigo').val(prefijo + '-' + Math.floor(Math.random() * 900 + 100));
+        // ============================================================
+        // 3. LÓGICA PARA MODALES DE MEDICAMENTOS (Crear y Editar)
+        // ============================================================
+
+        // A. GUARDAR NUEVO MEDICAMENTO (Formulario Rapid)
+        $('#formNuevoMedicamentoRapid').on('submit', function(e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+
+            $.ajax({
+                url: "{{ route('inventario.medicamentos.store') }}", // Asegúrate que esta ruta exista
+                method: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        $('#modalCrearMedicamento').modal('hide');
+                        $('#formNuevoMedicamentoRapid')[0].reset();
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Medicamento Creado',
+                            text: response.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                        // OPCIONAL: Si estás en una venta/compra, agregarlo al buscador automáticamente
+                        // let newOption = new Option(response.data.nombre, response.data.id, true, true);
+                        // ... lógica para agregarlo a tu select o tabla ...
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire('Error', 'No se pudo guardar el medicamento. Revisa los campos.', 'error');
+                }
+            });
+        });
+
+        // B. ABRIR MODAL EDITAR (Al hacer clic en un botón de editar en tu tabla)
+        // Asumiendo que tienes un botón con clase .btn-editar-medicamento y data-id="..."
+        $(document).on('click', '.btn-editar-medicamento', function() {
+            let id = $(this).data('id');
+
+            // 1. Cargar datos via AJAX
+            $.get('/inventario/medicamentos/' + id + '/edit', function(data) {
+                // 2. Llenar el formulario con los IDs que tienes en tu HTML
+                $('#edit_med_id').val(data.id);
+                $('#edit_med_codigo').val(data.codigo);
+                $('#edit_med_nombre').val(data.nombre);
+                $('#edit_med_digemid').val(data.codigo_digemid);
+                $('#edit_med_lab').val(data.laboratorio);
+                $('#edit_med_barra').val(data.codigo_barra);
+                $('#edit_med_barra_blister').val(data.codigo_barra_blister);
+                $('#edit_med_unidades').val(data.unidades_por_envase);
+                $('#edit_med_unidades_blister').val(data.unidades_por_blister);
+                $('#edit_med_forma').val(data.forma_farmaceutica);
+                $('#edit_med_pres').val(data.presentacion);
+                $('#edit_med_conc').val(data.concentracion);
+                $('#edit_med_reg').val(data.registro_sanitario); // <--- El campo nuevo
+                $('#edit_med_desc').val(data.descripcion);
+                $('#edit_med_cat').val(data.categoria_id);
+
+                // Switches (Checkbox)
+                $('#edit_med_igv').prop('checked', data.afecto_igv == 1);
+                $('#edit_med_receta').prop('checked', data.receta_medica == 1);
+
+                // Foto (Si tienes lógica de imagen)
+                if (data.imagen_url) {
+                    $('#img_med_foto_edit').attr('src', data.imagen_url).show();
+                    $('#div_med_placeholder_edit').hide();
+                } else {
+                    $('#img_med_foto_edit').hide();
+                    $('#div_med_placeholder_edit').show();
+                }
+
+                // 3. Mostrar Modal
+                $('#modalVerMedicamento').modal('show');
+            });
+        });
+
+        // C. GUARDAR EDICIÓN (ACTUALIZAR)
+        $('#formEditarMedicamento').on('submit', function(e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+            // Laravel a veces requiere _method: PUT para updates con FormData
+            formData.append('_method', 'PUT');
+
+            let id = $('#edit_med_id').val();
+            let urlUpdate = "/inventario/medicamentos/" + id; // Ajusta a tu ruta real
+
+            $.ajax({
+                url: urlUpdate,
+                method: "POST", // Usamos POST con _method PUT
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        $('#modalVerMedicamento').modal('hide');
+                        Swal.fire('Actualizado', response.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                },
+                // --- COPIA Y PEGA ESTA PARTE NUEVA ---
+                error: function(xhr) {
+                    console.log(xhr); // Para ver detalles en consola (F12)
+
+                    let mensaje = "No se pudo actualizar.";
+
+                    if (xhr.status === 422) {
+                        // Error de validación de Laravel (ej: campo vacío o código duplicado)
+                        let errors = xhr.responseJSON.errors;
+                        let lista = '';
+                        $.each(errors, function(key, val) {
+                            lista += val[0] + "\n"; // Toma el primer error de cada campo
+                        });
+                        mensaje = "Errores de validación:\n" + lista;
+                    } else if (xhr.status === 404) {
+                        mensaje = "Error 404: No se encontró la ruta o el producto.";
+                    } else if (xhr.status === 500) {
+                        mensaje = "Error 500: Fallo interno del servidor. Revisa los logs de Laravel.";
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        mensaje = xhr.responseJSON.message;
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ocurrió un error',
+                        text: mensaje
+                    });
+                }
+            });
         });
 
         // Abrir Modal (Botón Ojito/Más)

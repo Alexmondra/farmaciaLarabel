@@ -167,6 +167,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ventas/{id}/enviar-email', [VentaController::class, 'enviarEmail'])
         ->name('ventas.email');
 
+    Route::get('ventas/{id}/print-ticket', [VentaController::class, 'printTicket'])->name('ventas.print_ticket');
+    Route::get('ventas/{id}/print-a4', [VentaController::class, 'printA4'])->name('ventas.print_a4');
+
+
+
+
     Route::get('clientes/check-documento', [ClienteController::class, 'checkDocumento'])->name('clientes.check');
     Route::get('clientes/search', [ClienteController::class, 'search'])->name('clientes.search');
     Route::resource('clientes', ClienteController::class);

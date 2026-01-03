@@ -160,17 +160,99 @@ class VentaController extends Controller
         }
     }
 
-    public function show($id)
+    public function printTicket($id)
     {
         $user = Auth::user();
-
-        // 1. Cargar Configuración Global
         $config = Configuracion::first();
 
         $venta = Venta::with(['detalles.medicamento', 'cliente', 'usuario', 'sucursal'])
             ->findOrFail($id);
 
-        // 2. Permisos
+        $this->validarAccesoVenta($user, $venta);
+
+        $data = $this->armarDataImpresion($venta, $config);
+
+        return view('ventas.ventas.print_ticket', $data);
+    }
+
+    public function printA4($id)
+    {
+        $user = Auth::user();
+        $config = Configuracion::first();
+
+        $venta = Venta::with(['detalles.medicamento', 'cliente', 'usuario', 'sucursal'])
+            ->findOrFail($id);
+
+        $this->validarAccesoVenta($user, $venta);
+
+        $data = $this->armarDataImpresion($venta, $config);
+
+        return view('ventas.ventas.print_a4', $data);
+    }
+
+    /**
+     * MISMA validación que tu show()
+     */
+    private function validarAccesoVenta($user, Venta $venta): void
+    {
+        if (!$user->hasRole('Administrador')) {
+            $tieneAcceso = DB::table('sucursal_user')
+                ->where('user_id', $user->id)
+                ->where('sucursal_id', $venta->sucursal_id)
+                ->exists();
+
+            if (!$tieneAcceso) {
+                abort(403, 'Esta venta pertenece a otra sucursal y no tienes asignado acceso.');
+            }
+        }
+    }
+
+    /**
+     * Reutiliza logo, QR y monto en letras (igual que show)
+     * Retorna exactamente las variables que ya usas en blade.
+     */
+    private function armarDataImpresion(Venta $venta, Configuracion $config): array
+    {
+        // LOGO (igual que tu show)
+        $rutaLogo = $venta->sucursal->imagen_sucursal ?? $config->ruta_logo;
+        $logoBase64 = $this->obtenerImagenBase64($rutaLogo);
+
+        // QR (igual que tu show)
+        $rucEmisor = $config->empresa_ruc ?? '20000000001';
+        $tipoDoc   = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
+        $fecha     = $venta->fecha_emision->format('Y-m-d');
+        $clienteDocType = strlen($venta->cliente->documento) == 11 ? '6' : '1';
+        $hash      = $venta->hash ?? '';
+
+        $qrData = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
+        $qrBase64 = base64_encode(QrCode::format('svg')->size(150)->generate($qrData));
+
+        // MONTO EN LETRAS (mejorado para evitar decimales 100 por float)
+        $formatter = new NumeroALetras();
+        $total = (float) $venta->total_neto;
+
+        $entero = (int) floor($total);
+        $decimal = (int) round(($total - $entero) * 100);
+
+        if ($decimal === 100) { // caso raro por flotantes
+            $entero += 1;
+            $decimal = 0;
+        }
+
+        $letras = $formatter->toWords($entero);
+        $montoLetras = "SON: " . Str::upper($letras) . " CON " . str_pad((string)$decimal, 2, '0', STR_PAD_LEFT) . "/100 SOLES";
+
+        return compact('venta', 'qrBase64', 'montoLetras', 'logoBase64', 'config');
+    }
+    public function show($id)
+    {
+        $user = Auth::user();
+
+        $config = Configuracion::first();
+
+        $venta = Venta::with(['detalles.medicamento', 'cliente', 'usuario', 'sucursal'])
+            ->findOrFail($id);
+
         if (!$user->hasRole('Administrador')) {
             $tieneAcceso = \DB::table('sucursal_user')
                 ->where('user_id', $user->id)
@@ -181,16 +263,8 @@ class VentaController extends Controller
                 abort(403, 'Esta venta pertenece a otra sucursal y no tienes asignado acceso.');
             }
         }
-
-        // --- 3. LOGICA DEL LOGO (Igual que el PDF) ---
-        // Prioridad: Si la sucursal tiene logo propio, úsalo. Si no, usa el general.
         $rutaLogo = $venta->sucursal->imagen_sucursal ?? $config->ruta_logo;
-
-        // Convertimos a Base64 para evitar problemas de rutas rotas
         $logoBase64 = $this->obtenerImagenBase64($rutaLogo);
-
-
-        // --- 4. QR LOCAL ---
         $rucEmisor = $config->empresa_ruc ?? '20000000001';
         $tipoDoc   = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
         $fecha     = $venta->fecha_emision->format('Y-m-d');
@@ -200,16 +274,11 @@ class VentaController extends Controller
         $qrData = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
 
         $qrBase64 = base64_encode(QrCode::format('svg')->size(150)->generate($qrData));
-
-        // --- 5. MONTO EN LETRAS ---
-        // Usamos la librería directo aquí, más limpio.
         $formatter = new NumeroALetras();
         $entero = floor($venta->total_neto);
         $decimal = round(($venta->total_neto - $entero) * 100);
         $letras = $formatter->toWords($entero);
         $montoLetras = "SON: " . Str::upper($letras) . " CON {$decimal}/100 SOLES";
-
-        // Pasamos 'logoBase64' a la vista
         return view('ventas.ventas.show', compact('venta', 'qrBase64', 'montoLetras', 'logoBase64', 'config'));
     }
 
