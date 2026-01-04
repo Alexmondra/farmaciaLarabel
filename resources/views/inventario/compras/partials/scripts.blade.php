@@ -152,7 +152,6 @@
             let q = $input.val().trim();
             let $row = $input.closest('tr');
 
-            // Reiniciamos índice de flechas
             $row.data('search-index', -1);
 
             clearTimeout(timeoutBusqueda);
@@ -184,17 +183,33 @@
             let $results = $row.find('.search-results');
             let $items = $results.find('.search-item');
 
+            // 1. BLOQUEO DE ENTER (Para evitar que el escáner registre toda la compra)
+            if (e.which === 13) {
+                e.preventDefault(); // Detiene el submit del formulario siempre
+
+                if ($results.hasClass('active') && $items.length > 0) {
+                    let currentIndex = $row.data('search-index');
+                    // Si hay algo resaltado con flechas, selecciona ese, sino el primero
+                    if (currentIndex >= 0 && currentIndex < $items.length) {
+                        $items.eq(currentIndex).click();
+                    } else {
+                        $items.first().click();
+                    }
+                }
+                return false;
+            }
+
+            // 2. VALIDACIÓN PARA FLECHAS (Solo si hay resultados visibles)
             if (!$results.hasClass('active') || $items.length === 0) return;
 
-            // CORRECCIÓN AQUÍ: Validamos explícitamente si es undefined
             let currentIndex = $row.data('search-index');
-            if (typeof currentIndex === 'undefined') currentIndex = -1;
+            if (typeof currentIndex === 'undefined' || currentIndex === null) currentIndex = -1;
 
             // FLECHA ABAJO (40)
             if (e.which === 40) {
                 e.preventDefault();
                 currentIndex++;
-                if (currentIndex >= $items.length) currentIndex = 0; // Vuelve al inicio
+                if (currentIndex >= $items.length) currentIndex = 0;
                 highlightItem($items, currentIndex);
                 $row.data('search-index', currentIndex);
             }
@@ -202,19 +217,9 @@
             else if (e.which === 38) {
                 e.preventDefault();
                 currentIndex--;
-                if (currentIndex < 0) currentIndex = $items.length - 1; // Va al final
+                if (currentIndex < 0) currentIndex = $items.length - 1;
                 highlightItem($items, currentIndex);
                 $row.data('search-index', currentIndex);
-            }
-            // ENTER (13)
-            else if (e.which === 13) {
-                e.preventDefault();
-                if (currentIndex >= 0 && currentIndex < $items.length) {
-                    $items.eq(currentIndex).click();
-                } else {
-                    // Si da enter sin seleccionar nada, selecciona el primero por defecto
-                    $items.first().click();
-                }
             }
             // ESCAPE (27)
             else if (e.which === 27) {
@@ -296,19 +301,13 @@
                 success: function(response) {
                     if (response.success) {
                         $('#modalCrearMedicamento').modal('hide');
-                        $('#formNuevoMedicamentoRapid')[0].reset();
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Medicamento Creado',
-                            text: response.message,
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-
-                        // OPCIONAL: Si estás en una venta/compra, agregarlo al buscador automáticamente
-                        // let newOption = new Option(response.data.nombre, response.data.id, true, true);
-                        // ... lógica para agregarlo a tu select o tabla ...
+                        // Si el modal se abrió desde una fila de la tabla, selecciona el nuevo producto automáticamente
+                        if (window.inputSearchActivo) {
+                            seleccionarItem({
+                                full_data: response.data
+                            }, window.inputSearchActivo[0]);
+                        }
+                        Swal.fire('Guardado', 'Medicamento registrado con éxito', 'success');
                     }
                 },
                 error: function(xhr) {
@@ -360,58 +359,30 @@
         });
 
         // C. GUARDAR EDICIÓN (ACTUALIZAR)
-        $('#formEditarMedicamento').on('submit', function(e) {
+        $(document).off('submit', '#formEditarMedicamento').on('submit', '#formEditarMedicamento', function(e) {
             e.preventDefault();
-            let formData = new FormData(this);
-            // Laravel a veces requiere _method: PUT para updates con FormData
-            formData.append('_method', 'PUT');
-
             let id = $('#edit_med_id').val();
-            let urlUpdate = "/inventario/medicamentos/" + id; // Ajusta a tu ruta real
+            let formData = new FormData(this);
+            formData.append('_method', 'PUT'); // Indispensable para que Laravel procese el update
 
             $.ajax({
-                url: urlUpdate,
-                method: "POST", // Usamos POST con _method PUT
+                url: "/inventario/medicamentos/" + id + "/update-rapido",
+                method: "POST",
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        $('#modalVerMedicamento').modal('hide');
-                        Swal.fire('Actualizado', response.message, 'success').then(() => {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire('Error', response.message, 'error');
+                success: function(res) {
+                    $('#modalVerMedicamento').modal('hide');
+                    if (window.btnAccionActivo) {
+                        let row = window.btnAccionActivo.closest('tr');
+                        seleccionarItem({
+                            full_data: res.data
+                        }, row.find('.input-medicamento-search')[0]);
                     }
+                    Swal.fire('¡Éxito!', 'Medicamento actualizado', 'success');
                 },
-                // --- COPIA Y PEGA ESTA PARTE NUEVA ---
                 error: function(xhr) {
-                    console.log(xhr); // Para ver detalles en consola (F12)
-
-                    let mensaje = "No se pudo actualizar.";
-
-                    if (xhr.status === 422) {
-                        // Error de validación de Laravel (ej: campo vacío o código duplicado)
-                        let errors = xhr.responseJSON.errors;
-                        let lista = '';
-                        $.each(errors, function(key, val) {
-                            lista += val[0] + "\n"; // Toma el primer error de cada campo
-                        });
-                        mensaje = "Errores de validación:\n" + lista;
-                    } else if (xhr.status === 404) {
-                        mensaje = "Error 404: No se encontró la ruta o el producto.";
-                    } else if (xhr.status === 500) {
-                        mensaje = "Error 500: Fallo interno del servidor. Revisa los logs de Laravel.";
-                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                        mensaje = xhr.responseJSON.message;
-                    }
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Ocurrió un error',
-                        text: mensaje
-                    });
+                    Swal.fire('Error', 'No se pudo actualizar el medicamento', 'error');
                 }
             });
         });
@@ -427,6 +398,7 @@
                 $('#edit_med_nombre').val(info.nombre);
                 $('#edit_med_codigo').val(info.codigo);
                 $('#edit_med_digemid').val(info.codigo_digemid);
+
                 $('#edit_med_barra').val(info.codigo_barra);
                 $('#edit_med_barra_blister').val(info.codigo_barra_blister);
                 $('#edit_med_reg').val(info.registro_sanitario);
@@ -461,67 +433,6 @@
                 }, 500);
             }
         });
-
-        // Guardar Nuevo (Ajax)
-        $('#formNuevoMedicamentoRapid').on('submit', function(e) {
-            e.preventDefault();
-            $.ajax({
-                url: "{{ route('inventario.medicamentos.storeRapido') }}",
-                method: "POST",
-                data: new FormData(this),
-                processData: false,
-                contentType: false,
-                success: function(res) {
-                    $('#modalCrearMedicamento').modal('hide');
-                    if (window.inputSearchActivo) {
-                        seleccionarItem({
-                            full_data: res.data
-                        }, window.inputSearchActivo[0]);
-                    }
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Creado',
-                        timer: 1000,
-                        showConfirmButton: false
-                    });
-                },
-                error: function(xhr) {
-                    Swal.fire('Error', xhr.responseJSON?.message || 'Error al guardar', 'error');
-                }
-            });
-        });
-
-        // Guardar Edición (Ajax)
-        $('#formEditarMedicamento').on('submit', function(e) {
-            e.preventDefault();
-            let id = $('#edit_med_id').val();
-            let formData = new FormData(this);
-            formData.append('_method', 'PUT');
-
-            $.ajax({
-                url: "/inventario/medicamentos/" + id + "/update-rapido",
-                method: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(res) {
-                    $('#modalVerMedicamento').modal('hide');
-                    if (window.btnAccionActivo) {
-                        let row = window.btnAccionActivo.closest('tr');
-                        seleccionarItem({
-                            full_data: res.data
-                        }, row.find('.input-medicamento-search')[0]);
-                    }
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Actualizado',
-                        timer: 1000,
-                        showConfirmButton: false
-                    });
-                }
-            });
-        });
-
         // ============================================================
         // VALIDACIÓN ROBUSTA ANTES DE ENVIAR (EVITA RECARGA)
         // ============================================================
@@ -688,7 +599,6 @@
                 <div class="search-item" onclick='seleccionarItem(${JSON.stringify(item)}, this)'>
                     <div class="d-flex justify-content-between">
                         <strong>${i.nombre} <small>${presentacion}</small></strong>
-                        <span class="text-success font-weight-bold">Stock: ${i.stock_actual || 0}</span>
                     </div>
                     <small class="text-muted">${i.laboratorio || 'Generico'}</small>
                 </div>
