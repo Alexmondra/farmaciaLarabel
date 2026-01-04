@@ -135,7 +135,7 @@ class VentaService
                     'valor_unitario'  => $valorUnitario,
 
                     'igv'             => $igvItemTotal,
-                    'subtotal_neto'   => $subtotalItem,     // <--- ESTO GUARDARÁ 24.00
+                    'subtotal_neto'   => $subtotalItem,
                     'subtotal_bruto'  => $baseItemTotal,
 
                     'tipo_afectacion' => $codigoAfectacion
@@ -197,16 +197,15 @@ class VentaService
                 'porcentaje_igv'   => $sucursal->impuesto_porcentaje,
             ]);
 
-            // 6. GUARDAR DETALLES (VALORES PUROS)
             foreach ($itemsProcesados as $item) {
                 $lote = Lote::lockForUpdate()->find($item['lote_id']);
 
                 if (!$lote) throw new Exception("Lote no encontrado.");
-                if ($lote->stock_actual < $item['cantidad']) {
-                    throw new Exception("Stock insuficiente en lote {$lote->id}.");
+                if ($lote->stock_actual >= $item['cantidad']) {
+                    $lote->decrement('stock_actual', $item['cantidad']);
+                } else {
+                    $lote->update(['stock_actual' => 0]);
                 }
-
-                $lote->decrement('stock_actual', $item['cantidad']);
 
                 DetalleVenta::create([
                     'venta_id'        => $venta->id,
@@ -219,8 +218,7 @@ class VentaService
                     'valor_unitario'  => $item['valor_unitario'],
                     'igv'             => $item['igv'],
 
-                    // AQUÍ ESTÁ LA CORRECCIÓN CLAVE:
-                    'subtotal_neto'      => $item['subtotal_neto'], // Guardamos 24.00
+                    'subtotal_neto'      => $item['subtotal_neto'],
                     'subtotal_bruto'     => $item['subtotal_bruto'],
                     'subtotal_descuento' => 0, // 0 porque el descuento es GLOBAL en la cabecera
                     'tipo_afectacion'    => $item['tipo_afectacion'],

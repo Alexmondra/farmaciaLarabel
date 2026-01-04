@@ -66,7 +66,7 @@ class MedicamentoRequest extends FormRequest
             'concentracion'        => 'nullable|string|max:100',
             'descripcion'          => 'nullable|string',
             'registro_sanitario'   => 'nullable|string|max:60',
-            'unidades_por_blister' => 'nullable|integer|min:1',
+            'unidades_por_blister' => 'nullable|integer|min:0',
 
             'afecto_igv'           => 'sometimes',
             'receta_medica'        => 'sometimes',

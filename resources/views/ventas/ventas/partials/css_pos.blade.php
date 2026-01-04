@@ -2,6 +2,10 @@
     /* =========================================
        VARIABLES GLOBALES Y DARK MODE
        ========================================= */
+    #toast-container {
+        z-index: 9999 !important;
+    }
+
     :root {
         --color-success: #28a745;
         --color-primary: #007bff;
@@ -180,6 +184,18 @@
     body.dark-mode .loader-input {
         color: var(--color-primary);
         background-color: var(--bg-white-mode);
+    }
+
+    /* estilos para cantidad sobregirara el stock en veneta*/
+    .table-carrito .form-control.is-invalid {
+        background-image: none !important;
+        padding-right: 0.5rem !important;
+        border-color: #dc3545 !important;
+    }
+
+    .table-carrito .form-control.is-invalid {
+        color: #dc3545;
+        font-weight: bold;
     }
 
     /* =========================================

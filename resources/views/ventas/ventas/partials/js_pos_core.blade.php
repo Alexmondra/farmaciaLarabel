@@ -23,14 +23,21 @@
         // ==========================================
         // 1. BUSCADOR MEDICAMENTOS & LOTES
         // ==========================================
+        let peticionActual = null;
+
         window.buscarMedicamentos = function() {
             let q = $('#busqueda_medicamento').val().trim();
             let categoriaId = $('#filtro_categoria_id').val();
+
             if (q.length === 0 && !categoriaId) {
                 cerrarResultados();
                 return;
             }
-            $.ajax({
+            if (peticionActual) {
+                peticionActual.abort();
+            }
+
+            peticionActual = $.ajax({
                 url: RUTA_LOOKUP_MEDICAMENTOS,
                 method: 'GET',
                 data: {
@@ -40,35 +47,88 @@
                 },
                 success: function(data) {
                     renderResultadosMedicamentos(data);
+                },
+                error: function(xhr) {
+                    if (xhr.statusText !== 'abort') {
+                        console.error("Error en búsqueda:", xhr);
+                    }
+                },
+                complete: function() {
+                    peticionActual = null;
                 }
             });
         }
 
         function renderResultadosMedicamentos(lista) {
             let contenedor = $('#resultados-medicamentos');
+            let term = $('#busqueda_medicamento').val().trim(); // Capturamos lo que escribió
+
             selectedIndex = -1;
             resultCount = lista.length;
 
+            // --- CAMBIO PRINCIPAL AQUÍ ---
             if (!lista.length) {
-                contenedor.html('<div class="list-group-item text-muted small py-2">Sin resultados</div>').addClass('active');
+                // Si no hay resultados, mostramos el botón de CREAR RÁPIDO
+                let htmlNoResult = `
+                    <div class="list-group-item text-center py-3">
+                        <p class="text-muted mb-2"><i class="fas fa-search"></i> No se encontró "<b>${term}</b>"</p>
+                        <button type="button" class="btn btn-outline-primary font-weight-bold shadow-sm" 
+                                onclick="abrirModalCrearRapido('${term}')">
+                            <i class="fas fa-plus-circle mr-1"></i> REGISTRAR NUEVO
+                        </button>
+                    </div>
+                `;
+                contenedor.html(htmlNoResult).addClass('active');
                 return;
             }
+            // -----------------------------
 
-            let html = lista.map(m => `
-                <button type="button" class="list-group-item list-group-item-action resultado-medicamento py-1 px-2" 
+            let html = lista.map(m => {
+                let extraHtml = '';
+                let claseExtra = '';
+
+                // Lógica de visualización (Rojo si no está asignado)
+                if (m.asignado === false) {
+                    claseExtra = 'bg-light';
+                    extraHtml = `<div class="text-danger font-weight-bold" style="font-size: 0.75rem;">
+                                    <i class="fas fa-exclamation-circle"></i> NO ASIGNADO A SUCURSAL
+                                 </div>`;
+                }
+
+                // Lógica de Precio Sugerido (si viene de otra sucursal)
+                let precioHtml = '';
+                if (m.es_precio_sugerido) {
+                    precioHtml = `<span class="badge badge-info border" title="Precio Sugerido de otra tienda">S/ ${parseFloat(m.precio_venta).toFixed(2)} <i class="fas fa-info-circle small"></i></span>`;
+                } else {
+                    precioHtml = `<span class="badge badge-light border">S/ ${parseFloat(m.precio_venta).toFixed(2)}</span>`;
+                }
+
+                return `
+                <button type="button" class="list-group-item list-group-item-action resultado-medicamento py-2 px-2 ${claseExtra}" 
                         data-medicamento-id="${m.medicamento_id}" 
                         data-nombre="${m.nombre}" 
                         data-presentacion="${m.presentacion || ''}" 
                         data-precio="${m.precio_venta}">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                        <div style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70%;">
                             <strong>${m.nombre}</strong> <small class="text-muted">(${m.presentacion || ''})</small>
+                            ${extraHtml} 
                         </div>
-                        <div><span class="badge badge-light border">S/ ${parseFloat(m.precio_venta).toFixed(2)}</span></div>
+                        <div>
+                            ${precioHtml}
+                        </div>
                     </div>
                 </button>
-            `).join('');
+            `
+            }).join('');
+
             contenedor.html(html).addClass('active');
+        }
+
+        window.cerrarResultados = function() {
+            $('#resultados-medicamentos').removeClass('active').empty();
+            selectedIndex = -1;
+            resultCount = 0;
         }
 
         function cerrarResultados() {
@@ -229,18 +289,20 @@
 
             if (cantidad <= 0) return toastr.error('Cantidad inválida.');
 
-            // VALIDACIÓN MATEMÁTICA: Cantidad * Factor <= Stock Real
-            let totalRequerido = cantidad * factor;
 
+            let totalRequerido = cantidad * factor;
             if (totalRequerido > stockReal) {
-                return Swal.fire({
-                    icon: 'error',
-                    title: 'Stock Insuficiente',
-                    text: `Solicitas ${totalRequerido} unidades en total (${cantidad} ${tipo}), pero solo quedan ${stockReal} unidades en el lote.`
+                Swal.fire({
+                    icon: 'warning', // Icono Amarillo
+                    title: 'VENDIENDO FUERA DE STOCK',
+                    html: `Stock: <b>${stockReal}</b> | Solicitado: <b>${totalRequerido}</b>`,
+                    position: 'center',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true
                 });
             }
 
-            // AGREGAR AL CARRITO (Usamos ID compuesto para diferenciar Caja de Unidad del mismo lote)
             let uniqueId = loteId + '-' + tipo;
 
             if (carrito[uniqueId]) {
@@ -298,7 +360,20 @@
                         </td>
                         
                         <td class="align-middle text-center"> 
-                            <input type="number" class="form-control form-control-sm input-edit-cant font-weight-bold" value="${i.cantidad}" min="1">
+                            <div class="d-flex align-items-center justify-content-center">
+                                
+                                <input type="number" 
+                                    class="form-control form-control-sm input-edit-cant font-weight-bold" 
+                                    value="${i.cantidad}" 
+                                    min="1"
+                                    style="width: 60px;"> <button type="button" 
+                                    class="btn btn-xs btn-warning ml-1 btn-warning-stock" 
+                                    style="display: none; border-radius: 50%; width: 22px; height: 22px; padding: 0;"
+                                    data-stock="${i.stock_max}">
+                                    <i class="fas fa-exclamation" style="font-size: 0.7rem;"></i>
+                                </button>
+
+                            </div>
                         </td>
                         
                         <td class="align-middle text-center"> 
@@ -339,31 +414,41 @@
             if (!item) return;
 
             let val = $(this).val();
-
             if (e.type === 'blur' || e.type === 'change') {
                 if (val === '' || isNaN(val) || parseInt(val) < 1) {
                     val = 1;
                     $(this).val(1);
                 }
             }
-
             let cant = parseInt(val);
-            if (cant < 0) {
-                cant = 1;
-                $(this).val(1);
-            }
+            if (cant < 0) cant = 1;
             if (isNaN(cant)) cant = 1;
 
+            let $btnWarning = $row.find('.btn-warning-stock');
+
             if (cant > item.stock_max) {
-                cant = item.stock_max;
-                $(this).val(cant);
                 $(this).addClass('is-invalid');
-                setTimeout(() => $(this).removeClass('is-invalid'), 800);
+                $btnWarning.show();
+            } else {
+                $(this).removeClass('is-invalid');
+                $btnWarning.hide();
             }
 
             item.cantidad = cant;
             refrescarSubtotalFila($row, item);
             recalcularTotalDesdeMemoria();
+        });
+
+        $(document).on('click', '.btn-warning-stock', function() {
+            let stockReal = $(this).data('stock');
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Stock Insuficiente',
+                text: `Estás sobregirando el stock actual. (Tienes ${stockReal} disponibles)`,
+                confirmButtonColor: '#f39c12',
+                confirmButtonText: 'Entendido'
+            });
         });
 
         $(document).on('input blur change', '.input-edit-precio', function(e) {

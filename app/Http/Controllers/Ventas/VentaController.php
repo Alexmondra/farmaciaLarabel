@@ -207,17 +207,11 @@ class VentaController extends Controller
         }
     }
 
-    /**
-     * Reutiliza logo, QR y monto en letras (igual que show)
-     * Retorna exactamente las variables que ya usas en blade.
-     */
     private function armarDataImpresion(Venta $venta, Configuracion $config): array
     {
-        // LOGO (igual que tu show)
-        $rutaLogo = $venta->sucursal->imagen_sucursal ?? $config->ruta_logo;
-        $logoBase64 = $this->obtenerImagenBase64($rutaLogo);
 
-        // QR (igual que tu show)
+        $rutaLogo = $config->ruta_logo;
+        $logoBase64 = $this->obtenerImagenBase64($rutaLogo);
         $rucEmisor = $config->empresa_ruc ?? '20000000001';
         $tipoDoc   = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
         $fecha     = $venta->fecha_emision->format('Y-m-d');
@@ -227,14 +221,12 @@ class VentaController extends Controller
         $qrData = "{$rucEmisor}|{$tipoDoc}|{$venta->serie}|{$venta->numero}|{$venta->total_igv}|{$venta->total_neto}|{$fecha}|{$clienteDocType}|{$venta->cliente->documento}|{$hash}|";
         $qrBase64 = base64_encode(QrCode::format('svg')->size(150)->generate($qrData));
 
-        // MONTO EN LETRAS (mejorado para evitar decimales 100 por float)
         $formatter = new NumeroALetras();
         $total = (float) $venta->total_neto;
-
         $entero = (int) floor($total);
         $decimal = (int) round(($total - $entero) * 100);
 
-        if ($decimal === 100) { // caso raro por flotantes
+        if ($decimal === 100) {
             $entero += 1;
             $decimal = 0;
         }
@@ -242,7 +234,11 @@ class VentaController extends Controller
         $letras = $formatter->toWords($entero);
         $montoLetras = "SON: " . Str::upper($letras) . " CON " . str_pad((string)$decimal, 2, '0', STR_PAD_LEFT) . "/100 SOLES";
 
-        return compact('venta', 'qrBase64', 'montoLetras', 'logoBase64', 'config');
+        $ratio = $config->puntos_por_moneda ?? 1;
+        $puntosGanados = intval($venta->total_neto * $ratio);
+        $mensajePie = $config->mensaje_ticket ?? 'GRACIAS POR SU PREFERENCIA';
+
+        return compact('venta', 'qrBase64', 'montoLetras', 'logoBase64', 'config', 'puntosGanados', 'mensajePie');
     }
     public function show($id)
     {
@@ -282,10 +278,6 @@ class VentaController extends Controller
         return view('ventas.ventas.show', compact('venta', 'qrBase64', 'montoLetras', 'logoBase64', 'config'));
     }
 
-    /**
-     * Método Auxiliar Privado para convertir imágenes a Base64
-     * (Pon esto al final de tu VentaController class)
-     */
     private function obtenerImagenBase64($rutaRelativa)
     {
         if (!$rutaRelativa) {
@@ -367,7 +359,6 @@ class VentaController extends Controller
      * Busca lotes disponibles para un medicamento en una sucursal.
      * MÉTODO AJAX
      */
-
     public function lookupMedicamentos(Request $request)
     {
         $request->validate([
@@ -376,58 +367,84 @@ class VentaController extends Controller
             'categoria_id' => ['nullable', 'integer'],
         ]);
 
-        $hoy = now()->format('Y-m-d');
+        $term = trim((string)$request->q);
+        $sucursalId = $request->sucursal_id;
 
-        // 1. QUERY BASE
-        $query = MedicamentoSucursal::with('medicamento')
-            ->where('sucursal_id', $request->sucursal_id)
-            ->activos();
-        if ($request->filled('q')) {
-            $term = $request->q;
+        if (empty($term) && empty($request->categoria_id)) {
+            return response()->json([]);
+        }
 
-            $query->whereHas('medicamento', function ($sub) use ($term) {
-                // Si es numérico y largo, asumimos código de barras (Búsqueda exacta rápida)
-                if (is_numeric($term) && strlen($term) >= 8) {
-                    $sub->where(function ($q) use ($term) {
-                        $q->where('codigo_barra', $term)
-                            ->orWhere('codigo', $term);
-                    });
-                } else {
-                    // Búsqueda de texto (Incluida descripción)
-                    $sub->where(function ($q) use ($term) {
-                        $q->where('nombre', 'LIKE', "%{$term}%")
-                            ->orWhere('codigo', 'LIKE', "%{$term}%")
-                            ->orWhere('laboratorio', 'LIKE', "%{$term}%")
-                            ->orWhere('codigo_barra', 'LIKE', "%{$term}%")
-                            // AQUI ESTÁ EL NUEVO CAMPO:
-                            ->orWhere('descripcion', 'LIKE', "%{$term}%");
-                    });
-                }
-            });
+        // =========================================================
+        // ESTRATEGIA: BÚSQUEDA ÚNICA Y CENTRALIZADA
+        // =========================================================
+
+        // 1. Iniciamos la consulta directo al MAESTRO DE MEDICAMENTOS
+        // Usamos withoutGlobalScopes para ignorar filtros ocultos de empresa
+        $query = \App\Models\Inventario\Medicamento::query()
+            ->withoutGlobalScopes()
+            ->where('activo', true);
+
+        // 2. Cargamos la relación con la sucursal ACTUAL para saber si ya lo tienes
+        // (Esto es un "Eager Loading" filtrado)
+        $query->with(['sucursales' => function ($q) use ($sucursalId) {
+            $q->where('sucursal_id', $sucursalId);
+        }]);
+
+        // 3. APLICAMOS EL FILTRO (La lógica del buscador)
+        if ($term) {
+            // Detectamos si es código de barras (Numérico y largo)
+            $esCodigoBarra = (is_numeric($term) && strlen($term) >= 5);
+
+            if ($esCodigoBarra) {
+                // MODO ESCÁNER: Busca directo en las columnas de códigos
+                $query->where(function ($q) use ($term) {
+                    $q->where('codigo_barra', 'LIKE', "{$term}%")
+                        ->orWhere('codigo_barra_blister', 'LIKE', "{$term}%")
+                        ->orWhere('codigo', 'LIKE', "{$term}%"); // Por seguridad
+                });
+            } else {
+                // MODO TEXTO: Busca en todo
+                $query->where(function ($q) use ($term) {
+                    $q->where('nombre', 'LIKE', "%{$term}%")
+                        ->orWhere('codigo', 'LIKE', "%{$term}%")
+                        ->orWhere('laboratorio', 'LIKE', "%{$term}%")
+                        ->orWhere('descripcion', 'LIKE', "%{$term}%");
+                });
+            }
         }
 
         if ($request->filled('categoria_id')) {
-            $categoriaId = $request->categoria_id;
-            $query->whereHas('medicamento', function ($q) use ($categoriaId) {
-                $q->where('categoria_id', $categoriaId);
-            });
+            $query->where('categoria_id', $request->categoria_id);
         }
 
-        $medicamentos = $query->orderBy('id', 'desc')
-            ->limit(30)
-            ->get()
-            ->map(function ($ms) {
-                return [
-                    'medicamento_sucursal_id' => $ms->id,
-                    'medicamento_id'          => $ms->medicamento_id,
-                    'nombre'                  => $ms->medicamento->nombre,
-                    'codigo'                  => $ms->medicamento->codigo,
-                    'presentacion'            => $ms->medicamento->forma_farmaceutica ?? null,
-                    'precio_venta'            => (float) $ms->precio_venta,
-                ];
-            });
+        // 4. EJECUTAMOS Y MAPEAMOS
+        // Traemos 20 resultados y decidimos en vivo si es Local o Global
+        $resultados = $query->limit(20)->get()->map(function ($med) {
 
-        return response()->json($medicamentos);
+            // Intentamos obtener los datos de la sucursal (si existen)
+            // Como usamos 'with' arriba, esto ya viene cargado o viene vacío.
+            $pivot = $med->sucursales->first()->pivot ?? null;
+            $estaAsignado = !is_null($pivot);
+
+            return [
+                'asignado'                => $estaAsignado, // True = Local, False = Global (Rojo)
+
+                // Si está asignado usamos el ID del pivote, si no, null
+                'medicamento_sucursal_id' => $estaAsignado ? $med->sucursales->first()->id : null, // Ojo: id de la tabla pivote si tu modelo lo soporta, o null
+                // NOTA: Si usas MedicamentoSucursal como modelo intermedio, el ID suele ser id del registro pivote. 
+                // Si pivot devuelve objeto standard, ajústalo. Asumo Eloquent estándar.
+
+                'medicamento_id'          => $med->id,
+                'nombre'                  => $med->nombre,
+                'codigo'                  => $med->codigo,
+                'presentacion'            => $med->forma_farmaceutica ?? '',
+
+                // Si está asignado mostramos su precio, si no, 0.00
+                'precio_venta'            => $estaAsignado ? (float) $pivot->precio_venta : 0.00,
+            ];
+        });
+
+        return response()->json($resultados);
     }
 
 
@@ -439,14 +456,49 @@ class VentaController extends Controller
         ]);
 
         $hoy = now()->toDateString();
+        $sucursalId = $request->sucursal_id;
+        $medicamentoId = $request->medicamento_id;
 
-        // 1) precios del producto (SIEMPRE)
+        // =========================================================
+        // 1. OBTENER O CREAR RELACIÓN (CON HERENCIA DE PRECIOS)
+        // =========================================================
+
+        // Primero verificamos si YA existe en esta sucursal para no hacer consultas extra
         $ms = MedicamentoSucursal::with('medicamento')
-            ->where('medicamento_id', $request->medicamento_id)
-            ->where('sucursal_id', $request->sucursal_id)
+            ->where('medicamento_id', $medicamentoId)
+            ->where('sucursal_id', $sucursalId)
             ->first();
 
-        if (!$ms) return response()->json([]);
+        if (!$ms) {
+            $referencia = MedicamentoSucursal::where('medicamento_id', $medicamentoId)
+                ->where('sucursal_id', '!=', $sucursalId)
+                ->where('activo', true)
+                ->where('precio_venta', '>', 0)
+                ->orderBy('updated_at', 'desc')
+                ->first();
+
+            // Preparamos los valores por defecto
+            $datosCreacion = [
+                'stock_minimo'   => 0,
+                'activo'         => true,
+                'precio_venta'   => $referencia ? $referencia->precio_venta : 0,
+                'precio_blister' => $referencia ? $referencia->precio_blister : 0,
+                'precio_caja'    => $referencia ? $referencia->precio_caja : 0,
+            ];
+
+            // Creamos el registro con esos datos
+            $ms = MedicamentoSucursal::create([
+                'medicamento_id' => $medicamentoId,
+                'sucursal_id'    => $sucursalId
+            ] + $datosCreacion);
+
+            // Cargamos la relación para leer factores abajo
+            $ms->load('medicamento');
+        }
+
+        // =========================================================
+        // 2. PREPARAR DATOS DE SALIDA
+        // =========================================================
 
         $precios = [
             'unidad'  => (float) $ms->precio_venta,
@@ -459,56 +511,58 @@ class VentaController extends Controller
             'caja'    => $ms->medicamento->unidades_por_envase ?? 1,
         ];
 
-        // 2) base de lotes vigentes (no vencidos)
-        $base = Lote::where('medicamento_id', $request->medicamento_id)
-            ->where('sucursal_id', $request->sucursal_id)
+        // =========================================================
+        // 3. BÚSQUEDA DE LOTES (STOCK)
+        // =========================================================
+        $lotes = \App\Models\Inventario\Lote::where('medicamento_id', $medicamentoId)
+            ->where('sucursal_id', $sucursalId)
+            ->where('stock_actual', '>', 0)
             ->where(function ($q) use ($hoy) {
                 $q->whereDate('fecha_vencimiento', '>=', $hoy)
                     ->orWhereNull('fecha_vencimiento');
-            });
-
-        // 3) normal: lotes con stock (máx 5)
-        $lotes = (clone $base)
-            ->where('stock_actual', '>', 0)
-            ->orderBy('fecha_vencimiento', 'asc')
+            })
+            ->orderByRaw('fecha_vencimiento IS NULL, fecha_vencimiento ASC')
             ->limit(5)
             ->get();
 
-        // 4) si no hay stock: devolver 1 lote cualquiera (aunque stock 0)
+        // =========================================================
+        // 4. RESPALDO (SI NO HAY STOCK, CREAR LOTE VIRTUAL O NUEVO)
+        // =========================================================
         if ($lotes->isEmpty()) {
-            $loteCualquiera = (clone $base)
-                ->orderBy('fecha_vencimiento', 'asc')
+            // Buscar lote antiguo para reutilizar datos visuales
+            $loteRespaldo = \App\Models\Inventario\Lote::where('medicamento_id', $medicamentoId)
+                ->where('sucursal_id', $sucursalId)
+                ->orderBy('id', 'desc')
                 ->first();
 
-            if ($loteCualquiera) {
-                $lotes = collect([$loteCualquiera]);
-            } else {
-                // 5) si NO hay ni lotes: devolver 1 "lote virtual" para mostrar precios
-                return response()->json([[
-                    'id'                => null,
-                    'codigo_lote'       => null,
+            // Si es totalmente nuevo y no tiene historial de lotes, creamos uno base
+            if (!$loteRespaldo) {
+                $loteRespaldo = \App\Models\Inventario\Lote::create([
+                    'medicamento_id'    => $medicamentoId,
+                    'sucursal_id'       => $sucursalId,
+                    'codigo_lote'       => 'INI-' . date('dm'), // Código corto
                     'fecha_vencimiento' => null,
                     'stock_actual'      => 0,
-                    'ubicacion'         => 'General',
-                    'precios'           => $precios,
-                    'factores'          => $factores,
-                    'precio_oferta'     => null,
-                    'virtual'           => true,
-                ]]);
+                    'ubicacion'         => 'MOSTRADOR',
+                    'precio_compra'     => 0,
+                    'observaciones'     => 'Auto-creado al Asignar'
+                ]);
             }
+            $lotes = collect([$loteRespaldo]);
         }
 
-        // 6) mapeo final (lotes reales)
+        // =========================================================
+        // 5. MAPEO FINAL
+        // =========================================================
         $data = $lotes->map(function ($lote) use ($precios, $factores) {
             return [
                 'id'                => $lote->id,
                 'codigo_lote'       => $lote->codigo_lote,
-                'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('d/m/Y'),
+                'fecha_vencimiento' => optional($lote->fecha_vencimiento)->format('d/m/Y') ?? 'SIN FECHA',
                 'stock_actual'      => (int) $lote->stock_actual,
                 'ubicacion'         => $lote->ubicacion ?? 'General',
                 'precios'           => $precios,
                 'factores'          => $factores,
-                'precio_oferta'     => $lote->precio_oferta ? (float) $lote->precio_oferta : null,
                 'virtual'           => false,
             ];
         });

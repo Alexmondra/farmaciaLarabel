@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <title>Ticket {{ $venta->serie }}-{{ $venta->numero }}</title>
     <style>
+        /* RESET */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -14,7 +15,6 @@
         body {
             font-family: 'Arial Narrow', sans-serif;
             font-size: 12px;
-            /* Letra un poco más compacta */
             color: #000;
             background: #fff;
             width: 100%;
@@ -22,11 +22,11 @@
 
         .ticket-wrapper {
             width: 100%;
-            padding: 0 2mm 5mm 2mm;
-            /* Márgenes mínimos */
+            /* Ajusté el padding para que no quede tan pegado ni tan separado */
+            padding: 2mm 4mm 5mm 4mm;
         }
 
-        /* Utilidades de Texto */
+        /* Utilidades */
         .text-center {
             text-align: center;
         }
@@ -47,16 +47,13 @@
             color: red !important;
         }
 
-        /* Para el descuento */
-
-        /* Líneas */
-        .border-dashed {
-            border-top: 1px dashed #000;
-            margin: 4px 0;
+        .uppercase {
+            text-transform: uppercase;
         }
 
-        .border-solid {
-            border-top: 1px solid #000;
+        /* Separadores */
+        .border-dashed {
+            border-top: 1px dashed #000;
             margin: 4px 0;
         }
 
@@ -72,9 +69,10 @@
             vertical-align: top;
         }
 
-        /* Logo */
-        img {
-            max-width: 75%;
+        /* LOGO AJUSTADO: Más pequeño y nítido */
+        img.logo {
+            max-width: 55%;
+            /* Antes era 80%, ahora es más discreto */
             height: auto;
             filter: grayscale(100%) contrast(150%);
             margin-bottom: 2px;
@@ -88,8 +86,17 @@
             transform: rotate(-45deg);
             font-size: 40px;
             border: 3px dashed #000;
-            opacity: 0.3;
             padding: 10px;
+            opacity: 0.3;
+        }
+
+        /* Caja de Puntos */
+        .points-box {
+            border: 1px solid #000;
+            border-radius: 4px;
+            padding: 4px;
+            margin: 8px 0;
+            text-align: center;
         }
     </style>
 </head>
@@ -102,17 +109,36 @@
 
         <div class="text-center">
             @if(isset($logoBase64) && !empty($logoBase64))
-            <img src="{{ $logoBase64 }}" alt="Logo">
+            <img class="logo" src="{{ $logoBase64 }}" alt="Logo">
             @endif
-            <div style="font-size: 14px; font-weight: bold; line-height: 1;">{{ $venta->sucursal->nombre }}</div>
+
+            {{-- 1. RAZÓN SOCIAL (El nombre legal de la empresa) --}}
+            {{-- Si tienes el campo en config úsalo, si no, escribe el nombre fijo aquí --}}
+            <div style="font-size: 15px; font-weight: bold; text-transform: uppercase; margin-top: 5px; line-height: 1.1;">
+                {{ $config->empresa_razon_social ?? $config->empresa_nombre ?? 'FARMACIA MUNDO FARMA S.A.C.' }}
+            </div>
+
+            {{-- 2. SUCURSAL (El nombre del local específico) --}}
+            @if($venta->sucursal->nombre)
+            <div style="font-size: 12px; font-weight: bold; margin-top: 3px; color: #333;">
+                Sucursal: {{ $venta->sucursal->nombre }}
+            </div>
+            @endif
+
+            {{-- 3. DIRECCIÓN Y RUC --}}
             <div style="font-size: 10px; margin-top: 2px;">{{ $venta->sucursal->direccion }}</div>
-            <div class="font-bold" style="margin-top: 2px;">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
+            <div class="font-bold" style="font-size: 12px; margin-top: 3px;">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
+
+            {{-- 4. TELÉFONO (Opcional pero recomendado) --}}
+            @if(!empty($venta->sucursal->telefono))
+            <div style="font-size: 10px;">Telf: {{ $venta->sucursal->telefono }}</div>
+            @endif
         </div>
 
         <div class="border-dashed"></div>
 
         <div style="font-size: 11px;">
-            <div style="display:flex; justify-content:space-between;">
+            <div style="display: flex; justify-content: space-between;">
                 <b>{{ $venta->tipo_comprobante }}:</b>
                 <span>{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</span>
             </div>
@@ -128,7 +154,7 @@
         <table style="font-size: 11px;">
             <thead>
                 <tr>
-                    <th class="text-left" style="width: 10%;">Cant.</th>
+                    <th class="text-left" style="width: 10%;">C.</th>
                     <th class="text-left">DESCRIPCIÓN</th>
                     <th class="text-right">TOT.</th>
                 </tr>
@@ -147,7 +173,6 @@
         <div class="border-dashed"></div>
 
         <table style="font-size: 11px; margin-top: 2px;">
-            {{-- 1. Op. Gravada --}}
             @if($venta->op_gravada > 0)
             <tr>
                 <td class="text-right">Op. Gravada:</td>
@@ -155,7 +180,6 @@
             </tr>
             @endif
 
-            {{-- 2. Op. Exonerada --}}
             @if($venta->op_exonerada > 0)
             <tr>
                 <td class="text-right">Op. Exonerada:</td>
@@ -163,21 +187,11 @@
             </tr>
             @endif
 
-            {{-- 3. Op. Inafecta --}}
-            @if($venta->op_inafecta > 0)
-            <tr>
-                <td class="text-right">Op. Inafecta:</td>
-                <td class="text-right">S/ {{ number_format($venta->op_inafecta, 2) }}</td>
-            </tr>
-            @endif
-
-            {{-- 4. IGV --}}
             <tr>
                 <td class="text-right">I.G.V. (18%):</td>
                 <td class="text-right">S/ {{ number_format($venta->total_igv, 2) }}</td>
             </tr>
 
-            {{-- 5. DESCUENTO (ROJO) --}}
             @if($venta->total_descuento > 0)
             <tr>
                 <td class="text-right font-bold text-red">DESCUENTO:</td>
@@ -185,27 +199,70 @@
             </tr>
             @endif
 
-            {{-- 6. TOTAL FINAL (LINEA NEGRA ARRIBA) --}}
-            <tr>
-                <td colspan="2" style="padding: 0;">
-                    <div style="border-top: 1px solid #000; margin-top: 3px;"></div>
-                </td>
-            </tr>
+            {{-- TOTAL EN NEGRO (Estilo Inverso) --}}
             <tr style="font-size: 15px;">
-                <td class="font-bold" style="padding-top: 2px;">TOTAL:</td>
-                <td class="text-right font-bold" style="padding-top: 2px;">S/ {{ number_format($venta->total_neto, 2) }}</td>
+                <td colspan="2" style="padding-top: 4px;">
+                    <div style="background: #000; color: #fff; padding: 4px 6px; display: flex; justify-content: space-between; border-radius: 3px;">
+                        <span class="font-bold">TOTAL</span>
+                        <span class="font-bold">S/ {{ number_format($venta->total_neto, 2) }}</span>
+                    </div>
+                </td>
             </tr>
         </table>
 
-        <div class="text-center" style="margin-top: 5px; font-size: 10px; text-transform: uppercase;">
+        <div class="text-center uppercase" style="margin-top: 4px; font-size: 9px;">
             SON: {{ $montoLetras }}
         </div>
+        @if($venta->total_descuento > 0 || $venta->cliente->documento != '00000000')
+        <div class="points-box">
+            @if($venta->total_descuento > 0)
+            <div style="border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 2px;">
+                ¡Felicidades! 🎉 Ahorraste: <b class="text-red">S/ {{ number_format($venta->total_descuento, 2) }}</b>
+            </div>
+            @endif
 
-        <div class="text-center" style="margin-top: 8px;">
-            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 90px; height: 90px;">
-            <div style="font-weight: bold; margin-top: 4px; font-size: 10px;">GRACIAS POR SU PREFERENCIA</div>
-            <div style="font-size: 9px;">Consulta en: mundofarma.online</div>
+            {{-- CAJA DE PUNTOS --}}
+            <div style="font-weight: bold; font-size: 11px; background: #eee;">MONEDERO / PUNTOS</div>
+
+            <div style="display: flex; justify-content: space-between; padding: 2px 10px; font-size: 10px;">
+                <span>Ganados hoy:</span>
+                <b>+{{ $puntosGanados ?? 0 }} pts</b>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; padding: 0 10px; font-size: 10px;">
+                <span>Saldo Total:</span>
+                <b>{{ $venta->cliente->puntos ?? 0 }} pts</b>
+            </div>
+
+            <div style="font-size: 9px; font-style: italic; margin-top: 2px;">
+                ¡Úsalos en tu próxima compra!
+            </div>
         </div>
+        @endif
+        <div class="text-center" style="margin-top: 10px;">
+            {{-- 1. CÓDIGO QR --}}
+            <img src="data:image/svg+xml;base64,{{ $qrBase64 }}" style="width: 90px; height: 90px;">
+
+            {{-- 2. MENSAJE DE AGRADECIMIENTO (Viene de tu base de datos) --}}
+            <div style="font-weight: bold; margin-top: 5px; font-size: 10px; text-transform: uppercase;">
+                {{ $mensajePie }}
+            </div>
+
+            {{-- 3. FRASE DE CONSULTA "ELEGANTE" --}}
+            <div style="margin-top: 8px; font-size: 9px; color: #555; line-height: 1.2;">
+                Representación impresa de la<br>
+                {{ $venta->tipo_comprobante }} ELECTRÓNICA
+            </div>
+
+            <div style="margin-top: 4px; font-size: 9px;">
+                Consulte su validez en:<br>
+                <span style="font-weight: bold; font-size: 10px; color: #000;">mundofarma.online/consultar</span>
+            </div>
+
+            {{-- Detalle final sutil --}}
+            <div style="margin-top: 5px; border-top: 1px solid #ddd; width: 50%; margin-left: auto; margin-right: auto;"></div>
+        </div>
+
     </div>
 
     @if(request('imprimir') == 'si')

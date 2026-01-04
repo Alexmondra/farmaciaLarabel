@@ -33,20 +33,12 @@
             text-align: center;
         }
 
-        .text-left {
-            text-align: left;
-        }
-
         .font-bold {
             font-weight: bold;
         }
 
         .text-red {
             color: red !important;
-        }
-
-        .uppercase {
-            text-transform: uppercase;
         }
 
         /* Cabecera */
@@ -105,14 +97,15 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 5cm;
-            /* Un poco más alto para que quepan los puntos */
+            height: 4.5cm;
+            /* Altura del footer */
             background: #fff;
             border-top: 1px solid #ccc;
+            /* Separador sutil opcional */
             padding-top: 10px;
         }
 
-        /* Tabla de Totales */
+        /* Tabla de Totales (Estilo Imagen) */
         .totals-table {
             width: 100%;
             border-collapse: collapse;
@@ -125,18 +118,9 @@
 
         .total-final-row {
             border-top: 2px solid #000;
+            /* La línea negra gruesa */
             font-size: 16px;
             font-weight: bold;
-        }
-
-        /* Caja de Puntos en A4 */
-        .points-box-a4 {
-            border: 1px solid #444;
-            border-radius: 5px;
-            padding: 5px;
-            width: 90%;
-            margin-bottom: 10px;
-            background-color: #f9f9f9;
         }
 
         .anulado {
@@ -166,18 +150,8 @@
                 @endif
             </td>
             <td width="45%" class="text-center">
-                {{-- RAZÓN SOCIAL --}}
-                <div style="font-size: 14px; font-weight: bold; text-transform: uppercase;">
-                    {{ $config->empresa_razon_social ?? 'FARMACIA MUNDO FARMA S.A.C.' }}
-                </div>
-                {{-- SUCURSAL --}}
-                <div style="font-size: 12px; font-weight: bold; margin-top: 4px; color: #444;">
-                    SUCURSAL: {{ $venta->sucursal->nombre }}
-                </div>
+                <div style="font-size: 16px; font-weight: bold;">{{ $venta->sucursal->nombre }}</div>
                 <div style="font-size: 11px;">{{ $venta->sucursal->direccion }}</div>
-                @if(!empty($venta->sucursal->telefono))
-                <div style="font-size: 11px;">Telf: {{ $venta->sucursal->telefono }}</div>
-                @endif
             </td>
             <td width="30%">
                 <div class="ruc-box">
@@ -228,41 +202,14 @@
         <table style="width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top;">
-
-                    @if($venta->total_descuento > 0 || $venta->cliente->documento != '00000000')
-                    <div class="points-box-a4">
-                        @if($venta->total_descuento > 0)
-                        <div style="border-bottom: 1px dashed #ccc; padding-bottom: 4px; margin-bottom: 4px; text-align: center;">
-                            ¡Felicidades! 🎉 Ahorraste en esta compra:
-                            <b class="text-red">S/ {{ number_format($venta->total_descuento, 2) }}</b>
-                        </div>
-                        @endif
-
-                        @if($venta->cliente->documento != '00000000')
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div style="font-weight: bold; color: #333;">MONEDERO / PUNTOS:</div>
-                            <div style="text-align: right;">
-                                <div>Ganados hoy: <b>+{{ $puntosGanados ?? 0 }}</b></div>
-                                <div>Saldo Total: <b>{{ $venta->cliente->puntos ?? 0 }} pts</b></div>
-                            </div>
-                        </div>
-                        @endif
-                    </div>
-                    @endif
                     <table width="100%">
                         <tr>
                             <td width="90"><img src="data:image/svg+xml;base64,{{ $qrBase64 }}" width="85" height="85"></td>
-                            <td style="padding-left: 10px; vertical-align: middle;">
+                            <td style="padding-left: 10px;">
                                 <div class="font-bold small">SON: {{ $montoLetras }}</div>
-
-                                {{-- MENSAJE DINÁMICO --}}
-                                <div style="font-weight: bold; margin-top: 5px; font-size: 10px; text-transform: uppercase;">
-                                    {{ $mensajePie ?? 'GRACIAS POR SU PREFERENCIA' }}
-                                </div>
-
-                                <div style="font-size: 9px; color: #555; margin-top: 5px; line-height: 1.2;">
+                                <div style="font-size: 9px; color: #555; margin-top: 5px;">
                                     Representación impresa de la {{ $venta->tipo_comprobante }} ELECTRÓNICA.<br>
-                                    Consulte validez en: <b style="color: #000;">mundofarma.online/consultar</b>
+                                    Consulte en: <b>mundofarma.online/consultar</b>
                                 </div>
                             </td>
                         </tr>
