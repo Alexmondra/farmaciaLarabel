@@ -87,12 +87,17 @@
                 let extraHtml = '';
                 let claseExtra = '';
 
-                // Lógica de visualización (Rojo si no está asignado)
                 if (m.asignado === false) {
                     claseExtra = 'bg-light';
-                    extraHtml = `<div class="text-danger font-weight-bold" style="font-size: 0.75rem;">
-                                    <i class="fas fa-exclamation-circle"></i> NO ASIGNADO A SUCURSAL
-                                 </div>`;
+                    extraHtml = `
+                    <div class="mt-1" style="line-height: 1.2;">
+                        <div class="text-danger font-weight-bold" style="font-size: 0.75rem;">
+                            <i class="fas fa-exclamation-circle"></i> NO ASIGNADO A SUCURSAL
+                        </div>
+                        <div class="text-muted border-top mt-1 pt-1" style="font-size: 0.7rem; font-style: italic; width: 100%;">
+                            <i class="fas fa-arrow-right mr-1"></i> Se asignará automáticamente a esta sucursal al registrar.
+                        </div>
+                    </div>`;
                 }
 
                 // Lógica de Precio Sugerido (si viene de otra sucursal)
