@@ -374,42 +374,35 @@ class VentaController extends Controller
             return response()->json([]);
         }
 
-        // =========================================================
-        // ESTRATEGIA: BÚSQUEDA ÚNICA Y CENTRALIZADA
-        // =========================================================
-
-        // 1. Iniciamos la consulta directo al MAESTRO DE MEDICAMENTOS
-        // Usamos withoutGlobalScopes para ignorar filtros ocultos de empresa
         $query = \App\Models\Inventario\Medicamento::query()
             ->withoutGlobalScopes()
             ->where('activo', true);
 
-        // 2. Cargamos la relación con la sucursal ACTUAL para saber si ya lo tienes
-        // (Esto es un "Eager Loading" filtrado)
         $query->with(['sucursales' => function ($q) use ($sucursalId) {
             $q->where('sucursal_id', $sucursalId);
         }]);
 
-        // 3. APLICAMOS EL FILTRO (La lógica del buscador)
         if ($term) {
             // Detectamos si es código de barras (Numérico y largo)
             $esCodigoBarra = (is_numeric($term) && strlen($term) >= 5);
 
             if ($esCodigoBarra) {
-                // MODO ESCÁNER: Busca directo en las columnas de códigos
+                // --- MODO ESCÁNER: BÚSQUEDA EXACTA ---
                 $query->where(function ($q) use ($term) {
-                    $q->where('codigo_barra', 'LIKE', "{$term}%")
-                        ->orWhere('codigo_barra_blister', 'LIKE', "{$term}%")
-                        ->orWhere('codigo', 'LIKE', "{$term}%"); // Por seguridad
+                    $q->where('codigo_barra', '=', $term) // Uso de '=' en lugar de LIKE
+                        ->orWhere('codigo_barra_blister', '=', $term)
+                        ->orWhere('codigo', '=', $term);
                 });
+                $query->limit(1); // Solo necesitamos el primero si es exacto
             } else {
-                // MODO TEXTO: Busca en todo
+                // --- MODO TEXTO: BÚSQUEDA POR PARECIDO ---
                 $query->where(function ($q) use ($term) {
                     $q->where('nombre', 'LIKE', "%{$term}%")
                         ->orWhere('codigo', 'LIKE', "%{$term}%")
                         ->orWhere('laboratorio', 'LIKE', "%{$term}%")
                         ->orWhere('descripcion', 'LIKE', "%{$term}%");
                 });
+                $query->limit(20);
             }
         }
 
@@ -417,29 +410,17 @@ class VentaController extends Controller
             $query->where('categoria_id', $request->categoria_id);
         }
 
-        // 4. EJECUTAMOS Y MAPEAMOS
-        // Traemos 20 resultados y decidimos en vivo si es Local o Global
-        $resultados = $query->limit(20)->get()->map(function ($med) {
-
-            // Intentamos obtener los datos de la sucursal (si existen)
-            // Como usamos 'with' arriba, esto ya viene cargado o viene vacío.
+        $resultados = $query->get()->map(function ($med) {
             $pivot = $med->sucursales->first()->pivot ?? null;
             $estaAsignado = !is_null($pivot);
 
             return [
-                'asignado'                => $estaAsignado, // True = Local, False = Global (Rojo)
-
-                // Si está asignado usamos el ID del pivote, si no, null
-                'medicamento_sucursal_id' => $estaAsignado ? $med->sucursales->first()->id : null, // Ojo: id de la tabla pivote si tu modelo lo soporta, o null
-                // NOTA: Si usas MedicamentoSucursal como modelo intermedio, el ID suele ser id del registro pivote. 
-                // Si pivot devuelve objeto standard, ajústalo. Asumo Eloquent estándar.
-
+                'asignado'                => $estaAsignado,
+                'medicamento_sucursal_id' => $estaAsignado ? $med->sucursales->first()->id : null,
                 'medicamento_id'          => $med->id,
                 'nombre'                  => $med->nombre,
                 'codigo'                  => $med->codigo,
                 'presentacion'            => $med->forma_farmaceutica ?? '',
-
-                // Si está asignado mostramos su precio, si no, 0.00
                 'precio_venta'            => $estaAsignado ? (float) $pivot->precio_venta : 0.00,
             ];
         });

@@ -261,6 +261,23 @@ class MedicamentoSucursalController extends Controller
     }
 
 
+    // validaciones pertinenetes 
+
+    public function verificarLote(Request $request)
+    {
+        $lote = Lote::where('medicamento_id', $request->medicamento_id)
+            ->where('sucursal_id', $request->sucursal_id)
+            ->where('codigo_lote', trim($request->codigo_lote))
+            ->first();
+
+        return response()->json([
+            'existe' => !is_null($lote),
+            // Carbon asegura que la fecha sea compatible con el input date de HTML
+            'vencimiento' => $lote && $lote->fecha_vencimiento ? \Carbon\Carbon::parse($lote->fecha_vencimiento)->format('Y-m-d') : null
+        ]);
+    }
+
+
     // =========================================================================
     //  NUEVA FUNCIÓN: REGISTRAR BAJA / SALIDA DE STOCK
     // =========================================================================

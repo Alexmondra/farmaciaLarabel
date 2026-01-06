@@ -119,7 +119,7 @@
                     <p class="text-muted mb-3">No hay lotes activos disponibles para venta.</p>
 
                     {{-- Botón para ver historial --}}
-                    @can('lotes.ver ')
+                    @can('lotes.ver')
                     <a href="{{ route('inventario.medicamento_sucursal.historial', [
                                         'medicamento' => $medicamento->id, 
                                         'sucursal' => $sucursal->id
@@ -218,7 +218,7 @@
                     </table>
 
                     {{-- Footer pequeño de la tabla para ir al historial --}}
-                    @can('lotes.ver ')
+                    @can('lotes.ver')
                     <div class="bg-light p-2 text-center border-top">
                         <a href="{{ route('inventario.medicamento_sucursal.historial', [
                                         'medicamento' => $medicamento->id, 

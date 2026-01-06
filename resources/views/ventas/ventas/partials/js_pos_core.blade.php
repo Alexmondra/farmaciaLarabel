@@ -62,7 +62,31 @@
         function renderResultadosMedicamentos(lista) {
             let contenedor = $('#resultados-medicamentos');
             let term = $('#busqueda_medicamento').val().trim(); // Capturamos lo que escribió
+            // Verificamos si es un código numérico largo (escáner)
+            let esCodigoBarra = (/^\d+$/.test(term) && term.length >= 5);
 
+            // Si hay un único resultado exacto y está asignado a la sucursal
+            if (esCodigoBarra && lista.length === 1 && lista[0].asignado === true) {
+                let m = lista[0];
+
+                cerrarResultados();
+                $('#busqueda_medicamento').val('');
+
+                medicamentoSeleccionado = {
+                    medicamento_id: m.medicamento_id,
+                    nombre: m.nombre,
+                    presentacion: m.presentacion,
+                    precio_venta: parseFloat(m.precio_venta)
+                };
+                $('#modal-medicamento-nombre').text(medicamentoSeleccionado.nombre);
+                $('#modal-medicamento-presentacion').text(medicamentoSeleccionado.presentacion);
+
+                // Cargamos lotes y abrimos el modal de inmediato
+                cargarLotesMedicamento(m.medicamento_id);
+                $('#modalLotes').modal('show');
+
+                return;
+            }
             selectedIndex = -1;
             resultCount = lista.length;
 
@@ -100,7 +124,6 @@
                     </div>`;
                 }
 
-                // Lógica de Precio Sugerido (si viene de otra sucursal)
                 let precioHtml = '';
                 if (m.es_precio_sugerido) {
                     precioHtml = `<span class="badge badge-info border" title="Precio Sugerido de otra tienda">S/ ${parseFloat(m.precio_venta).toFixed(2)} <i class="fas fa-info-circle small"></i></span>`;

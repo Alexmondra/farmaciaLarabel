@@ -147,7 +147,7 @@
 
                         {{-- COLUMNA 4: INICIAL (SOLO PC) --}}
                         <td class="text-center d-none d-md-table-cell">
-                            <span class="text-muted">{{ $stockInicial ?? '—' }}</span>
+                            <span class="text-muted">{{ $stockInicial ?? 'kardex' }}</span>
                         </td>
 
                         {{-- COLUMNA 5: STOCK ACTUAL (Visible siempre) --}}

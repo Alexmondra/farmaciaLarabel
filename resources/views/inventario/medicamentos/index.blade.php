@@ -3,45 +3,51 @@
 @section('title', 'Inventario')
 
 @section('content_header')
-<div class="d-flex justify-content-between align-items-center">
-    <h1 class="text-dark font-weight-bold">
+<div class="d-flex justify-content-between align-items-center flex-wrap">
+    <h1 class="text-dark font-weight-bold mb-2">
         <i class="fas fa-pills mr-2 text-primary"></i>Inventario
     </h1>
 
-    <div class="btn-group shadow-sm">
-        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fas fa-dolly-flatbed mr-2"></i> Operaciones
+    <div class="d-flex align-items-center flex-wrap mb-2" style="gap: 10px;">
+        @can('stock.ajustar')
+        <button type="button" class="btn btn-success shadow-sm px-3 font-weight-bold"
+            onclick="abrirModalIngreso()"
+            style="border-radius: 20px;">
+            <i class="fas fa-plus-circle mr-1"></i> AJUSTE / ENTRADA
         </button>
 
-        <div class="dropdown-menu dropdown-menu-right">
-            @can('compras.crear')
-            <a class="dropdown-item" href="{{ route('compras.create') }}"> {{-- Pon aquí tu ruta real --}}
-                <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Compra (Ingreso)
-            </a>
-            @endcan
 
-            <div class="dropdown-divider"></div>
+        <button type="button" class="btn btn-danger shadow-sm px-3 font-weight-bold"
+            onclick="abrirModalSalida()"
+            style="border-radius: 20px;">
+            <i class="fas fa-minus-circle mr-1"></i> AJUSTE / SALIDA
+        </button>
+        @endcan
 
-            @can('stock.ajustar')
-            <a class="dropdown-item" href="#" onclick="abrirModalSalida()">
-                <i class="fas fa-trash-alt text-danger mr-2"></i> Dar de Baja / Ajuste (Salida)
-            </a>
-            @endcan
+        {{-- DROPDOWN OPERACIONES (LIMPIO) --}}
+        <div class="btn-group shadow-sm">
+            <button type="button" class="btn btn-primary dropdown-toggle font-weight-bold"
+                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                style="border-radius: 20px;">
+                <i class="fas fa-cog mr-1"></i> Operaciones
+            </button>
 
-            @can('guias.crear')
-            <a class="dropdown-item" href="{{ route('guias.create') }}"> {{-- Pon aquí tu ruta real --}}
-                <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
-            </a>
-            @endcan
+            <div class="dropdown-menu dropdown-menu-right" style="border-radius: 12px;">
+                @can('compras.crear')
+                <a class="dropdown-item py-2" href="{{ route('compras.create') }}">
+                    <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Compra (Ingreso)
+                </a>
+                @endcan
 
-            @can('stock.ajustar')
-            <a class="dropdown-item" href="#" onclick="abrirModalIngreso()">
-                <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Ingreso / Ajuste (+)
-            </a>
-            @endcan
+                <div class="dropdown-divider"></div>
+
+                @can('guias.crear')
+                <a class="dropdown-item py-2" href="{{ route('guias.create') }}">
+                    <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
+                </a>
+                @endcan
+            </div>
         </div>
-
-
     </div>
 </div>
 @endsection
@@ -362,7 +368,12 @@
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Vencimiento</label>
-                                        <input type="date" name="vencimiento" class="form-control">
+                                        <input type="date" name="vencimiento" id="inputIngresoVencimiento" class="form-control">
+                                        <div id="avisoLoteExistente" style="display: none;" class="mt-1">
+                                            <small class="text-primary font-weight-bold">
+                                                <i class="fas fa-info-circle"></i> Lote existente. Fecha bloqueada.
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
@@ -414,6 +425,7 @@ $permisosJS = [
 
 @section('js')
 <script>
+    let estaProcesandoIngreso = false; // Variable de control global
     // 1. CONFIGURACIÓN TOAST
     const ToastCentro = Swal.mixin({
         toast: true,
@@ -711,6 +723,46 @@ $permisosJS = [
     let selectedIndex = -1;
     let resultCount = 0;
 
+    //valicaciones de lotes
+
+    $('#inputIngresoLote').on('blur change', function() {
+        let lote = $(this).val().trim();
+        let medId = $('#hiddenIngresoMedId').val();
+
+        // Solo disparamos la búsqueda si hay un lote escrito y un medicamento seleccionado
+        if (lote.length === 0 || !medId) return;
+
+        $.ajax({
+            url: "{{ route('inventario.lotes.verificar') }}",
+            method: 'GET',
+            data: {
+                codigo_lote: lote,
+                medicamento_id: medId,
+                sucursal_id: SUCURSAL_ID
+            },
+            success: function(res) {
+                let $inputVenc = $('#inputIngresoVencimiento');
+                let $aviso = $('#avisoLoteExistente');
+                let $inputCant = $('input[name="cantidad"]');
+
+                if (res.existe) {
+                    $inputVenc.val(res.vencimiento);
+                    $inputVenc.prop('readonly', true).addClass('bg-light');
+                    $aviso.fadeIn();
+                    $inputCant.focus().select();
+
+                    toastr.success('Lote detectado: Fecha cargada automáticamente.');
+                } else {
+                    $inputVenc.prop('readonly', false).removeClass('bg-light');
+                    $aviso.fadeOut();
+                }
+            },
+            error: function() {
+                console.error("Error al verificar el lote.");
+            }
+        });
+    });
+
     // 1. ABRIR MODAL
     function abrirModalSalida() {
         if (!SUCURSAL_ID) {
@@ -721,6 +773,9 @@ $permisosJS = [
             return;
         }
         resetearModal();
+        $('#inputIngresoVencimiento').prop('readonly', false).removeClass('bg-light');
+        $('#avisoLoteExistente').hide();
+
         $('#modalSalidaStock').modal('show');
         // Enfocar y seleccionar texto al abrir
         setTimeout(() => $('#txtBuscarSalida').focus().select(), 500);
@@ -822,15 +877,47 @@ $permisosJS = [
         }
     }
 
-    // 4. CARGAR LOTES (Al dar Enter o Clic)
-    window.cargarLotesParaBaja = function(id, nombre, pres) {
+
+    // para firzar a salide del modal de salida y ponerlo en el de ingreso
+    function abrirModalIngresoConDatos(id, nombre, pres) {
+        $('#modalSalidaStock').modal('hide');
+        abrirModalIngreso();
+
+        setTimeout(() => {
+            $('#txtBuscarIngreso').val(nombre);
+            if (typeof seleccionarMedIngreso === "function") {
+                seleccionarMedIngreso(id, nombre, pres);
+                toastr.info('Cargando ' + nombre + ' para ajuste de entrada.');
+            }
+        }, 600);
+    }
+
+    window.cargarLotesParaBaja = function(id, nombre, pres, asignado = true) {
         $('#txtBuscarSalida').val('');
         $('#listaResultadosSalida').hide();
+
+        // VALIDACIÓN 1: Si el medicamento NO está asignado a la sucursal
+        if (asignado === false) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Medicamento no asignado',
+                html: `El producto <b>${nombre}</b> no está registrado en esta sucursal.<br><br><small class="text-muted">¿Deseas registrar un ingreso para regularizarlo?</small>`,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-plus-circle"></i> Sí, ir a Ingreso',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#modalSalidaStock').modal('hide');
+                    abrirModalIngresoConDatos(id, nombre, pres); // Función nueva
+                }
+            });
+            return;
+        }
 
         $('#lblProductoSeleccionado').text(`${nombre} - ${pres}`);
         $('#panelLotes').show();
         $('#formSalidaStock').hide();
-
         $('#tbodyLotesSalida').html('<tr><td colspan="4" class="text-center">Cargando lotes...</td></tr>');
 
         $.ajax({
@@ -843,27 +930,42 @@ $permisosJS = [
             success: function(lotes) {
                 let tbody = $('#tbodyLotesSalida').empty();
 
-                if (lotes.length === 0) {
-                    tbody.html('<tr><td colspan="4" class="text-center text-danger font-weight-bold">AGOTADO / SIN STOCK</td></tr>');
+                // Calculamos el stock total sumando todos los lotes
+                let stockTotal = lotes.reduce((sum, l) => sum + parseInt(l.stock_actual), 0);
+
+                // VALIDACIÓN 2: Si el medicamento está asignado pero no tiene stock (Stock = 0)
+                if (lotes.length === 0 || stockTotal <= 0) {
+                    tbody.html('<tr><td colspan="4" class="text-center text-danger font-weight-bold">SIN STOCK DISPONIBLE</td></tr>');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No hay stock disponible',
+                        html: `El producto <b>${nombre}</b> no tiene existencias.<br>¿Deseas registrar un ingreso ahora?`,
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fas fa-plus-circle"></i> Sí, ir a Ingreso',
+                        confirmButtonColor: '#28a745',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            abrirModalIngresoConDatos(id, nombre, pres);
+                        }
+                    });
                     return;
                 }
 
                 lotes.forEach(l => {
                     let btn = l.stock_actual > 0 ?
-                        `<button type="button" class="btn btn-sm btn-danger" 
-                            onclick="prepararFormulario(${l.id}, '${l.codigo_lote}', ${l.stock_actual})">
-                            <i class="fas fa-arrow-down"></i> Bajar
-                           </button>` :
-                        '<span class="badge badge-secondary">Cero</span>';
+                        `<button type="button" class="btn btn-sm btn-danger" onclick="prepararFormulario(${l.id}, '${l.codigo_lote}', ${l.stock_actual})">
+                        <i class="fas fa-arrow-down"></i> Bajar
+                    </button>` : '';
 
                     tbody.append(`
-                        <tr>
-                            <td class="pl-3 align-middle font-weight-bold">${l.codigo_lote}</td>
-                            <td class="align-middle">${l.fecha_vencimiento || '-'}</td>
-                            <td class="align-middle text-center text-primary font-weight-bold" style="font-size:1.1em">${l.stock_actual}</td>
-                            <td class="align-middle">${btn}</td>
-                        </tr>
-                    `);
+                    <tr>
+                        <td class="pl-3 align-middle font-weight-bold">${l.codigo_lote}</td>
+                        <td class="align-middle">${l.fecha_vencimiento || '-'}</td>
+                        <td class="align-middle text-center text-primary font-weight-bold">${l.stock_actual}</td>
+                        <td class="align-middle">${btn}</td>
+                    </tr>
+                `);
                 });
             }
         });
@@ -934,13 +1036,17 @@ $permisosJS = [
             });
             return;
         }
+        $('#formIngresoStock')[0].reset();
 
-        // Resetear
+        const $btn = $('#formIngresoStock').find('button[type="submit"]');
+        $btn.prop('disabled', false).html('<i class="fas fa-save mr-2"></i> GUARDAR INGRESO');
+
         $('#txtBuscarIngreso').val('');
         $('#listaResultadosIngreso').hide();
         $('#formIngresoStock').hide();
-        $('#formIngresoStock')[0].reset();
-
+        $('#hiddenIngresoMedId').val('');
+        $('#inputIngresoVencimiento').prop('readonly', false).removeClass('bg-light').val('');
+        $('#avisoLoteExistente').hide();
         $('#modalIngresoStock').modal('show');
         setTimeout(() => $('#txtBuscarIngreso').focus(), 500);
     }
@@ -1033,12 +1139,16 @@ $permisosJS = [
     // 5. Guardar (AJAX)
     $('#formIngresoStock').on('submit', function(e) {
         e.preventDefault();
+        if (estaProcesandoIngreso) return;
+
         let btn = $(this).find('button[type="submit"]');
-        let txt = btn.html();
-        btn.prop('disabled', true).text('Guardando...');
+        let originalHtml = btn.html();
+
+        estaProcesandoIngreso = true;
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> PROCESANDO...');
 
         $.ajax({
-            url: "{{ route('inventario.movimientos.store_ingreso') }}", // La ruta nueva
+            url: "{{ route('inventario.movimientos.store_ingreso') }}",
             method: 'POST',
             data: $(this).serialize(),
             success: function(res) {
@@ -1047,7 +1157,7 @@ $permisosJS = [
                     icon: 'success',
                     title: 'Ingreso registrado correctamente'
                 });
-                aplicarFiltros(); // Recargar tabla
+                aplicarFiltros();
             },
             error: function(xhr) {
                 let msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error al guardar';
@@ -1055,7 +1165,10 @@ $permisosJS = [
                     icon: 'error',
                     title: msg
                 });
-                btn.prop('disabled', false).html(txt);
+            },
+            complete: function() {
+                estaProcesandoIngreso = false;
+                btn.prop('disabled', false).html(originalHtml);
             }
         });
     });

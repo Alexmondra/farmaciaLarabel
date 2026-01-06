@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Inventario\MedicamentoSucursal;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Inventario\MovimientoInventario;
+
 
 use Illuminate\Support\Facades\DB;
 
@@ -142,12 +144,7 @@ class CompraController extends Controller
             'tipo_comprobante'         => 'nullable|string',
             'numero_factura_proveedor' => 'nullable|string',
             'observaciones'            => 'nullable|string',
-
-            // --- Archivo (Aquí está la actualización) ---
-            // max:20480 = 20MB. mimes incluye Word (doc, docx), PDF e Imágenes.
             'archivo_comprobante'      => 'nullable|file|max:20480|mimes:pdf,jpg,jpeg,png,doc,docx',
-
-            // --- Items ---
             'items'                            => 'required|array|min:1',
             'items.*.medicamento_id'           => 'required|integer',
             'items.*.codigo_lote'              => 'required|string',
@@ -212,6 +209,18 @@ class CompraController extends Controller
                         'lote_id'                => $lote->id,
                         'cantidad_recibida'      => $item['cantidad_recibida'],
                         'precio_compra_unitario' => $item['precio_compra_unitario'],
+                    ]);
+
+                    MovimientoInventario::create([
+                        'tipo'           => 'entrada',
+                        'medicamento_id' => $item['medicamento_id'],
+                        'sucursal_id'    => $sucursalSeleccionada->id,
+                        'lote_id'        => $lote->id,
+                        'cantidad'       => $item['cantidad_recibida'],
+                        'motivo'         => 'COMPRA',
+                        'referencia' => ($data['tipo_comprobante'] ?? 'Doc.') . ' N° ' . ($data['numero_factura_proveedor'] ?? 'S/N'),
+                        'user_id'        => $user->id,
+                        'stock_final'    => $lote->stock_actual
                     ]);
 
                     // 3. Actualizar Precios (MedicamentoSucursal)

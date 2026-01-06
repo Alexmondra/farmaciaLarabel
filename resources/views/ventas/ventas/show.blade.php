@@ -167,7 +167,6 @@
 
     function enviarWhatsApp(numero, nombre, urlPdf) {
         const codigoPais = '51';
-        // Añadimos emojis y un texto más claro
         const mensaje = `📄 *MUNDO FARMA - Comprobante Electrónico*\n\nHola *${nombre}*, adjuntamos el enlace para descargar su comprobante oficial en formato PDF:\n\n👉 ${urlPdf}\n\n_Gracias por su preferencia._`;
         const textoEncode = encodeURIComponent(mensaje);
         const url = `https://api.whatsapp.com/send?phone=${codigoPais}${numero}&text=${textoEncode}`;

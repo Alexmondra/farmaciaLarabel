@@ -39,7 +39,6 @@
                     @csrf
                     <input type="hidden" name="afecto_igv" value="1">
                     <input type="hidden" name="activo" value="1">
-                    <input type="hidden" name="receta_medica" value="0">
                     <input type="hidden" name="unidades_por_envase" value="1">
                     <input type="hidden" name="unidades_por_blister" value="0">
 

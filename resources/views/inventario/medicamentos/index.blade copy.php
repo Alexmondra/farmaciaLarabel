@@ -3,6 +3,54 @@
 @section('title', 'Inventario')
 
 @section('content_header')
+<div class="d-flex justify-content-between align-items-center flex-wrap">
+    <h1 class="text-dark font-weight-bold mb-2">
+        <i class="fas fa-pills mr-2 text-primary"></i>Inventario
+    </h1>
+
+    <div class="d-flex align-items-center flex-wrap mb-2" style="gap: 10px;">
+        {{-- BOTÓN AJUSTE ENTRADA (AFUERA) --}}
+        <button type="button" class="btn btn-success shadow-sm px-3 font-weight-bold"
+            onclick="abrirModalIngreso()"
+            style="border-radius: 20px;">
+            <i class="fas fa-plus-circle mr-1"></i> AJUSTE / ENTRADA
+        </button>
+
+        {{-- BOTÓN AJUSTE SALIDA (AFUERA) --}}
+        <button type="button" class="btn btn-danger shadow-sm px-3 font-weight-bold"
+            onclick="abrirModalSalida()"
+            style="border-radius: 20px;">
+            <i class="fas fa-minus-circle mr-1"></i> AJUSTE / SALIDA
+        </button>
+
+        {{-- DROPDOWN OPERACIONES (LIMPIO) --}}
+        <div class="btn-group shadow-sm">
+            <button type="button" class="btn btn-primary dropdown-toggle font-weight-bold"
+                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                style="border-radius: 20px;">
+                <i class="fas fa-cog mr-1"></i> Operaciones
+            </button>
+
+            <div class="dropdown-menu dropdown-menu-right" style="border-radius: 12px;">
+                @can('compras.crear')
+                <a class="dropdown-item py-2" href="{{ route('compras.create') }}">
+                    <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Compra (Ingreso)
+                </a>
+                @endcan
+
+                <div class="dropdown-divider"></div>
+
+                @can('guias.crear')
+                <a class="dropdown-item py-2" href="{{ route('guias.create') }}">
+                    <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
+                </a>
+                @endcan
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+@section('content_header')
 <div class="d-flex justify-content-between align-items-center">
     <h1 class="text-dark font-weight-bold">
         <i class="fas fa-pills mr-2 text-primary"></i>Inventario
@@ -15,7 +63,7 @@
 
         <div class="dropdown-menu dropdown-menu-right">
             @can('compras.crear')
-            <a class="dropdown-item" href="{{ route('compras.create') }}"> {{-- Pon aquí tu ruta real --}}
+            <a class="dropdown-item" href="{{ route('compras.create') }}">
                 <i class="fas fa-cart-plus text-success mr-2"></i> Registrar Compra (Ingreso)
             </a>
             @endcan
@@ -29,7 +77,7 @@
             @endcan
 
             @can('guias.crear')
-            <a class="dropdown-item" href="{{ route('guias.create') }}"> {{-- Pon aquí tu ruta real --}}
+            <a class="dropdown-item" href="{{ route('guias.create') }}">
                 <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
             </a>
             @endcan
@@ -958,7 +1006,7 @@ $permisosJS = [
         clearTimeout(timeoutIngreso);
         timeoutIngreso = setTimeout(() => {
             $.ajax({
-                url: RUTA_BUSCAR, // Reusamos la ruta de Ventas que ya funciona
+                url: RUTA_BUSCAR,
                 method: 'GET',
                 data: {
                     sucursal_id: SUCURSAL_ID,

@@ -55,7 +55,9 @@
                         <option value="">-- Seleccione --</option>
                         <option value="FACTURA" {{ old('tipo_comprobante') == 'FACTURA' ? 'selected' : '' }}>Factura</option>
                         <option value="BOLETA" {{ old('tipo_comprobante') == 'BOLETA' ? 'selected' : '' }}>Boleta</option>
+                        <option value="GUIA REMISION" {{ old('tipo_comprobante') == 'GUIA REMISION' ? 'selected' : '' }}>Guía de Remisión</option>
                         <option value="NOTA CREDITO" {{ old('tipo_comprobante') == 'NOTA CREDITO' ? 'selected' : '' }}>Nota Crédito</option>
+
                     </select>
                 </div>
             </div>

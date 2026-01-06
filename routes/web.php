@@ -116,9 +116,11 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('medicamentos/{medicamento}/sucursales/{sucursal}/historial', 'historial')
                 ->name('medicamento_sucursal.historial');
+            Route::get('lotes/{lote}/sucursales/{sucursal}/movimientos', [MedicamentoSucursalController::class, 'loteMovimientos'])->name('lote.movimientos.ajax');
+
             Route::put('medicamentos/{medicamento}/sucursales/{sucursal}', 'update')->name('medicamentos.updateSucursal');
         });
-
+        Route::get('lotes/verificar', [MedicamentoSucursalController::class, 'verificarLote'])->name('lotes.verificar');
         Route::post('movimientos/salida', [MedicamentoSucursalController::class, 'storeSalida'])
             ->name('movimientos.store_salida');
         Route::post('movimientos/ingreso', [MedicamentoSucursalController::class, 'storeIngreso'])

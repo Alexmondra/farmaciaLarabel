@@ -245,13 +245,13 @@ return [
                     'icon' => 'fas fa-file-invoice-dollar',
                 ],
                 // --- AQUÍ AGREGAMOS LAS GUÍAS ---
-                [
+                /* [
                     'text'   => 'Guías de Remisión',
                     'url'    => 'guias',
                     'can' => 'guias.ver', // Descomenta cuando tengas el permiso
                     'icon'   => 'fas fa-shipping-fast', // Ícono de transporte/envío
                     'active' => ['guias*'],
-                ],
+                ],*/
                 // --------------------------------
                 [
                     'text' => 'Directorio de Clientes',
