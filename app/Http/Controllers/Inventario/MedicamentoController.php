@@ -9,7 +9,7 @@ use App\Models\Inventario\Medicamento;
 use App\Services\SucursalResolver;
 use App\Repositories\MedicamentoRepository;
 use App\Http\Requests\Inventario\MedicamentoRequest;
-
+use App\Models\Inventario\Categoria;
 
 class MedicamentoController extends Controller
 {
@@ -104,45 +104,54 @@ class MedicamentoController extends Controller
     public function updateRapido(MedicamentoRequest $request, $id)
     {
         $med = Medicamento::findOrFail($id);
-
         $data = $request->validated();
 
         if ($request->hasFile('imagen')) {
             $data['imagen_path'] = $request->file('imagen')->store('medicamentos', 'public');
-        } else {
-            // Importante: No sobrescribir imagen si no enviaron una nueva
-            unset($data['imagen']);
         }
 
         $data['afecto_igv']    = $request->has('afecto_igv');
         $data['receta_medica'] = $request->has('receta_medica');
 
-        // Limpiar llave foránea vacía
+        // Limpiar llaves vacías
         $data['categoria_id']  = $request->categoria_id ?: null;
 
         $med->update($data);
-        $med->refresh();
 
         return response()->json([
             'success' => true,
-            'message' => 'Actualizado correctamente.',
+            'message' => '¡Ficha técnica actualizada!',
             'data'    => $med
         ]);
     }
 
     // AGREGAR ESTO EN MedicamentoController.php
-
     public function show($id)
     {
         $ctx = $this->sucursalResolver->resolverPara(Auth::user());
+        $sucursalId = $ctx['sucursal_seleccionada']->id ?? null;
+
+        $medicamento = Medicamento::with(['categoria'])->findOrFail($id);
+
+        // Si hay sucursal, buscamos sus precios. Si no, devolvemos null o precios por defecto.
+        $preciosMaestros = null;
+        if ($sucursalId) {
+            $datosSucursal = $medicamento->sucursales()
+                ->where('sucursal_id', $sucursalId)
+                ->first();
+            $preciosMaestros = $datosSucursal ? $datosSucursal->pivot : null;
+        }
 
         $detalle = $this->medicamentoRepo->detalle($id, $ctx);
+        $categorias = Categoria::orderBy('nombre')->get();
 
         return view('inventario.medicamentos.show', [
-            'medicamento'         => $detalle['medicamento'],
-            'sucursalesDetalle'   => $detalle['sucursalesDetalle'],
-            'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
-            'esAdmin'             => $ctx['es_admin'],
+            'medicamento'          => $medicamento,
+            'sucursalesDetalle'    => $detalle['sucursalesDetalle'],
+            'sucursalSeleccionada' => $ctx['sucursal_seleccionada'], // Puede ser null
+            'preciosMaestros'      => $preciosMaestros,
+            'categorias'           => $categorias,
+            'esAdmin'              => $ctx['es_admin'],
         ]);
     }
 

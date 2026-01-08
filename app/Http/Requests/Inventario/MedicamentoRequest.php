@@ -4,6 +4,8 @@ namespace App\Http\Requests\Inventario;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\Inventario\Medicamento;
+
 
 class MedicamentoRequest extends FormRequest
 {

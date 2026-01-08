@@ -130,21 +130,17 @@ class MedicamentoSucursalController extends Controller
     {
         $data = $request->validate([
             'fecha_vencimiento' => 'nullable|date',
+            'precio_oferta'      => 'nullable|numeric|min:0', // <--- AGREGADO
         ]);
 
         $lote = Lote::findOrFail($loteId);
-        $lote->fecha_vencimiento = $data['fecha_vencimiento'] ?? null;
+
+        if ($request->has('fecha_vencimiento')) $lote->fecha_vencimiento = $data['fecha_vencimiento'];
+        if ($request->has('precio_oferta')) $lote->precio_oferta = $data['precio_oferta'];
+
         $lote->save();
 
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Fecha de vencimiento actualizada.',
-                'fecha_vencimiento' => $lote->fecha_vencimiento,
-            ]);
-        }
-
-        return back()->with('success', 'Fecha de vencimiento actualizada.');
+        return response()->json(['success' => true, 'message' => 'Lote actualizado.']);
     }
 
 

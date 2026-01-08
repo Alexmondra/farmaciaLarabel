@@ -765,6 +765,7 @@ $permisosJS = [
 
     // 1. ABRIR MODAL
     function abrirModalSalida() {
+        $('#searchInput').val('');
         if (!SUCURSAL_ID) {
             ToastCentro.fire({
                 icon: 'error',
@@ -808,7 +809,13 @@ $permisosJS = [
                     selectedIndex = -1;
 
                     if (resultCount === 0) {
-                        html = '<div class="list-group-item text-muted">No encontrado</div>';
+                        html = `
+                            <div class="list-group-item text-center p-3">
+                                <p class="mb-2 text-muted">Medicamento no encontrado</p>
+                                <a href="{{ route('inventario.medicamentos.general') }}" class="btn btn-primary btn-sm shadow-sm">
+                                    <i class="fas fa-search-plus mr-1"></i> Ir al Catálogo General
+                                </a>
+                            </div>`;
                     } else {
                         data.forEach((m, index) => {
                             // Agregamos clase 'item-resultado' y un ID único para el teclado
@@ -1029,6 +1036,7 @@ $permisosJS = [
 
     // 1. Abrir Modal
     function abrirModalIngreso() {
+        $('#searchInput').val('');
         if (!SUCURSAL_ID) {
             ToastCentro.fire({
                 icon: 'error',
@@ -1076,7 +1084,13 @@ $permisosJS = [
                     idxIngreso = -1;
 
                     if (countIngreso === 0) {
-                        html = '<div class="list-group-item text-muted">No encontrado</div>';
+                        html = `
+                            <div class="list-group-item text-center p-3">
+                                <p class="mb-2 text-muted">Medicamento no encontrado</p>
+                                <a href="{{ route('inventario.medicamentos.general') }}" class="btn btn-success btn-sm shadow-sm">
+                                    <i class="fas fa-plus-circle mr-1"></i> Ir al Catálogo General
+                                </a>
+                            </div>`;
                     } else {
                         data.forEach((m, i) => {
                             html += `
@@ -1227,5 +1241,26 @@ $permisosJS = [
         /* Gris oscuro base */
         border-color: #4b545c;
         color: #ffffff;
+    }
+
+
+
+
+
+    /* Estilo para el item de 'No encontrado' */
+    .list-group-item div p {
+        font-size: 0.9rem;
+    }
+
+    body.dark-mode .list-group-item .text-muted {
+        color: #adb5bd !important;
+    }
+
+    /* Asegurar que el botón dentro de la lista sea visible */
+    .list-group-item .btn-sm {
+        border-radius: 15px;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.75rem;
     }
 </style>

@@ -11,10 +11,8 @@ use Carbon\Carbon;
 
 class MedicamentoRepository
 {
-    /**
-     * Búsqueda principal EVOLUCIONADA: Soporta Filtros de Precio + Omnibox
-     */
-    // CAMBIO EN LA FIRMA: Agregamos bool $soloConStock = false
+
+
     public function buscarMedicamentos(string $q, array $ctx, bool $soloConStock = false, int $perPage = 10): LengthAwarePaginator
     {
         $idsFiltro            = $ctx['ids_filtro'];
@@ -182,38 +180,44 @@ class MedicamentoRepository
        ======================================================= */
     public function detalle(int $id, array $ctx): array
     {
-        $idsFiltro = $ctx['ids_filtro'];
+        $idsFiltro = $ctx['ids_filtro'] ?? [];
         $medicamento = Medicamento::with('categoria')->findOrFail($id);
         $hoy = Carbon::today();
 
         $rel = $medicamento->sucursales();
-        if (is_array($idsFiltro) && count($idsFiltro) > 0) {
+        if (!empty($idsFiltro)) {
             $rel->whereIn('sucursales.id', $idsFiltro);
         }
         $sucursales = $rel->get();
 
-        // Aquí traemos TODOS los lotes para verlos en la tabla (incluso vencidos, para saber que existen)
-        // PERO el "stock_total" lo calcularemos filtrando.
         $lotes = Lote::where('medicamento_id', $id)
-            ->when(is_array($idsFiltro) && count($idsFiltro) > 0, fn($q) => $q->whereIn('sucursal_id', $idsFiltro))
-            ->orderBy('sucursal_id')->orderBy('fecha_vencimiento')
+            ->where('stock_actual', '>', 0) // Solo lotes con existencia
+            ->where(function ($q) use ($hoy) {
+                $q->whereNull('fecha_vencimiento')
+                    ->orWhere('fecha_vencimiento', '>=', $hoy);
+            })
+            ->when(!empty($idsFiltro), function ($q) use ($idsFiltro) {
+                return $q->whereIn('sucursal_id', $idsFiltro);
+            })
+            ->orderBy('sucursal_id')
+            ->orderBy('fecha_vencimiento', 'asc') // Primero los que vencen pronto
             ->get();
 
         $lotesPorSucursal = $lotes->groupBy('sucursal_id');
 
-        $detalle = $sucursales->map(function ($suc) use ($lotesPorSucursal, $hoy) {
-            $lista = $lotesPorSucursal->get($suc->id, collect());
+        $detalle = $sucursales->map(function ($suc) use ($lotesPorSucursal) {
+            $todosLosLotesActivos = $lotesPorSucursal->get($suc->id, collect());
 
-            // Calculamos el stock "real" vendible
-            $stockVendible = $lista->filter(function ($lote) use ($hoy) {
-                return $lote->fecha_vencimiento == null || $lote->fecha_vencimiento >= $hoy;
-            })->sum('stock_actual');
+            $stockVendible = $todosLosLotesActivos->sum('stock_actual');
+
+            $lotesLimitados = $todosLosLotesActivos->take(5);
 
             return [
                 'sucursal'    => $suc,
                 'precio'      => $suc->pivot->precio_venta ?? null,
-                'stock_total' => $stockVendible, // Muestra solo lo vigente
-                'lotes'       => $lista, // Muestra todos para inventario físico
+                'stock_total' => $stockVendible,
+                'lotes'       => $lotesLimitados,
+                'total_lotes_activos' => $todosLosLotesActivos->count()
             ];
         });
 
