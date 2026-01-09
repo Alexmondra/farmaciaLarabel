@@ -215,7 +215,6 @@
                 placeholder: "-- Buscar Categoría --",
                 allowClear: true,
                 width: '100%',
-                // Esta línea es la que permite que el buscador reciba el foco del teclado
                 dropdownParent: $('#formEditRapido')
             });
         });
