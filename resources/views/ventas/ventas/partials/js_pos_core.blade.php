@@ -234,69 +234,76 @@
                 },
                 success: function(lotes) {
                     let tbody = $('#modal-lotes-tbody').empty();
-
                     if (!lotes.length) {
                         tbody.append('<tr><td colspan="7" class="text-center text-danger">SIN STOCK DISPONIBLE</td></tr>');
                         return;
                     }
 
                     lotes.forEach(l => {
-                        // A. GENERAR OPCIONES DE PRESENTACIÓN
-                        let options = `<option value="UNIDAD" data-precio="${l.precios.unidad}" data-factor="1">UNIDAD</option>`;
+                        let tieneOfertaUnidad = l.precio_oferta > 0;
+                        let precioUnidadFinal = tieneOfertaUnidad ? l.precio_oferta : l.precios.unidad;
 
-                        // Si tiene Blíster configurado (Factor > 1 y Precio > 0)
+                        // A. Guardamos el HTML del precio de la unidad en un data-attribute para restaurarlo luego
+                        let htmlPrecioUnidad = tieneOfertaUnidad ?
+                            `<div class="d-flex flex-column align-items-end" style="line-height: 1.2;">
+                        <small class="text-muted" style="text-decoration: line-through; font-size: 0.7rem; opacity: 0.7;">S/ ${l.precios.unidad.toFixed(2)}</small>
+                        <span style="color: #ff7e67; font-size: 1rem; font-weight: 800;">S/ ${precioUnidadFinal.toFixed(2)}</span>
+                    </div>` :
+                            `<span style="color: #28a745;">S/ ${l.precios.unidad.toFixed(2)}</span>`;
+
+                        let options = `<option value="UNIDAD" data-precio="${precioUnidadFinal}" data-factor="1" data-html-precio='${htmlPrecioUnidad}'>UNIDAD</option>`;
+
                         if (l.factores.blister > 1 && l.precios.blister > 0) {
-                            options += `<option value="BLISTER" data-precio="${l.precios.blister}" data-factor="${l.factores.blister}">BLISTER (x${l.factores.blister})</option>`;
+                            options += `<option value="BLISTER" data-precio="${l.precios.blister}" data-factor="${l.factores.blister}" data-html-precio='<span style="color: #28a745;">S/ ${l.precios.blister.toFixed(2)}</span>'>BLISTER (x${l.factores.blister})</option>`;
                         }
 
-                        // Si tiene Caja configurada
                         if (l.factores.caja > 1 && l.precios.caja > 0) {
-                            options += `<option value="CAJA" data-precio="${l.precios.caja}" data-factor="${l.factores.caja}">CAJA (x${l.factores.caja})</option>`;
+                            options += `<option value="CAJA" data-precio="${l.precios.caja}" data-factor="${l.factores.caja}" data-html-precio='<span style="color: #28a745;">S/ ${l.precios.caja.toFixed(2)}</span>'>CAJA (x${l.factores.caja})</option>`;
                         }
 
-                        // B. RENDERIZAR FILA
+                        let badgeOferta = tieneOfertaUnidad ?
+                            `<br><span class="badge" style="font-size: 0.6rem; background-color: #fd7e14; color: white; border: 1px solid #ffc107;">
+                        <i class="fas fa-bolt"></i> OFERTA UNID.
+                    </span>` : '';
+
+                        let styleFila = tieneOfertaUnidad ? 'style="background-color: rgba(255, 193, 7, 0.05); border-left: 3px solid #fd7e14;"' : '';
+
                         tbody.append(`
-                            <tr data-lote-id="${l.id}" data-stock="${l.stock_actual}">
-                                <td class="align-middle small font-weight-bold">${l.codigo_lote}</td>
-                                
-                                <td class="align-middle small">${l.fecha_vencimiento || '-'}</td>
-
-                                <td class="align-middle text-center small text-info">
-                                    <i class="fas fa-map-marker-alt mr-1"></i>${l.ubicacion || '-'}
-                                </td>
-
-                                <td class="text-center font-weight-bold align-middle text-primary">${l.stock_actual}</td>
-                                
-                                <td class="align-middle">
-                                    <select class="form-control form-control-sm select-presentacion font-weight-bold" style="font-size: 0.85rem;">
-                                        ${options}
-                                    </select>
-                                </td>
-
-                                <td class="align-middle">
-                                    <input type="number" class="form-control form-control-sm input-cant-lote text-center font-weight-bold" min="1" value="1">
-                                </td>
-                                
-                                <td class="align-middle text-right font-weight-bold text-success cell-precio">
-                                    S/ ${l.precios.unidad.toFixed(2)}
-                                </td>
-
-                                <td class="align-middle text-center">
-                                    <button type="button" class="btn btn-sm btn-success btn-agregar-lote"><i class="fas fa-plus"></i></button>
-                                </td>
-                                <td style="display:none;" class="data-codigo-lote">${l.codigo_lote}</td>
-                            </tr>
-                        `);
+                    <tr data-lote-id="${l.id}" data-stock="${l.stock_actual}" ${styleFila}>
+                        <td class="align-middle small font-weight-bold">${l.codigo_lote} ${badgeOferta}</td>
+                        <td class="align-middle small text-nowrap">${l.fecha_vencimiento || '-'}</td>
+                        <td class="align-middle text-center small text-info"><i class="fas fa-map-marker-alt mr-1"></i>${l.ubicacion || '-'}</td>
+                        <td class="text-center font-weight-bold align-middle text-primary" style="font-size: 1rem;">${l.stock_actual}</td>
+                        <td class="align-middle">
+                            <select class="form-control form-control-sm select-presentacion font-weight-bold" style="font-size: 0.85rem; background-color: transparent;">
+                                ${options}
+                            </select>
+                        </td>
+                        <td class="align-middle">
+                            <input type="number" class="form-control form-control-sm input-cant-lote text-center font-weight-bold" min="1" value="1" style="background-color: transparent;">
+                        </td>
+                        <td class="align-middle text-right font-weight-bold cell-precio">
+                            ${htmlPrecioUnidad}
+                        </td>
+                        <td class="align-middle text-center">
+                            <button type="button" class="btn btn-sm ${tieneOfertaUnidad ? 'btn-warning' : 'btn-success'} btn-agregar-lote">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
                     });
                 }
             });
         }
 
-        // EVENTO: CAMBIAR PRECIO AL CAMBIAR SELECT
+        // NUEVO EVENTO CHANGE: Recupera el HTML guardado en la opción seleccionada
         $(document).on('change', '.select-presentacion', function() {
             let row = $(this).closest('tr');
-            let precio = parseFloat($(this).find(':selected').data('precio'));
-            row.find('.cell-precio').text('S/ ' + precio.toFixed(2));
+            let option = $(this).find(':selected');
+            let htmlPredefinido = option.data('html-precio'); // Recuperamos el diseño completo
+
+            row.find('.cell-precio').html(htmlPredefinido);
         });
 
         // ==========================================

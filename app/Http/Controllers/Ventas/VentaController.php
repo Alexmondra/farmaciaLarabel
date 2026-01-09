@@ -544,6 +544,7 @@ class VentaController extends Controller
                 'ubicacion'         => $lote->ubicacion ?? 'General',
                 'precios'           => $precios,
                 'factores'          => $factores,
+                'precio_oferta'     => (float) $lote->precio_oferta,
                 'virtual'           => false,
             ];
         });

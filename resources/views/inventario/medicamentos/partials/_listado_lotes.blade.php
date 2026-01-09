@@ -1,3 +1,10 @@
+<div class="mb-4">
+    <a href="{{ route('inventario.medicamentos.index') }}" class="btn btn-default shadow-sm border">
+        <i class="fas fa-arrow-left mr-2 text-primary"></i>
+        <span class="font-weight-bold">Regresar al Listado de Medicamentos</span>
+    </a>
+</div>
+
 @foreach($sucursalesDetalle as $item)
 <div class="card card-outline card-info shadow-sm bg-dark mb-4">
     {{-- Ubicación sugerida: En el card-header de cada sucursal dentro de _listado_lotes.blade.php --}}
