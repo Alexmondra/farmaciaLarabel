@@ -40,12 +40,13 @@
                 @endcan
 
                 <div class="dropdown-divider"></div>
-
+                {{--
                 @can('guias.crear')
                 <a class="dropdown-item py-2" href="{{ route('guias.create') }}">
-                    <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
+                <i class="fas fa-truck-loading text-info mr-2"></i> Generar Guía (Traslado)
                 </a>
                 @endcan
+                --}}
             </div>
         </div>
     </div>

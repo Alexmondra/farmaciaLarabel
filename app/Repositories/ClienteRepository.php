@@ -20,8 +20,6 @@ class ClienteRepository
     public function search($filters = [], $perPage = 10)
     {
         // === AQUÍ ESTÁ EL CANDADO ===
-        // Agregamos ->where('id', '!=', 1) a la base de la consulta.
-        // Esto se aplica ANTES de que el usuario busque nada.
         $query = Cliente::where('activo', true)
             ->where('id', '!=', 1);
 

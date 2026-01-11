@@ -5,23 +5,30 @@
     <meta charset="utf-8">
     <title>Ticket {{ $venta->serie }}-{{ $venta->numero }}</title>
     <style>
+        /* 1. RESET TOTAL */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
-        html,
-        body {
-            width: 100%;
-            background: #fff;
-            height: auto !important;
-            overflow: visible !important;
-        }
-
+        /* 2. ELIMINAR MÁRGENES DE PÁGINA (Navegador) */
         @page {
             margin: 0;
             size: auto;
+        }
+
+        html,
+        body {
+            width: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff;
+            height: auto !important;
+            overflow: visible !important;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         body {
@@ -33,11 +40,13 @@
             print-color-adjust: exact !important;
         }
 
+        /* 3. CONTENEDOR AJUSTADO */
         .ticket-wrapper {
             width: 100%;
             padding: 2mm 3mm 8mm 3mm;
             position: relative;
             display: block;
+            margin-top: 0 !important;
         }
 
         @media print {
@@ -78,7 +87,7 @@
             margin: 5px 0;
         }
 
-        /* 4. TABLAS OPTIMIZADAS (No se desbordan) */
+        /* 4. TABLAS OPTIMIZADAS */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -96,10 +105,12 @@
             max-width: 65%;
             height: auto;
             filter: grayscale(100%) contrast(150%);
+            margin-top: 0;
+            /* Asegurar que no empuje el texto hacia abajo */
             margin-bottom: 4px;
         }
 
-        /* 5. MARCA DE AGUA ANULADO (Claramente visible en B/N) */
+        /* 5. MARCA DE AGUA */
         .watermark {
             position: absolute;
             top: 25%;

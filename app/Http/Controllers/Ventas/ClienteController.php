@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Ventas;
 
+use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Controller;
 use App\Models\Ventas\Cliente;
 use App\Repositories\ClienteRepository;
@@ -26,7 +27,6 @@ class ClienteController extends Controller
 
     public function index()
     {
-        // Código limpio: El repositorio ya se encarga de esconder al ID 1
         $stats = $this->clienteRepo->getStats();
         $clientes = $this->clienteRepo->search([]);
         $config = Configuracion::first();
@@ -51,9 +51,62 @@ class ClienteController extends Controller
         return view('ventas.clientes.partials.table', compact('clientes'));
     }
 
+
     public function checkDocumento(Request $request)
     {
+        // 1. Buscamos primero en nuestra base de datos local
         $cliente = $this->clienteRepo->checkDocumento($request->doc, $request->except_id);
+
+        // 2. Si NO existe localmente, consultamos la API de mundofarma
+        if (!$cliente) {
+            $documento = $request->doc;
+            $longitud = strlen($documento);
+            $token = env('API_KEY');
+            $url = null;
+
+            if ($longitud === 8) {
+                $url = env('API_DNI_URL') . $documento;
+            } elseif ($longitud === 11) {
+                $url = env('API_RUC_URL') . $documento;
+            }
+
+            if ($url) {
+                try {
+                    $response = Http::withHeaders([
+                        'X-API-KEY' => $token,
+                        'Accept'    => 'application/json',
+                    ])->get($url);
+
+                    if ($response->successful()) {
+                        $res = $response->json();
+                        if ($longitud === 8) {
+                            $dataToSave = [
+                                'tipo_documento' => 'DNI',
+                                'documento'      => $documento,
+                                'nombre'         => $res['nombres'] ?? '',
+                                'apellidos'      => trim(($res['apellido_paterno'] ?? '') . ' ' . ($res['apellido_materno'] ?? '')),
+                                'email'          => $res['correo'] ?? null,
+                                'telefono'       => $res['telefono'] ?? null,
+                                'activo'         => true
+                            ];
+                        } else {
+                            $dataToSave = [
+                                'tipo_documento' => 'RUC',
+                                'documento'      => $documento,
+                                'razon_social'   => $res['razon_social'] ?? '',
+                                'direccion'      => $res['direccion'] ?? null,
+                                'email'          => $res['correo'] ?? null,
+                                'telefono'       => $res['telefono'] ?? null,
+                                'activo'         => true
+                            ];
+                        }
+                        $cliente = Cliente::create($dataToSave);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error("Error consultando API Mundofarma: " . $e->getMessage());
+                }
+            }
+        }
         $config = Configuracion::first();
         return response()->json([
             'exists' => !!$cliente,
