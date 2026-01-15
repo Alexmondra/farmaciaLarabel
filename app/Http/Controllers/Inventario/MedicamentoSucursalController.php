@@ -337,15 +337,13 @@ class MedicamentoSucursalController extends Controller
         $request->validate([
             'medicamento_id' => 'required|exists:medicamentos,id',
             'cantidad'       => 'required|integer|min:1',
-            'codigo_lote'    => 'required|string|max:50',  // El usuario escribe el lote
-            'vencimiento'    => 'nullable|date',           // Opcional para ingresos rápidos
+            'codigo_lote'    => 'required|string|max:50',
+            'vencimiento'    => 'nullable|date',
             'motivo'         => 'required|string',
             'observacion'    => 'nullable|string|max:255',
         ]);
 
         $user = Auth::user();
-
-        // Resolver sucursal
         $ctx = $this->sucursalResolver->resolverPara($user);
         $sucursal = $ctx['sucursal_seleccionada'];
 
@@ -355,39 +353,56 @@ class MedicamentoSucursalController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Buscamos si el lote YA EXISTE en esta sucursal para este producto
+            // 1. GESTIÓN DEL LOTE
             $lote = Lote::where('medicamento_id', $request->medicamento_id)
                 ->where('sucursal_id', $sucursal->id)
                 ->where('codigo_lote', trim($request->codigo_lote))
                 ->first();
 
             if ($lote) {
-                // A) EL LOTE EXISTE: Aumentamos stock
                 $lote->stock_actual += $request->cantidad;
-                // Opcional: Si el usuario manda nueva fecha, ¿actualizamos? 
-                // Mejor mantenemos la original para no mezclar, o actualizamos si estaba null.
                 if (!$lote->fecha_vencimiento && $request->filled('vencimiento')) {
                     $lote->fecha_vencimiento = $request->vencimiento;
                 }
                 $lote->save();
             } else {
-                // B) LOTE NUEVO: Lo creamos desde cero
                 $lote = new Lote();
                 $lote->medicamento_id    = $request->medicamento_id;
                 $lote->sucursal_id       = $sucursal->id;
                 $lote->codigo_lote       = trim($request->codigo_lote);
                 $lote->stock_actual      = $request->cantidad;
                 $lote->fecha_vencimiento = $request->vencimiento;
-
-                // Si quieres copiar el precio de compra del medicamento base (opcional)
-                // $lote->precio_compra = ... 
-
                 $lote->save();
             }
 
-            // 2. Registrar en Kardex (Historial)
+            // 2. VINCULACIÓN AUTOMÁTICA CON LA SUCURSAL (SOLUCIÓN AL PROBLEMA)
+            // Buscamos si ya existe el registro, incluso si fue eliminado (Soft Delete)
+            $pivot = MedicamentoSucursal::withTrashed()
+                ->where('medicamento_id', $request->medicamento_id)
+                ->where('sucursal_id', $sucursal->id)
+                ->first();
+
+            if (!$pivot) {
+                // Si no existe el vínculo, lo creamos para que aparezca en el inventario
+                MedicamentoSucursal::create([
+                    'medicamento_id' => $request->medicamento_id,
+                    'sucursal_id'    => $sucursal->id,
+                    'stock_minimo'   => 10,
+                    'activo'         => true,
+                    'updated_by'     => $user->id
+                ]);
+            } elseif ($pivot->trashed() || !$pivot->activo) {
+                // Si estaba eliminado o desactivado, lo restauramos y activamos
+                $pivot->restore();
+                $pivot->update([
+                    'activo'     => true,
+                    'updated_by' => $user->id
+                ]);
+            }
+
+            // 3. REGISTRAR EN KARDEX (MOVIMIENTO)
             MovimientoInventario::create([
-                'tipo'           => 'entrada', // Importante: Tipo INGRESO
+                'tipo'           => 'entrada',
                 'medicamento_id' => $request->medicamento_id,
                 'sucursal_id'    => $sucursal->id,
                 'lote_id'        => $lote->id,
@@ -395,11 +410,11 @@ class MedicamentoSucursalController extends Controller
                 'motivo'         => $request->motivo,
                 'referencia'     => $request->observacion,
                 'user_id'        => $user->id,
-                'stock_final'    => $lote->stock_actual // Stock después de sumar
+                'stock_final'    => $lote->stock_actual
             ]);
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Ingreso registrado correctamente.']);
+            return response()->json(['success' => true, 'message' => 'Ingreso registrado y producto vinculado a sucursal.']);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);

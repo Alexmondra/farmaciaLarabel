@@ -286,32 +286,48 @@
         // ============================================================
         // 3. LÓGICA PARA MODALES DE MEDICAMENTOS (Crear y Editar)
         // ============================================================
+        // Lógica para autogenerar código en el modal de compras
+        $(document).on('input', '#formNuevoMedicamentoRapid input[name="nombre"]', function() {
+            let texto = $(this).val().toUpperCase();
+            let limpio = texto.replace(/[^A-Z0-9]/g, '');
 
+            let prefijo = limpio.substring(0, 6);
+
+            if (prefijo.length === 0) {
+                $('#crear_codigo').val('NEW-' + window.sufijoAleatorioCompra);
+            } else {
+                $('#crear_codigo').val(prefijo + '-' + window.sufijoAleatorioCompra);
+            }
+        });
         // A. GUARDAR NUEVO MEDICAMENTO (Formulario Rapid)
         $('#formNuevoMedicamentoRapid').on('submit', function(e) {
             e.preventDefault();
-            let formData = new FormData(this);
+            let btn = $(this).find('button[type="submit"]');
+            btn.prop('disabled', true).text('Guardando...');
 
             $.ajax({
-                url: "{{ route('inventario.medicamentos.store') }}", // Asegúrate que esta ruta exista
+                url: "{{ route('inventario.medicamentos.storeRapido') }}", // Usa storeRapido como en el catálogo general
                 method: "POST",
-                data: formData,
+                data: new FormData(this),
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    if (response.success) {
-                        $('#modalCrearMedicamento').modal('hide');
-                        // Si el modal se abrió desde una fila de la tabla, selecciona el nuevo producto automáticamente
-                        if (window.inputSearchActivo) {
-                            seleccionarItem({
-                                full_data: response.data
-                            }, window.inputSearchActivo[0]);
-                        }
-                        Swal.fire('Guardado', 'Medicamento registrado con éxito', 'success');
+                    $('#modalCrearMedicamento').modal('hide');
+                    if (window.inputSearchActivo) {
+                        seleccionarItem({
+                            full_data: response.data
+                        }, window.inputSearchActivo[0]);
                     }
+                    Swal.fire('¡Éxito!', 'Medicamento registrado', 'success');
                 },
                 error: function(xhr) {
-                    Swal.fire('Error', 'No se pudo guardar el medicamento. Revisa los campos.', 'error');
+                    // Esto te dirá el error exacto (ej: "El campo laboratorio es obligatorio")
+                    let msg = xhr.responseJSON?.message || 'Error al guardar';
+                    if (xhr.responseJSON?.errors) {
+                        msg = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                    }
+                    Swal.fire('Error de Validación', msg, 'error');
+                    btn.prop('disabled', false).text('Guardar Producto');
                 }
             });
         });
@@ -426,6 +442,7 @@
                 window.inputSearchActivo = $(this).closest('.input-group').find('.input-medicamento-search');
                 $('#formNuevoMedicamentoRapid')[0].reset();
                 $('#crear_med_igv').prop('checked', true);
+                window.sufijoAleatorioCompra = Math.floor(Math.random() * 900) + 100;
                 $('#crear_codigo').val('NEW-' + Math.floor(Math.random() * 900 + 100));
                 $('#modalCrearMedicamento').modal('show');
                 setTimeout(() => {
