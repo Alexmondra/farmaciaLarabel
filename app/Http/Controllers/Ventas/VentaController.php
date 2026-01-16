@@ -154,7 +154,7 @@ class VentaController extends Controller
             $venta = $this->ventaService->registrarVenta($user, $data);
 
             return redirect()->route('ventas.show', $venta->id)
-                ->with('success', 'Venta registrada correctamente.');
+                ->with('success', '✅ Venta registrada con éxito. El comprobante se está procesando con SUNAT');
         } catch (\Exception $e) {
             return back()->withErrors(['general' => $e->getMessage()])->withInput();
         }

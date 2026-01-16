@@ -24,7 +24,6 @@
 <div class="container-fluid pb-5 animate__animated animate__fadeIn">
 
     {{-- === BARRA DE HERRAMIENTAS === --}}
-    {{-- === BARRA DE HERRAMIENTAS === --}}
     <div class="card shadow-lg no-print mb-4 border-0 card-glass">
         <div class="card-body p-3">
             <div class="row align-items-center">

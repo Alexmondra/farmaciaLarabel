@@ -246,7 +246,7 @@ class VentaService
 
             // 8. SUNAT
             if ($tipoComp == 'BOLETA' || $tipoComp == 'FACTURA') {
-                $this->sunatService->transmitirAComprobante($venta);
+                \App\Jobs\ProcesarVentaSunat::dispatch($venta);
             }
 
             return $venta;
