@@ -61,52 +61,61 @@ class ClienteController extends Controller
         if (!$cliente) {
             $documento = $request->doc;
             $longitud = strlen($documento);
-            $token = env('API_KEY');
+
+            // Usamos config() tal cual lo definiste en services.php
+            $token = config('services.datos.key');
             $url = null;
 
             if ($longitud === 8) {
-                $url = env('API_DNI_URL') . $documento;
+                $url = config('services.datos.dni_url') . $documento;
             } elseif ($longitud === 11) {
-                $url = env('API_RUC_URL') . $documento;
+                $url = config('services.datos.ruc_url') . $documento;
             }
 
             if ($url) {
                 try {
-                    $response = Http::withHeaders([
-                        'X-API-KEY' => $token,
-                        'Accept'    => 'application/json',
-                    ])->get($url);
+                    $response = Http::timeout(15)
+                        ->withoutVerifying()
+                        ->withHeaders([
+                            'X-API-KEY' => $token,
+                            'Accept'    => 'application/json',
+                        ])->get($url);
 
                     if ($response->successful()) {
                         $res = $response->json();
-                        if ($longitud === 8) {
-                            $dataToSave = [
-                                'tipo_documento' => 'DNI',
-                                'documento'      => $documento,
-                                'nombre'         => $res['nombres'] ?? '',
-                                'apellidos'      => trim(($res['apellido_paterno'] ?? '') . ' ' . ($res['apellido_materno'] ?? '')),
-                                'email'          => $res['correo'] ?? null,
-                                'telefono'       => $res['telefono'] ?? null,
-                                'activo'         => true
-                            ];
-                        } else {
-                            $dataToSave = [
-                                'tipo_documento' => 'RUC',
-                                'documento'      => $documento,
-                                'razon_social'   => $res['razon_social'] ?? '',
-                                'direccion'      => $res['direccion'] ?? null,
-                                'email'          => $res['correo'] ?? null,
-                                'telefono'       => $res['telefono'] ?? null,
-                                'activo'         => true
-                            ];
+
+                        // Verificamos que la API realmente devolvió datos y no un error vacío
+                        if (isset($res['nombres']) || isset($res['razon_social'])) {
+                            if ($longitud === 8) {
+                                $dataToSave = [
+                                    'tipo_documento' => 'DNI',
+                                    'documento'      => $documento,
+                                    'nombre'         => $res['nombres'] ?? '',
+                                    'apellidos'      => trim(($res['apellido_paterno'] ?? '') . ' ' . ($res['apellido_materno'] ?? '')),
+                                    'email'          => $res['correo'] ?? null,
+                                    'telefono'       => $res['telefono'] ?? null,
+                                    'activo'         => true
+                                ];
+                            } else {
+                                $dataToSave = [
+                                    'tipo_documento' => 'RUC',
+                                    'documento'      => $documento,
+                                    'razon_social'   => $res['razon_social'] ?? '',
+                                    'direccion'      => $res['direccion'] ?? null,
+                                    'email'          => $res['correo'] ?? null,
+                                    'telefono'       => $res['telefono'] ?? null,
+                                    'activo'         => true
+                                ];
+                            }
+                            $cliente = Cliente::create($dataToSave);
                         }
-                        $cliente = Cliente::create($dataToSave);
                     }
                 } catch (\Exception $e) {
-                    \Log::error("Error consultando API Mundofarma: " . $e->getMessage());
+                    \Log::error("Error consultando API Mundofarma en VPS: " . $e->getMessage());
                 }
             }
         }
+
         $config = Configuracion::first();
         return response()->json([
             'exists' => !!$cliente,
@@ -114,7 +123,6 @@ class ClienteController extends Controller
             'config' => ['valor_punto' => $config->valor_punto_canje ?? 0.02]
         ]);
     }
-
     public function show($id)
     {
         $cliente = Cliente::with([
