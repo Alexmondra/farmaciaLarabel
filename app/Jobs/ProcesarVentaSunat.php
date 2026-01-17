@@ -28,7 +28,6 @@ class ProcesarVentaSunat implements ShouldQueue
 
     public function handle(SunatService $sunatService)
     {
-        // Ejecuta tu lógica actual de envío que está en SunatService
         $sunatService->transmitirAComprobante($this->venta);
     }
 }

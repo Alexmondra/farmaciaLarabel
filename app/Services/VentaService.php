@@ -293,7 +293,8 @@ class VentaService
             $venta->estado = 'ANULADO';
             $venta->save();
 
-            $this->sunatService->transmitirNotaCredito($notaCredito, $venta);
+            // $this->sunatService->transmitirNotaCredito($notaCredito, $venta);
+            \App\Jobs\ProcesarAnulacionSunat::dispatch($notaCredito, $venta);
 
             return $notaCredito;
         });

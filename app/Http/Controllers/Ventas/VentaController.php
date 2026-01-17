@@ -58,7 +58,7 @@ class VentaController extends Controller
         $user = Auth::user();
         $ctx = $this->sucursalResolver->resolverPara($user);
 
-        // 1. Query Base
+        // 1. Query Base con Eager Loading optimizado
         $query = Venta::with(['cliente', 'usuario', 'sucursal'])
             ->orderBy('fecha_emision', 'desc');
 
@@ -67,24 +67,27 @@ class VentaController extends Controller
             $query->whereIn('sucursal_id', $ctx['ids_filtro']);
         }
 
-        // 3. Lógica de Búsqueda Inteligente
+        // 3. Lógica de Búsqueda Inteligente (Optimizada para tiempo real)
         if ($request->filled('search_q')) {
             $busqueda = trim($request->search_q);
             $query->where(function ($q) use ($busqueda) {
-                $q->whereHas('cliente', fn($c) => $c->where('nombre', 'LIKE', "%$busqueda%"));
+                // Buscar por nombre de cliente o nombre completo
+                $q->whereHas('cliente', function ($c) use ($busqueda) {
+                    $c->where('nombre', 'LIKE', "%$busqueda%")
+                        ->orWhere('apellidos', 'LIKE', "%$busqueda%");
+                });
 
                 if (is_numeric($busqueda)) {
-                    $q->orWhereRaw('CAST(numero AS UNSIGNED) = ?', [(int)$busqueda]);
+                    $q->orWhere('numero', '=', (int)$busqueda);
                 } elseif (str_contains($busqueda, '-')) {
                     $partes = explode('-', $busqueda);
                     if (count($partes) == 2) {
                         $serie = trim($partes[0]);
                         $numero = trim($partes[1]);
-
                         if (is_numeric($numero)) {
                             $q->orWhere(function ($sub) use ($serie, $numero) {
                                 $sub->where('serie', 'LIKE', "%$serie%")
-                                    ->whereRaw('CAST(numero AS UNSIGNED) = ?', [(int)$numero]);
+                                    ->where('numero', '=', (int)$numero);
                             });
                         }
                     }
@@ -94,6 +97,7 @@ class VentaController extends Controller
                 }
             });
         } else {
+            // Solo aplicar filtro de fechas si NO hay una búsqueda de texto activa
             $desde = $request->get('fecha_desde', now()->format('Y-m-d'));
             $hasta = $request->get('fecha_hasta', now()->format('Y-m-d'));
 
@@ -104,13 +108,18 @@ class VentaController extends Controller
         }
 
         // 4. Paginación
-        $ventas = $query->paginate(20);
+        $ventas = $query->paginate(20)->appends($request->all());
+        // --- EL CAMBIO CLAVE PARA AJAX ---
+        if ($request->ajax()) {
+            return view('ventas.ventas._table', compact('ventas'))->render();
+        }
+        // ---------------------------------
 
+        // 5. Datos adicionales para la carga inicial
         $cajaAbierta = CajaSesion::where('user_id', $user->id)
             ->where('estado', 'ABIERTO')
             ->first();
 
-        // 6. Sucursales (Para el modal de abrir caja si fuera necesario)
         $sucursalesParaApertura = $ctx['es_admin']
             ? Sucursal::orderBy('nombre')->get()
             : $user->sucursales()->orderBy('nombre')->get();
@@ -562,16 +571,9 @@ class VentaController extends Controller
             if ($venta->estado === 'ANULADO') {
                 return back()->with('error', 'Esta venta ya está anulada.');
             }
-            $notaCredito = $this->ventaService->anularVenta($user, $venta, "Solicitud del cliente");
+            $this->ventaService->anularVenta($user, $venta, "Solicitud del cliente");
 
-            $mensaje = 'Venta anulada correctamente. ';
-            if ($notaCredito->sunat_exito) {
-                $mensaje .= 'Nota de Crédito enviada y aceptada por SUNAT.';
-            } else {
-                $mensaje .= 'Nota generada, pero hubo un error al enviar a SUNAT. Revisa el historial.';
-            }
-
-            return back()->with('success', $mensaje);
+            return back()->with('success', '✅ Venta anulada localmente. La comunicación con SUNAT se está procesando en segundo plano');
         } catch (\Exception $e) {
             return back()->with('error', 'Error al anular: ' . $e->getMessage());
         }
