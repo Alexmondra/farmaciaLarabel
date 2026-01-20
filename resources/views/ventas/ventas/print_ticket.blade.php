@@ -164,8 +164,23 @@
             <div style="font-size: 14px; font-weight: bold; line-height: 1.1;">
                 {{ $config->empresa_razon_social ?? $config->empresa_nombre ?? 'FARMACIA MUNDO FARMA S.A.C.' }}
             </div>
-            <div style="font-size: 10px;">{{ $venta->sucursal->direccion }}</div>
-            <div class="font-bold">RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}</div>
+            <div style="font-size: 12px; font-weight: bold; margin-top: 3px;">
+                RUC: {{ $config->empresa_ruc ?? $venta->sucursal->ruc }}
+            </div>
+            <div style="font-size: 10px; line-height: 1.2;">
+                {{ $venta->sucursal->direccion }}<br>
+                {{ $venta->sucursal->distrito }} - {{ $venta->sucursal->provincia }}<br>
+
+                {{-- Teléfono y Email --}}
+                @if($venta->sucursal->telefono || $venta->sucursal->email)
+                <span>
+                    {{ $venta->sucursal->telefono ?? '' }}
+                    {{ $venta->sucursal->telefono && $venta->sucursal->email ? '|' : '' }}
+                    {{ $venta->sucursal->email ?? '' }}
+                </span><br>
+                @endif
+            </div>
+
         </div>
 
         <div class="border-dashed"></div>

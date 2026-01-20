@@ -22,14 +22,13 @@
                             {{ $venta->tipo_comprobante }}
                         </span>
                         <small class="text-bold text-nowrap">{{ $venta->serie }}-{{ $venta->numero }}</small>
-                        {{-- En móvil mostramos el cliente debajo del nro --}}
-                        <small class="d-md-none text-muted">{{ Str::limit($venta->cliente->nombre ?? 'Público General', 15) }}</small>
                     </div>
                 </td>
 
                 <td class="align-middle d-none d-md-table-cell small">
-                    {{ Str::limit($venta->cliente->nombre ?? 'Público General', 25) }}
+                    {{ Str::limit($venta->cliente->razon_social ?? $venta->cliente->nombre ?? 'Público General', 25) }}
                 </td>
+
 
                 <td class="d-none d-lg-table-cell align-middle small">
                     {{ $venta->fecha_emision->format('d/m/Y H:i') }}
