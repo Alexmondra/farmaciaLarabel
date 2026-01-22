@@ -28,14 +28,14 @@
                     {{-- FILA 2: DATOS DE SCANNER (BARRAS) --}}
                     <div class="row mb-3 bg-light p-2 rounded mx-0">
                         <div class="col-md-6">
-                            <label class="small font-weight-bold"><i class="fas fa-box mr-1"></i> EAN CAJA (Envase)</label>
+                            <label class="small font-weight-bold"><i class="fas fa-box mr-1"></i> CODIGO DE BARRA CAJA (Envase)</label>
                             <div class="input-group input-group-sm">
                                 <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-barcode"></i></span></div>
                                 <input type="text" name="codigo_barra" class="form-control" placeholder="Escanear caja...">
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="small font-weight-bold"><i class="fas fa-tablets mr-1"></i> EAN BLÍSTER (Opcional)</label>
+                            <label class="small font-weight-bold"><i class="fas fa-tablets mr-1"></i> CODIGO DE BARRA BLÍSTER (Opcional)</label>
                             <div class="input-group input-group-sm">
                                 <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-barcode"></i></span></div>
                                 <input type="text" name="codigo_barra_blister" class="form-control" placeholder="Escanear blíster...">
@@ -208,11 +208,11 @@
                             {{-- CÓDIGOS DE BARRA --}}
                             <div class="row g-2 mb-2 bg-light p-2 rounded mx-0 border-left border-warning">
                                 <div class="col-6">
-                                    <label class="small font-weight-bold"><i class="fas fa-barcode"></i> EAN CAJA</label>
+                                    <label class="small font-weight-bold"><i class="fas fa-barcode"></i> CODIGO BARRA CAJA</label>
                                     <input type="text" name="codigo_barra" id="edit_med_barra" class="form-control form-control-sm">
                                 </div>
                                 <div class="col-6">
-                                    <label class="small font-weight-bold"><i class="fas fa-barcode"></i> EAN BLÍSTER</label>
+                                    <label class="small font-weight-bold"><i class="fas fa-barcode"></i> CODIGO BARRA BLÍSTER</label>
                                     <input type="text" name="codigo_barra_blister" id="edit_med_barra_blister" class="form-control form-control-sm">
                                 </div>
                             </div>
