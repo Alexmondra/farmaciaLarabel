@@ -252,10 +252,14 @@
                             <option value="ambos">Ventas + Detalles</option>
                             <option value="ventas">Solo Ventas</option>
                             <option value="detalles">Solo Detalles</option>
+                            <option value="resumen">Resumen Simple</option>
                         </select>
 
                         <button type="button" class="btn btn-light" onclick="exportarExcel()">
                             <i class="fas fa-download"></i>
+                        </button>
+                        <button type="button" class="btn btn-info ml-1" onclick="abrirModalCompartirExcel()" title="Compartir Excel">
+                            <i class="fas fa-envelope"></i>
                         </button>
                     </div>
                 </div>
@@ -273,6 +277,43 @@
 
         </div>
     </div>
+
+
+    <div class="modal fade" id="modalCompartirExcel" tabindex="-1" role="dialog" aria-labelledby="modalCompartirExcelLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                <div class="modal-header bg-info text-white" style="border-radius: 15px 15px 0 0;">
+                    <h5 class="modal-title font-weight-bold" id="modalCompartirExcelLabel">
+                        <i class="fas fa-envelope-open-text mr-2"></i> Compartir Reporte Excel
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small">El sistema generará el Excel con los filtros actuales y lo enviará al correo que indiques.</p>
+
+                    <div class="form-group">
+                        <label for="email_reporte" class="font-weight-bold">Correo del destinatario</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-light border-right-0"><i class="fas fa-at text-info"></i></span>
+                            </div>
+                            <input type="email" id="email_reporte" class="form-control border-left-0"
+                                placeholder="ejemplo@correo.com" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 15px 15px;">
+                    <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-info px-4 font-weight-bold" id="btnEnviarExcel" onclick="enviarExcelCorreo()">
+                        <i class="fas fa-paper-plane mr-1"></i> Enviar Reporte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </section>
 @endsection
 
@@ -377,6 +418,91 @@
         let url = `{{ route('reportes.ventas-historial.export-excel') }}?fecha_inicio=${inicio}&fecha_fin=${fin}&sucursal_id=${sucursal}&search=${encodeURIComponent(search)}&modo=${modo}`;
 
         window.location.href = url;
+    }
+
+
+    function abrirModalCompartirExcel() {
+        $('#modalCompartirExcel').modal('show');
+    }
+
+    function enviarExcelCorreo() {
+        let emailInput = document.getElementById('email_reporte');
+        let email = emailInput.value;
+        let btn = document.getElementById('btnEnviarExcel');
+
+        // 1. Validación de Correo Electrónico
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Correo Inválido',
+                text: 'Por favor, ingresa una dirección de correo electrónica válida.',
+                confirmButtonColor: '#17a2b8'
+            });
+            return;
+        }
+
+        // 2. Alerta de "Enviando..." (Sin botón de OK, solo progreso)
+        Swal.fire({
+            title: 'Enviando reporte...',
+            text: 'Estamos procesando el Excel, esto puede tardar unos segundos.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        btn.disabled = true;
+
+        // 3. Captura de datos y envío
+        let datos = {
+            email: email,
+            fecha_inicio: document.getElementById('fecha_inicio').value,
+            fecha_fin: document.getElementById('fecha_fin').value,
+            sucursal_id: document.getElementById('filtroSucursal') ? document.getElementById('filtroSucursal').value : '',
+            search: document.getElementById('filtroSearch').value,
+            modo: document.getElementById('modoExport').value
+        };
+
+        fetch("{{ route('reportes.ventas-historial.compartir-excel') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(datos)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    $('#modalCompartirExcel').modal('hide');
+                    // Alerta de éxito elegante
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Enviado!',
+                        text: 'El reporte se está procesando en la cola y llegará pronto.',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo contactar con el servidor.'
+                });
+            })
+            .finally(() => {
+                btn.disabled = false;
+            });
     }
 </script>
 @endsection

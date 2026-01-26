@@ -308,7 +308,7 @@ class ReporteVentasController extends Controller
         }
 
         $modo = $request->input('modo', 'ambos'); // ventas | detalles | ambos
-        if (!in_array($modo, ['ventas', 'detalles', 'ambos'])) {
+        if (!in_array($modo, ['ventas', 'detalles', 'ambos', 'resumen'])) {
             $modo = 'ambos';
         }
 
@@ -326,5 +326,53 @@ class ReporteVentasController extends Controller
         $fileName = "ventas_{$fechaInicio->format('Ymd')}_{$fechaFin->format('Ymd')}_{$modo}.xlsx";
 
         return Excel::download(new VentasHistorialExport($filters), $fileName);
+    }
+
+    public function compartirExcelHistorial(Request $request, SucursalResolver $resolver)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $acceso = $resolver->resolverPara(auth()->user());
+
+        try {
+            $fechaInicio = $request->filled('fecha_inicio')
+                ? \Carbon\Carbon::parse($request->fecha_inicio)->startOfDay()
+                : \Carbon\Carbon::now()->startOfMonth();
+            $fechaFin = $request->filled('fecha_fin')
+                ? \Carbon\Carbon::parse($request->fecha_fin)->endOfDay()
+                : \Carbon\Carbon::now()->endOfDay();
+        } catch (\Exception $e) {
+            $fechaInicio = \Carbon\Carbon::now()->startOfMonth();
+            $fechaFin = \Carbon\Carbon::now()->endOfDay();
+        }
+
+        $modo = $request->input('modo', 'ambos');
+        $filters = [
+            'fecha_inicio' => $fechaInicio->toDateTimeString(),
+            'fecha_fin'    => $fechaFin->toDateTimeString(),
+            'sucursal_id'  => $request->input('sucursal_id'),
+            'search'       => $request->input('search'),
+            'ids_filtro'   => $acceso['ids_filtro'],
+            'modo'         => $modo,
+        ];
+
+        // USAMOS MICROSECONDS O UN STRING ALEATORIO PARA EVITAR COLISIONES TOTALES
+        // "His" (Hora, Min, Seg) + un ID único de 5 caracteres
+        $uniqueId = now()->format('His') . '_' . uniqid();
+
+        // AQUÍ ESTÁ EL CAMBIO: Incluimos el $uniqueId en el nombre del archivo
+        $fileName = "reporte_{$uniqueId}_{$fechaInicio->format('Ymd')}_{$modo}.xlsx";
+
+        try {
+            // Al enviar a la cola, el Job llevará el nombre ÚNICO del archivo
+            \Mail::to($request->email)->send(new \App\Mail\ReporteExcelMailable($filters, $fileName));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El reporte se está procesando con el ID ' . $uniqueId . ' y se enviará a ' . $request->email
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
     }
 }

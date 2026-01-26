@@ -135,7 +135,7 @@ class VentasResumenSheet implements FromQuery, WithHeadings, WithMapping, WithCh
 
     public function chunkSize(): int
     {
-        return 1000;
+        return 500;
     }
 
     public function styles(Worksheet $sheet)

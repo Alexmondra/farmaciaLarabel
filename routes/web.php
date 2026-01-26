@@ -261,7 +261,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reportes/venta/{id}/pdf', [ReporteVentasController::class, 'descargarPdf'])
         ->name('reportes.venta.pdf');
 
-
+    Route::post('ventas/historial/compartir-excel', [ReporteVentasController::class, 'compartirExcelHistorial'])
+        ->name('reportes.ventas-historial.compartir-excel');
 
     // de aqui las de inventario 
 

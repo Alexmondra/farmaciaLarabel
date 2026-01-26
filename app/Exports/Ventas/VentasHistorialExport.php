@@ -13,6 +13,9 @@ class VentasHistorialExport implements WithMultipleSheets
         $modo = $this->filtros['modo'] ?? 'ambos';
 
         $sheets = [];
+        if ($modo === 'resumen') {
+            return [new VentasResumenSimpleSheet($this->filtros)];
+        }
         if ($modo === 'ventas' || $modo === 'ambos') {
             $sheets[] = new VentasResumenSheet($this->filtros);
         }

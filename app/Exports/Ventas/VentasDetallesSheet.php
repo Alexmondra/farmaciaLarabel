@@ -171,7 +171,7 @@ class VentasDetallesSheet implements FromQuery, WithHeadings, WithMapping, WithC
 
     public function chunkSize(): int
     {
-        return 1000;
+        return 200;
     }
 
     public function styles(Worksheet $sheet)
