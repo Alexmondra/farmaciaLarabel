@@ -61,6 +61,7 @@ class SunatService
             $config = Configuracion::first();
             $see = $this->getSee();
             $invoice = $this->generarComprobante($venta);
+
             // 1. Firmar XML
             $xml = $see->getXmlSigned($invoice);
             $nombreArchivo = $invoice->getName();
@@ -76,19 +77,40 @@ class SunatService
             // 2. Enviar a SUNAT
             $result = $see->sendXml(get_class($invoice), $invoice->getName(), $xml);
 
+            // 3. Validar la respuesta REAL de SUNAT
             if ($result->isSuccess()) {
                 // Guardar CDR
                 $rutaCdr = 'sunat/cdr/facturas/R-' . $nombreArchivo . '.zip';
                 Storage::put($rutaCdr, $result->getCdrZip());
 
                 $venta->ruta_cdr = $rutaCdr;
-                $venta->codigo_error_sunat = 0;
-                $venta->mensaje_sunat = $result->getCdrResponse()->getDescription();
-                $venta->estado = 'ACEPTADA';
+
+                // LEER EL INTERIOR DEL CDR
+                $cdr = $result->getCdrResponse();
+                $codigoRespuesta = (int)$cdr->getCode();
+                $descripcion = $cdr->getDescription();
+
+                $venta->codigo_error_sunat = $codigoRespuesta;
+                $venta->mensaje_sunat = $descripcion;
+
+                // LÓGICA DE ESTADOS REALES
+                if ($codigoRespuesta === 0) {
+                    $venta->estado = 'ACEPTADA';
+                } elseif ($codigoRespuesta >= 2000 && $codigoRespuesta <= 3999) {
+                    // Rechazos de SUNAT (Ej. tu error 3224)
+                    $venta->estado = 'RECHAZADA';
+                } elseif ($codigoRespuesta >= 4000) {
+                    // Observaciones (Aceptada pero con advertencias)
+                    $venta->estado = 'OBSERVADA';
+                } else {
+                    $venta->estado = 'ACEPTADA';
+                }
             } else {
+                // Error de conexión, problemas de red o certificado inválido
                 $error = $result->getError();
                 $venta->codigo_error_sunat = $error->getCode();
                 $venta->mensaje_sunat = $error->getMessage();
+                $venta->estado = 'RECHAZADA'; // O 'ERROR_ENVIO' si prefieres manejarlo distinto
             }
 
             $venta->save();
@@ -96,6 +118,7 @@ class SunatService
         } catch (\Exception $e) {
             Log::error("Error SUNAT Venta {$venta->id}: " . $e->getMessage());
             $venta->mensaje_sunat = "Error Conexión: " . $e->getMessage();
+            $venta->estado = 'RECHAZADA';
             $venta->save();
             return false;
         }
