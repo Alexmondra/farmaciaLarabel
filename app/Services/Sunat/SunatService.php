@@ -151,6 +151,7 @@ class SunatService
         $mtoOperGravadas = (float)$venta->op_gravada;
         $mtoOperExoneradas = (float)$venta->op_exonerada;
         $mtoOperInafectas = (float)($venta->op_inafecta ?? 0);
+        $mtoOperGratuitas = (float)($venta->op_gratuita ?? 0);
 
         $baseTotal = $mtoOperGravadas + $mtoOperExoneradas + $mtoOperInafectas; // <-- QUITAMOS "+ $descuentoGlobal"
 
@@ -166,6 +167,8 @@ class SunatService
 
         $invoice->setMtoOperGravadas($mtoOperGravadas)
             ->setMtoOperExoneradas($mtoOperExoneradas)
+            ->setMtoOperInafectas($mtoOperInafectas)
+            ->setMtoOperGratuitas($mtoOperGratuitas)
             ->setMtoIGV($venta->total_igv)
             ->setTotalImpuestos($venta->total_igv)
             ->setValorVenta($baseTotal)
@@ -191,7 +194,7 @@ class SunatService
             if ($esGratuito) {
                 // En operaciones gratuitas, el precio unitario va en 0
                 // Pero necesitamos un Valor Referencial
-                $valorReferencial = $det->medicamento->precio_venta ?? 1.00; // Precio de lista o 1 sol
+                $valorReferencial = (float)($det->medicamento->precio_venta ?? 1.00);
                 $item->setMtoValorGratuito($valorReferencial * $cantidad);
 
                 // Tipos de afectación gratuitos (Amazonía: 21, Gravado: 11, etc)
@@ -204,14 +207,13 @@ class SunatService
                 $tipoAfectacion = $det->tipo_afectacion ?? ($sucursalEnAmazonia ? '20' : '10');
             }
 
-            $porcentajeIgv = ($igvItem > 0) ? 18.00 : 0.00;
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')
                 ->setCantidad($cantidad)
                 ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO')
                 ->setMtoBaseIgv($baseItem)
-                ->setPorcentajeIgv($porcentajeIgv)
+                ->setPorcentajeIgv($esGratuito ? 0 : 18.00)
                 ->setIgv($igvItem)
                 ->setTipAfeIgv($tipoAfectacion)
                 ->setTotalImpuestos($igvItem)
