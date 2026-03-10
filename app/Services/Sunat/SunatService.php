@@ -174,9 +174,19 @@ class SunatService
         $mtoOperGravadas = (float)$venta->op_gravada;
         $mtoOperExoneradas = (float)$venta->op_exonerada;
         $mtoOperInafectas = (float)($venta->op_inafecta ?? 0);
-        $mtoOperGratuitas = (float)($venta->op_gratuita ?? 0);
 
-        $baseTotal = $mtoOperGravadas + $mtoOperExoneradas + $mtoOperInafectas; // <-- QUITAMOS "+ $descuentoGlobal"
+        // --- SOLUCIÓN: CÁLCULO DINÁMICO DE REGALOS (SIN TOCAR LA BD) ---
+        $mtoOperGratuitas = 0;
+        foreach ($venta->detalles as $det) {
+            $precioUnit = round((float)$det->precio_unitario, 4);
+            if ($precioUnit <= 0) { // Si el precio es 0.00
+                $valorRef = (float)($det->medicamento->precio_venta ?? 1.00);
+                $mtoOperGratuitas += ($valorRef * (float)$det->cantidad);
+            }
+        }
+        // ---------------------------------------------------------------
+
+        $baseTotal = $mtoOperGravadas + $mtoOperExoneradas + $mtoOperInafectas;
 
         if ($descuentoGlobal > 0) {
             $invoice->setDescuentos([
@@ -191,7 +201,7 @@ class SunatService
         $invoice->setMtoOperGravadas($mtoOperGravadas)
             ->setMtoOperExoneradas($mtoOperExoneradas)
             ->setMtoOperInafectas($mtoOperInafectas)
-            ->setMtoOperGratuitas($mtoOperGratuitas)
+            ->setMtoOperGratuitas($mtoOperGratuitas) // Aquí pasamos el cálculo dinámico
             ->setMtoIGV($venta->total_igv)
             ->setTotalImpuestos($venta->total_igv)
             ->setValorVenta($baseTotal)
@@ -262,9 +272,7 @@ class SunatService
                 ->setCode('2000')
                 ->setValue('BIENES TRANSFERIDOS EN LA AMAZONÍA REGIÓN SELVA PARA SER CONSUMIDOS EN LA MISMA');
         }
-
-        // 3. Leyenda Transferencia Gratuita (Si aplica)
-        if ($venta->op_gratuita > 0) {
+        if ($mtoOperGratuitas > 0) {
             $leyendas[] = (new Legend())
                 ->setCode('1002')
                 ->setValue('TRANSFERENCIA GRATUITA DE UN BIEN Y/O SERVICIO PRESTADO GRATUITAMENTE');
