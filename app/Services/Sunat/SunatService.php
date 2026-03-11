@@ -223,24 +223,26 @@ class SunatService
             $porcentajeIgv = $sucursalEnAmazonia ? 0 : 18.00;
 
             if ($esGratuito) {
-                // 1. Valor referencial unitario
+                // 1. Valor referencial unitario (lo que cuesta normalmente)
                 $valorReferencial = (float)($det->medicamento->precio_venta ?? 1.00);
 
-                // Greenter exige el valor UNITARIO aquí para el 9996
+                // Greenter manda esto al nodo PricingReference (El Tributo 9996)
                 $item->setMtoValorGratuito($valorReferencial);
 
                 $tipoAfectacion = $sucursalEnAmazonia ? '21' : '11';
 
-                // LA CLAVE: El precio al cliente es 0, pero la base referencial NO ES 0
+                // --- SOLUCIÓN ERROR 2640 ---
+                // Si es gratis, el valor unitario que "paga" el cliente es CERO SÍ O SÍ.
                 $precioUnit = 0;
+                $valorUnit  = 0;
+                // ---------------------------
 
                 if ($sucursalEnAmazonia) {
-                    $valorUnit = $valorReferencial;
                     $baseItem  = round($valorReferencial * $cantidad, 2);
                     $igvItem   = 0;
                 } else {
-                    $valorUnit = round($valorReferencial / 1.18, 4);
-                    $baseItem  = round($valorUnit * $cantidad, 2);
+                    $baseRef   = round($valorReferencial / 1.18, 4);
+                    $baseItem  = round($baseRef * $cantidad, 2);
                     $igvItem   = round(($valorReferencial * $cantidad) - $baseItem, 2);
                 }
             } else {
