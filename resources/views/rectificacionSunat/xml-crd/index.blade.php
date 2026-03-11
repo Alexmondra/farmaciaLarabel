@@ -72,6 +72,7 @@
                         <th>Comprobante</th>
                         <th>Cliente</th>
                         <th class="text-center">Estado</th>
+                        <th>Sunat Observaciones</th>
                         <th class="text-right">Descargas</th>
                     </tr>
                 </thead>
@@ -98,6 +99,39 @@
                             <span class="badge badge-pill badge-danger">RECHAZADA</span>
                             @else
                             <span class="badge badge-pill badge-warning text-white">PENDIENTE</span>
+                            @endif
+                        </td>
+                        <td class="align-middle" style="white-space: normal;">
+                            @if($venta->observaciones || ($venta->codigo_error_sunat && $venta->codigo_error_sunat !== '0'))
+                            <div class="p-2 rounded {{ $venta->codigo_error_sunat === '0' ? 'text-success' : 'text-danger' }}"
+                                style="border: 1px solid #dee2e6; background-color: #f8f9fa; font-size: 0.8rem; display: block; width: fit-content; max-width: 250px;">
+
+                                <div class="d-flex align-items-start">
+                                    <i class="fas {{ $venta->codigo_error_sunat === '0' ? 'fa-check-circle' : 'fa-exclamation-circle' }} mt-1 mr-2"></i>
+
+                                    <div style="word-break: break-word;">
+                                        {{-- Mensaje de la SUNAT --}}
+                                        @if($venta->mensaje_sunat && $venta->codigo_error_sunat !== '0')
+                                        <strong class="d-block text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Respuesta SUNAT:</strong>
+                                        <span class="d-block mb-1 font-weight-bold">{{ $venta->mensaje_sunat }}</span>
+                                        @endif
+
+                                        {{-- Observaciones adicionales --}}
+                                        @if($venta->observaciones)
+                                        @if($venta->mensaje_sunat && $venta->codigo_error_sunat !== '0')
+                                        <hr class="my-1"> @endif
+                                        <span class="text-muted small italic">{{ $venta->observaciones }}</span>
+                                        @endif
+
+                                        {{-- Código de error --}}
+                                        @if($venta->codigo_error_sunat && $venta->codigo_error_sunat !== '0')
+                                        <div class="mt-1">
+                                            <span class="badge badge-danger shadow-sm" style="font-size: 0.65rem;">Cód: {{ $venta->codigo_error_sunat }}</span>
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
                             @endif
                         </td>
                         <td class="align-middle text-right">

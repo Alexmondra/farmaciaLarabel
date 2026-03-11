@@ -24,6 +24,7 @@ class FacturacionController extends Controller
             ->whereIn('tipo_comprobante', ['FACTURA', 'BOLETA'])
             ->where('estado', '!=', 'ACEPTADA')
             ->where('estado', '!=', 'ANULADO')
+            ->where('estado', '!=', 'RECHAZADA')
             ->orderBy('fecha_emision', 'desc')
             ->paginate(20);
 
