@@ -34,6 +34,18 @@ class SunatArchivosController extends Controller
         if (!is_null($idsFiltro)) {
             $query->whereIn('sucursal_id', $idsFiltro);
         }
+        if ($request->filled('estado')) {
+            $estado = $request->estado;
+            if ($estado == 'ACEPTADO') {
+                $query->where('codigo_error_sunat', '0');
+            } elseif ($estado == 'RECHAZADA') {
+                $query->whereNotNull('codigo_error_sunat')
+                    ->where('codigo_error_sunat', '!=', '0');
+            } elseif ($estado == 'PENDIENTE') {
+                $query->whereNull('codigo_error_sunat');
+            }
+        }
+
         if ($request->filled('search')) {
             $busqueda = trim($request->search);
 

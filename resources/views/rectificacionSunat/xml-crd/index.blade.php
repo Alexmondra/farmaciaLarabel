@@ -28,33 +28,44 @@
             <form action="{{ route('facturacion.comprobantes.index') }}" method="GET" id="searchForm">
                 <div class="row align-items-end">
 
-                    <div class="col-lg-4 col-md-12 mb-2">
+                    <div class="col-lg-2 col-md-12 mb-2">
                         <h3 class="card-title font-weight-bold mt-2">
-                            <i class="fas fa-list mr-1"></i> Comprobantes Emitidos
+                            <i class="fas fa-list mr-1"></i> Comprobantes
                         </h3>
                     </div>
 
-                    <div class="col-lg-4 col-md-6 col-12 mb-2">
+                    {{-- FILTRO: RANGO DE FECHAS --}}
+                    <div class="col-lg-3 col-md-6 col-12 mb-2">
                         <label class="mb-0 text-sm text-muted">Rango de Fechas:</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text bg-teal border-0">
-                                    <i class="far fa-calendar-alt"></i>
-                                </span>
+                                <span class="input-group-text bg-teal border-0"><i class="far fa-calendar-alt"></i></span>
                             </div>
                             <input type="text" class="form-control float-right" id="reservation" name="rango_fechas" value="{{ $rangoFechas }}">
                         </div>
                     </div>
 
-                    <div class="col-lg-4 col-md-6 col-12 mb-2">
-                        <label class="mb-0 text-sm text-muted">Búsqueda rápida (Serie, Cliente, RUC):</label>
+                    {{-- NUEVO FILTRO: ESTADO --}}
+                    <div class="col-lg-3 col-md-6 col-12 mb-2">
+                        <label class="mb-0 text-sm text-muted">Estado SUNAT:</label>
+                        <select name="estado" class="form-control" onchange="document.getElementById('searchForm').submit();">
+                            <option value="" {{ request('estado') == '' ? 'selected' : '' }}>-- Todos los estados --</option>
+                            <option value="ACEPTADO" {{ request('estado') == 'ACEPTADO' ? 'selected' : '' }}>✅ ACEPTADOS</option>
+                            <option value="RECHAZADA" {{ request('estado') == 'RECHAZADA' ? 'selected' : '' }}>❌ RECHAZADAS</option>
+                            <option value="PENDIENTE" {{ request('estado') == 'PENDIENTE' ? 'selected' : '' }}>⏳ PENDIENTES</option>
+                        </select>
+                    </div>
+
+                    {{-- BÚSQUEDA RÁPIDA --}}
+                    <div class="col-lg-4 col-md-12 mb-2">
+                        <label class="mb-0 text-sm text-muted">Búsqueda rápida:</label>
                         <div class="input-group">
                             <input type="text" name="search" class="form-control"
-                                placeholder="Ej: F001-450, o Juan Perez..."
+                                placeholder="Serie, Cliente, RUC..."
                                 value="{{ request('search') }}">
                             <div class="input-group-append">
                                 <button type="submit" class="btn btn-teal">
-                                    <i class="fas fa-search mr-1"></i> Buscar
+                                    <i class="fas fa-search"></i>
                                 </button>
                             </div>
                         </div>
