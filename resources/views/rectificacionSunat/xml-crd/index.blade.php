@@ -95,7 +95,7 @@
                             @if($venta->codigo_error_sunat === '0')
                             <span class="badge badge-pill badge-success">ACEPTADO</span>
                             @elseif($venta->codigo_error_sunat)
-                            <span class="badge badge-pill badge-danger">ERROR</span>
+                            <span class="badge badge-pill badge-danger">RECHAZADA</span>
                             @else
                             <span class="badge badge-pill badge-warning text-white">PENDIENTE</span>
                             @endif

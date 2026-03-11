@@ -130,7 +130,6 @@ class SunatService
         $sucursal = $venta->sucursal;
         $tipoDoc = $venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
 
-        // Detectar si la Sucursal está en Amazonía (IGV 0%)
         $sucursalEnAmazonia = ($sucursal->impuesto_porcentaje == 0);
 
         $invoice = new Invoice();
@@ -175,16 +174,14 @@ class SunatService
         $mtoOperExoneradas = (float)$venta->op_exonerada;
         $mtoOperInafectas = (float)($venta->op_inafecta ?? 0);
 
-        // --- SOLUCIÓN: CÁLCULO DINÁMICO DE REGALOS (SIN TOCAR LA BD) ---
         $mtoOperGratuitas = 0;
         foreach ($venta->detalles as $det) {
             $precioUnit = round((float)$det->precio_unitario, 4);
-            if ($precioUnit <= 0) { // Si el precio es 0.00
+            if ($precioUnit <= 0) {
                 $valorRef = (float)($det->medicamento->precio_venta ?? 1.00);
                 $mtoOperGratuitas += ($valorRef * (float)$det->cantidad);
             }
         }
-        // ---------------------------------------------------------------
 
         $baseTotal = $mtoOperGravadas + $mtoOperExoneradas + $mtoOperInafectas;
 
@@ -201,7 +198,7 @@ class SunatService
         $invoice->setMtoOperGravadas($mtoOperGravadas)
             ->setMtoOperExoneradas($mtoOperExoneradas)
             ->setMtoOperInafectas($mtoOperInafectas)
-            ->setMtoOperGratuitas($mtoOperGratuitas) // Aquí pasamos el cálculo dinámico
+            ->setMtoOperGratuitas($mtoOperGratuitas)
             ->setMtoIGV($venta->total_igv)
             ->setTotalImpuestos($venta->total_igv)
             ->setValorVenta($baseTotal)
@@ -223,30 +220,39 @@ class SunatService
             $valorUnit  = round((float)$det->valor_unitario, 4);
 
             $esGratuito = ($precioUnit <= 0);
+            $porcentajeIgv = $sucursalEnAmazonia ? 0 : 18.00;
 
             if ($esGratuito) {
-                // En operaciones gratuitas, el precio unitario va en 0
-                // Pero necesitamos un Valor Referencial
+                // 1. Valor referencial unitario
                 $valorReferencial = (float)($det->medicamento->precio_venta ?? 1.00);
-                $item->setMtoValorGratuito($valorReferencial * $cantidad);
 
-                // Tipos de afectación gratuitos (Amazonía: 21, Gravado: 11, etc)
-                $tipoAfectacion = $sucursalEnAmazonia ? '21' : '11'; // 21 = Transf. Gratuita Exonerada
+                // Greenter exige el valor UNITARIO aquí para el 9996
+                $item->setMtoValorGratuito($valorReferencial);
+
+                $tipoAfectacion = $sucursalEnAmazonia ? '21' : '11';
+
+                // LA CLAVE: El precio al cliente es 0, pero la base referencial NO ES 0
                 $precioUnit = 0;
-                $valorUnit = 0;
-                $baseItem = 0;
-                $totalItem = 0;
+
+                if ($sucursalEnAmazonia) {
+                    $valorUnit = $valorReferencial;
+                    $baseItem  = round($valorReferencial * $cantidad, 2);
+                    $igvItem   = 0;
+                } else {
+                    $valorUnit = round($valorReferencial / 1.18, 4);
+                    $baseItem  = round($valorUnit * $cantidad, 2);
+                    $igvItem   = round(($valorReferencial * $cantidad) - $baseItem, 2);
+                }
             } else {
                 $tipoAfectacion = $det->tipo_afectacion ?? ($sucursalEnAmazonia ? '20' : '10');
             }
-
 
             $item->setCodProducto('MED-' . $det->medicamento_id)
                 ->setUnidad('NIU')
                 ->setCantidad($cantidad)
                 ->setDescripcion($det->medicamento->nombre ?? 'PRODUCTO')
                 ->setMtoBaseIgv($baseItem)
-                ->setPorcentajeIgv($esGratuito ? 0 : 18.00)
+                ->setPorcentajeIgv($porcentajeIgv)
                 ->setIgv($igvItem)
                 ->setTipAfeIgv($tipoAfectacion)
                 ->setTotalImpuestos($igvItem)
@@ -261,12 +267,10 @@ class SunatService
         // LEYENDAS
         $leyendas = [];
 
-        // 1. Monto en Letras
         $formatter = new NumeroALetras();
         $textoMonto = $formatter->toInvoice($venta->total_neto, 2, 'SOLES');
         $leyendas[] = (new Legend())->setCode('1000')->setValue('SON: ' . $textoMonto);
 
-        // 2. Leyenda Amazonía
         if ($sucursalEnAmazonia) {
             $leyendas[] = (new Legend())
                 ->setCode('2000')
@@ -278,7 +282,6 @@ class SunatService
                 ->setValue('TRANSFERENCIA GRATUITA DE UN BIEN Y/O SERVICIO PRESTADO GRATUITAMENTE');
         }
 
-        // 4. Referencia
         if ($venta->referencia_pago) {
             $leyendas[] = (new Legend())
                 ->setCode('2001')
