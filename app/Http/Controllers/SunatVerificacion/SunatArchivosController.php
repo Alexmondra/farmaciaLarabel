@@ -35,14 +35,14 @@ class SunatArchivosController extends Controller
             $query->whereIn('sucursal_id', $idsFiltro);
         }
         if ($request->filled('estado')) {
-            $estado = $request->estado;
-            if ($estado == 'ACEPTADO') {
-                $query->where('codigo_error_sunat', '0');
+            $estado = strtoupper(trim($request->estado));
+
+            if ($estado == 'ACEPTADO' || $estado == 'ACEPTADA') {
+                $query->where('estado', 'ACEPTADA');
             } elseif ($estado == 'RECHAZADA') {
-                $query->whereNotNull('codigo_error_sunat')
-                    ->where('codigo_error_sunat', '!=', '0');
+                $query->where('estado', 'RECHAZADA');
             } elseif ($estado == 'PENDIENTE') {
-                $query->whereNull('codigo_error_sunat');
+                $query->where('estado', 'PENDIENTE');
             }
         }
 

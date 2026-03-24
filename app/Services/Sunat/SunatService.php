@@ -110,7 +110,7 @@ class SunatService
                 $error = $result->getError();
                 $venta->codigo_error_sunat = $error->getCode();
                 $venta->mensaje_sunat = $error->getMessage();
-                $venta->estado = 'RECHAZADA'; // O 'ERROR_ENVIO' si prefieres manejarlo distinto
+                $venta->estado = 'PENDIENTE'; // O 'ERROR_ENVIO' si prefieres manejarlo distinto
             }
 
             $venta->save();
@@ -118,7 +118,7 @@ class SunatService
         } catch (\Exception $e) {
             Log::error("Error SUNAT Venta {$venta->id}: " . $e->getMessage());
             $venta->mensaje_sunat = "Error Conexión: " . $e->getMessage();
-            $venta->estado = 'RECHAZADA';
+            $venta->estado = 'PENDIENTE';
             $venta->save();
             return false;
         }
