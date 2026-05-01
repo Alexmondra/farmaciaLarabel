@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use App\Services\ComprobanteService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\Ventas\VentasHistorialExport;
+use App\Exports\Ventas\VentasAnuladasExport;
 
 
 class ReporteVentasController extends Controller
@@ -220,7 +221,7 @@ class ReporteVentasController extends Controller
         }
 
         // 3. Query (SOLO ANULADAS)
-        $query = Venta::with(['cliente', 'usuario', 'sucursal'])
+        $query = Venta::with(['cliente', 'usuario', 'sucursal', 'notasCredito'])
             ->where('estado', 'ANULADO') // <--- EL FILTRO CLAVE
             ->whereBetween('fecha_emision', [$fechaInicio, $fechaFin])
             ->orderBy('fecha_emision', 'desc');
@@ -326,6 +327,89 @@ class ReporteVentasController extends Controller
         $fileName = "ventas_{$fechaInicio->format('Ymd')}_{$fechaFin->format('Ymd')}_{$modo}.xlsx";
 
         return Excel::download(new VentasHistorialExport($filters), $fileName);
+    }
+
+    public function exportarExcelAnuladas(Request $request, SucursalResolver $resolver)
+    {
+        $acceso = $resolver->resolverPara(auth()->user());
+
+        try {
+            $fechaInicio = $request->filled('fecha_inicio')
+                ? \Carbon\Carbon::parse($request->fecha_inicio)->startOfDay()
+                : \Carbon\Carbon::now()->startOfMonth();
+
+            $fechaFin = $request->filled('fecha_fin')
+                ? \Carbon\Carbon::parse($request->fecha_fin)->endOfDay()
+                : \Carbon\Carbon::now()->endOfDay();
+        } catch (\Exception $e) {
+            $fechaInicio = \Carbon\Carbon::now()->startOfMonth();
+            $fechaFin    = \Carbon\Carbon::now()->endOfDay();
+        }
+
+        $modo = $request->input('modo', 'ambos');
+        if (!in_array($modo, ['ventas', 'detalles', 'ambos', 'resumen'])) {
+            $modo = 'ambos';
+        }
+
+        $filters = [
+            'fecha_inicio' => $fechaInicio->toDateTimeString(),
+            'fecha_fin'    => $fechaFin->toDateTimeString(),
+            'sucursal_id'  => $request->input('sucursal_id'),
+            'search'       => $request->input('search'),
+            'ids_filtro'   => $acceso['ids_filtro'],
+            'modo'         => $modo,
+        ];
+
+        $fileName = "anuladas_{$fechaInicio->format('Ymd')}_{$fechaFin->format('Ymd')}_{$modo}.xlsx";
+
+        return Excel::download(new VentasAnuladasExport($filters), $fileName);
+    }
+
+    public function compartirExcelAnuladas(Request $request, SucursalResolver $resolver)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $acceso = $resolver->resolverPara(auth()->user());
+
+        try {
+            $fechaInicio = $request->filled('fecha_inicio')
+                ? \Carbon\Carbon::parse($request->fecha_inicio)->startOfDay()
+                : \Carbon\Carbon::now()->startOfMonth();
+            $fechaFin = $request->filled('fecha_fin')
+                ? \Carbon\Carbon::parse($request->fecha_fin)->endOfDay()
+                : \Carbon\Carbon::now()->endOfDay();
+        } catch (\Exception $e) {
+            $fechaInicio = \Carbon\Carbon::now()->startOfMonth();
+            $fechaFin = \Carbon\Carbon::now()->endOfDay();
+        }
+
+        $modo = $request->input('modo', 'ambos');
+        $filters = [
+            'fecha_inicio' => $fechaInicio->toDateTimeString(),
+            'fecha_fin'    => $fechaFin->toDateTimeString(),
+            'sucursal_id'  => $request->input('sucursal_id'),
+            'search'       => $request->input('search'),
+            'ids_filtro'   => $acceso['ids_filtro'],
+            'modo'         => $modo,
+        ];
+
+        $uniqueId = now()->format('His') . '_' . uniqid();
+        $fileName = "reporte_anuladas_{$uniqueId}_{$fechaInicio->format('Ymd')}_{$modo}.xlsx";
+
+        try {
+            \Mail::to($request->email)->send(new \App\Mail\ReporteExcelMailable(
+                $filters,
+                $fileName,
+                \App\Exports\Ventas\VentasAnuladasExport::class
+            ));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El reporte de anuladas se está procesando con el ID ' . $uniqueId . ' y se enviará a ' . $request->email
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function compartirExcelHistorial(Request $request, SucursalResolver $resolver)

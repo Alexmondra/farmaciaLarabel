@@ -7,7 +7,6 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\Ventas\VentasHistorialExport;
 use Illuminate\Support\Facades\Storage;
 
 class ReporteExcelMailable extends Mailable implements ShouldQueue
@@ -16,13 +15,15 @@ class ReporteExcelMailable extends Mailable implements ShouldQueue
 
     public $filters;
     public $fileName;
+    public $exportClass;
 
     public $timeout = 700;
 
-    public function __construct($filters, $fileName)
+    public function __construct($filters, $fileName, $exportClass = null)
     {
         $this->filters = $filters;
         $this->fileName = $fileName;
+        $this->exportClass = $exportClass ?? \App\Exports\Ventas\VentasHistorialExport::class;
     }
 
     public function build()
@@ -36,9 +37,10 @@ class ReporteExcelMailable extends Mailable implements ShouldQueue
                 Storage::disk($disk)->makeDirectory('temp_reports');
             }
 
-            // 2. Intentar guardar y verificar el retorno
-            // store() devuelve true si se creó con éxito
-            $creado = Excel::store(new VentasHistorialExport($this->filters), $tempPath, $disk);
+            // 2. Crear la instancia del export class dinámicamente
+            $exportInstance = new $this->exportClass($this->filters);
+
+            $creado = Excel::store($exportInstance, $tempPath, $disk);
 
             if (!$creado) {
                 throw new \Exception("Laravel-Excel no pudo guardar el archivo en el disco.");
@@ -51,14 +53,17 @@ class ReporteExcelMailable extends Mailable implements ShouldQueue
                 throw new \Exception("Archivo no encontrado físicamente en: " . $fullPath);
             }
 
-            return $this->subject('Reporte de Ventas Solicitado')
+            $subject = str_contains($this->fileName, 'anuladas')
+                ? 'Reporte de Ventas Anuladas Solicitado'
+                : 'Reporte de Ventas Solicitado';
+
+            return $this->subject($subject)
                 ->view('emails.reporte_excel')
                 ->attach($fullPath, [
                     'as' => $this->fileName,
                     'mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 ]);
         } catch (\Exception $e) {
-            // ESTO ES LO MÁS IMPORTANTE: Verás el error REAL en el log
             \Log::error("Fallo crítico en Mailable: " . $e->getMessage());
             \Log::error($e->getTraceAsString());
             throw $e;

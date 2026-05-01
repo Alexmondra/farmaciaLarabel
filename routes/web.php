@@ -258,6 +258,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reportes/ventas-anuladas', [ReporteVentasController::class, 'ventasAnuladas'])
         ->name('reportes.ventas-anuladas');
 
+    Route::get('/reportes/ventas/anuladas/export-excel', [ReporteVentasController::class, 'exportarExcelAnuladas'])
+        ->name('reportes.ventas-anuladas.export-excel');
+
+    Route::post('ventas/anuladas/compartir-excel', [ReporteVentasController::class, 'compartirExcelAnuladas'])
+        ->name('reportes.ventas-anuladas.compartir-excel');
+
     Route::get('reportes/venta/{id}/pdf', [ReporteVentasController::class, 'descargarPdf'])
         ->name('reportes.venta.pdf');
 
