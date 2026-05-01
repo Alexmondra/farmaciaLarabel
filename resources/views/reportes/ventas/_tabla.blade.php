@@ -1,10 +1,11 @@
-<div class="card-body p-0">
-    <table class="table table-hover table-responsive-stack w-100 mb-0">
+<div class="card-body p-0 table-responsive">
+    <table class="table table-hover w-100 mb-0">
         <thead class="text-muted small bg-light text-uppercase">
             <tr>
                 <th class="pl-4" style="width: 50px;">#</th>
                 <th>Fecha Emisión</th>
                 <th>Comprobante</th>
+                <th>N.Crédito</th>
                 <th>Cliente</th>
                 <th>Total</th>
                 <th>Estado</th>
@@ -15,7 +16,7 @@
             @forelse($ventas as $index => $venta)
             <tr style="border-bottom: 1px solid var(--border-color);">
 
-                {{-- 1. CONTADOR SIMPLE (Calcula el número real considerando la página actual) --}}
+                {{-- 1. CONTADOR SIMPLE --}}
                 <td data-label="#" class="pl-4 align-middle font-weight-bold text-muted">
                     {{ ($ventas->currentPage() - 1) * $ventas->perPage() + $loop->iteration }}
                 </td>
@@ -30,10 +31,23 @@
                     </small>
                 </td>
 
-                {{-- Comprobante --}}
+                {{-- Comprobante Original --}}
                 <td data-label="Documento" class="align-middle">
                     <span class="badge badge-light border">{{ $venta->tipo_comprobante }}</span>
                     <span class="d-block small text-muted mt-1">{{ $venta->serie }}-{{ $venta->numero }}</span>
+                </td>
+
+                {{-- Nota de Crédito (Serie de la anulación) --}}
+                <td data-label="N.Crédito" class="align-middle">
+                    @php
+                        $nc = $venta->notasCredito->first();
+                    @endphp
+                    @if($nc)
+                        <span class="badge badge-danger">NC</span>
+                        <span class="d-block small font-weight-bold mt-1 text-danger">{{ $nc->serie }}-{{ $nc->numero }}</span>
+                    @else
+                        <span class="text-muted small">-</span>
+                    @endif
                 </td>
 
                 {{-- Cliente --}}
@@ -75,7 +89,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="text-center py-5">
+                <td colspan="8" class="text-center py-5">
                     <div class="d-flex flex-column align-items-center justify-content-center">
                         <i class="far fa-folder-open fa-3x text-muted mb-3 opacity-50"></i>
                         <h6 class="text-muted">No se encontraron ventas.</h6>

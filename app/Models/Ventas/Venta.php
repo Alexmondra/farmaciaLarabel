@@ -101,4 +101,9 @@ class Venta extends Model
     {
         return $this->hasMany(DetalleVenta::class, 'venta_id');
     }
+
+    public function notasCredito()
+    {
+        return $this->hasMany(NotaCredito::class, 'venta_id');
+    }
 }
