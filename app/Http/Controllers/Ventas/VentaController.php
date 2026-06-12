@@ -44,7 +44,7 @@ class VentaController extends Controller
                 return response()->json(['message' => 'El cliente no tiene email.'], 400);
             }
 
-            Mail::to($venta->cliente->email)->send(new ComprobanteMailable($venta));
+            Mail::to($venta->cliente->email)->queue(new ComprobanteMailable($venta));
 
             return response()->json(['success' => true]);
         } catch (\Exception $e) {

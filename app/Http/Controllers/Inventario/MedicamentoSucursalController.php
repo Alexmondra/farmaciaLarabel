@@ -341,6 +341,8 @@ class MedicamentoSucursalController extends Controller
             'vencimiento'    => 'nullable|date',
             'motivo'         => 'required|string',
             'observacion'    => 'nullable|string|max:255',
+            'distribuciones' => 'nullable|array',
+            'distribuciones.*' => 'nullable|integer|min:0',
         ]);
 
         $user = Auth::user();
@@ -351,67 +353,90 @@ class MedicamentoSucursalController extends Controller
             return response()->json(['error' => 'Selecciona una sucursal.'], 403);
         }
 
+        $distribuciones = collect($request->input('distribuciones', []))
+            ->map(fn($cantidad) => (int) $cantidad)
+            ->filter(fn($cantidad) => $cantidad > 0);
+
+        $sucursalesPermitidas = $this->sucursalesOperacion($user)->pluck('id');
+
+        if ($distribuciones->isNotEmpty()) {
+            $idsNoPermitidos = $distribuciones->keys()
+                ->map(fn($id) => (int) $id)
+                ->diff($sucursalesPermitidas);
+
+            if ($idsNoPermitidos->isNotEmpty()) {
+                return response()->json(['error' => 'Hay sucursales no permitidas en la distribución.'], 422);
+            }
+
+            if ($distribuciones->sum() !== (int) $request->cantidad) {
+                return response()->json(['error' => 'La distribución debe sumar exactamente la cantidad ingresada.'], 422);
+            }
+        } else {
+            $distribuciones = collect([$sucursal->id => (int) $request->cantidad]);
+        }
+
+        $codigoLote = strtoupper(trim($request->codigo_lote));
+
         DB::beginTransaction();
         try {
-            // 1. GESTIÓN DEL LOTE
-            $lote = Lote::where('medicamento_id', $request->medicamento_id)
-                ->where('sucursal_id', $sucursal->id)
-                ->where('codigo_lote', trim($request->codigo_lote))
-                ->first();
+            foreach ($distribuciones as $sucursalId => $cantidadSucursal) {
+                $sucursalId = (int) $sucursalId;
 
-            if ($lote) {
-                $lote->stock_actual += $request->cantidad;
-                if (!$lote->fecha_vencimiento && $request->filled('vencimiento')) {
+                $lote = Lote::where('medicamento_id', $request->medicamento_id)
+                    ->where('sucursal_id', $sucursalId)
+                    ->where('codigo_lote', $codigoLote)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($lote) {
+                    $lote->stock_actual += $cantidadSucursal;
+                    if (!$lote->fecha_vencimiento && $request->filled('vencimiento')) {
+                        $lote->fecha_vencimiento = $request->vencimiento;
+                    }
+                    $lote->save();
+                } else {
+                    $lote = new Lote();
+                    $lote->medicamento_id    = $request->medicamento_id;
+                    $lote->sucursal_id       = $sucursalId;
+                    $lote->codigo_lote       = $codigoLote;
+                    $lote->stock_actual      = $cantidadSucursal;
                     $lote->fecha_vencimiento = $request->vencimiento;
+                    $lote->save();
                 }
-                $lote->save();
-            } else {
-                $lote = new Lote();
-                $lote->medicamento_id    = $request->medicamento_id;
-                $lote->sucursal_id       = $sucursal->id;
-                $lote->codigo_lote       = trim($request->codigo_lote);
-                $lote->stock_actual      = $request->cantidad;
-                $lote->fecha_vencimiento = $request->vencimiento;
-                $lote->save();
-            }
 
-            // 2. VINCULACIÓN AUTOMÁTICA CON LA SUCURSAL (SOLUCIÓN AL PROBLEMA)
-            // Buscamos si ya existe el registro, incluso si fue eliminado (Soft Delete)
-            $pivot = MedicamentoSucursal::withTrashed()
-                ->where('medicamento_id', $request->medicamento_id)
-                ->where('sucursal_id', $sucursal->id)
-                ->first();
+                $pivot = MedicamentoSucursal::withTrashed()
+                    ->where('medicamento_id', $request->medicamento_id)
+                    ->where('sucursal_id', $sucursalId)
+                    ->first();
 
-            if (!$pivot) {
-                // Si no existe el vínculo, lo creamos para que aparezca en el inventario
-                MedicamentoSucursal::create([
+                if (!$pivot) {
+                    MedicamentoSucursal::create([
+                        'medicamento_id' => $request->medicamento_id,
+                        'sucursal_id'    => $sucursalId,
+                        'stock_minimo'   => 10,
+                        'activo'         => true,
+                        'updated_by'     => $user->id
+                    ]);
+                } elseif ($pivot->trashed() || !$pivot->activo) {
+                    $pivot->restore();
+                    $pivot->update([
+                        'activo'     => true,
+                        'updated_by' => $user->id
+                    ]);
+                }
+
+                MovimientoInventario::create([
+                    'tipo'           => 'entrada',
                     'medicamento_id' => $request->medicamento_id,
-                    'sucursal_id'    => $sucursal->id,
-                    'stock_minimo'   => 10,
-                    'activo'         => true,
-                    'updated_by'     => $user->id
-                ]);
-            } elseif ($pivot->trashed() || !$pivot->activo) {
-                // Si estaba eliminado o desactivado, lo restauramos y activamos
-                $pivot->restore();
-                $pivot->update([
-                    'activo'     => true,
-                    'updated_by' => $user->id
+                    'sucursal_id'    => $sucursalId,
+                    'lote_id'        => $lote->id,
+                    'cantidad'       => $cantidadSucursal,
+                    'motivo'         => $request->motivo,
+                    'referencia'     => $request->observacion,
+                    'user_id'        => $user->id,
+                    'stock_final'    => $lote->stock_actual
                 ]);
             }
-
-            // 3. REGISTRAR EN KARDEX (MOVIMIENTO)
-            MovimientoInventario::create([
-                'tipo'           => 'entrada',
-                'medicamento_id' => $request->medicamento_id,
-                'sucursal_id'    => $sucursal->id,
-                'lote_id'        => $lote->id,
-                'cantidad'       => $request->cantidad,
-                'motivo'         => $request->motivo,
-                'referencia'     => $request->observacion,
-                'user_id'        => $user->id,
-                'stock_final'    => $lote->stock_actual
-            ]);
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Ingreso registrado y producto vinculado a sucursal.']);
@@ -419,5 +444,14 @@ class MedicamentoSucursalController extends Controller
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    private function sucursalesOperacion($user)
+    {
+        if ($user->hasRole('Administrador')) {
+            return Sucursal::where('activo', true)->orderBy('nombre')->get();
+        }
+
+        return $user->sucursales()->where('activo', true)->orderBy('nombre')->get();
     }
 }

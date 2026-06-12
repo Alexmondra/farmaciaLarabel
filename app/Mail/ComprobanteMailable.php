@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class ComprobanteMailable extends Mailable
+class ComprobanteMailable extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -24,7 +24,13 @@ class ComprobanteMailable extends Mailable
     {
         $pdfContent = $comprobanteService->generarPdf($this->venta, 'content');
 
-        $nombreArchivo = "{$this->venta->ruc_emisor}-{$this->venta->tipo_comprobante}-{$this->venta->serie}-{$this->venta->numero}.pdf";
+        $config = cache()->remember('configuracion_global', 1440, function () {
+            return \App\Models\Configuracion::first();
+        });
+        $rucEmisor = $config->empresa_ruc ?? '20000000001';
+        $tipoDoc = $this->venta->tipo_comprobante == 'FACTURA' ? '01' : '03';
+
+        $nombreArchivo = "{$rucEmisor}-{$tipoDoc}-{$this->venta->serie}-{$this->venta->numero}.pdf";
 
         return $this->subject('Tu Comprobante Electrónico')
             ->view('emails.comprobante')

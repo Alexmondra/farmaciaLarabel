@@ -381,7 +381,33 @@
                                     <div class="form-group">
                                         <label>Cantidad (+)</label>
                                         <input type="number" name="cantidad" class="form-control font-weight-bold text-success border-success"
-                                            min="1" value="1" required>
+                                            min="1" value="1" required id="inputIngresoCantidad">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card border-success mb-3">
+                                <div class="card-body py-2">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="chkIngresoDistribuir">
+                                        <label class="custom-control-label font-weight-bold text-success" for="chkIngresoDistribuir">
+                                            Distribuir este lote por sucursales
+                                        </label>
+                                    </div>
+                                    <div id="boxIngresoDistribucion" class="mt-3" style="display: none;">
+                                        <div class="row">
+                                            @foreach(($sucursalesIngreso ?? []) as $sucursal)
+                                            <div class="col-md-6 mb-2">
+                                                <label class="small mb-1">{{ $sucursal->nombre }}</label>
+                                                <input type="number" min="0" step="1" disabled
+                                                    name="distribuciones[{{ $sucursal->id }}]"
+                                                    data-sucursal-id="{{ $sucursal->id }}"
+                                                    class="form-control form-control-sm text-center input-ingreso-distribucion"
+                                                    placeholder="0">
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        <small id="lblIngresoDistribucionTotal" class="text-muted">Distribuido: 0 / 1 un.</small>
                                     </div>
                                 </div>
                             </div>
@@ -1046,6 +1072,11 @@ $permisosJS = [
             return;
         }
         $('#formIngresoStock')[0].reset();
+        $('#chkIngresoDistribuir').prop('checked', false);
+        $('#boxIngresoDistribucion').hide();
+        $('.input-ingreso-distribucion').prop('disabled', true).val('').removeClass('is-invalid');
+        $('#inputIngresoCantidad').prop('readonly', false).removeClass('bg-light');
+        recalcularIngresoDistribucion();
 
         const $btn = $('#formIngresoStock').find('button[type="submit"]');
         $btn.prop('disabled', false).html('<i class="fas fa-save mr-2"></i> GUARDAR INGRESO');
@@ -1058,6 +1089,61 @@ $permisosJS = [
         $('#avisoLoteExistente').hide();
         $('#modalIngresoStock').modal('show');
         setTimeout(() => $('#txtBuscarIngreso').focus(), 500);
+    }
+
+    $('#chkIngresoDistribuir').on('change', function() {
+        const activo = $(this).is(':checked');
+        $('#boxIngresoDistribucion').toggle(activo);
+        $('.input-ingreso-distribucion').prop('disabled', !activo);
+        $('#inputIngresoCantidad').prop('readonly', activo).toggleClass('bg-light', activo);
+
+        if (activo) {
+            $('.input-ingreso-distribucion').val('');
+            if (SUCURSAL_ID) {
+                $(`.input-ingreso-distribucion[data-sucursal-id="${SUCURSAL_ID}"]`).val($('#inputIngresoCantidad').val());
+            }
+        } else if (!parseInt($('#inputIngresoCantidad').val())) {
+            $('#inputIngresoCantidad').val(1);
+        }
+
+        actualizarCantidadIngresoDesdeDistribucion();
+    });
+
+    $('#inputIngresoCantidad, .input-ingreso-distribucion').on('input change', function() {
+        if ($('#chkIngresoDistribuir').is(':checked')) {
+            actualizarCantidadIngresoDesdeDistribucion();
+        } else {
+            recalcularIngresoDistribucion();
+        }
+    });
+
+    function actualizarCantidadIngresoDesdeDistribucion() {
+        if ($('#chkIngresoDistribuir').is(':checked')) {
+            let distribuido = 0;
+
+            $('.input-ingreso-distribucion').each(function() {
+                distribuido += parseInt($(this).val()) || 0;
+            });
+
+            $('#inputIngresoCantidad').val(distribuido);
+        }
+
+        recalcularIngresoDistribucion();
+    }
+
+    function recalcularIngresoDistribucion() {
+        let total = parseInt($('#inputIngresoCantidad').val()) || 0;
+        let distribuido = 0;
+
+        $('.input-ingreso-distribucion').each(function() {
+            distribuido += parseInt($(this).val()) || 0;
+        });
+
+        let ok = distribuido === total;
+        $('#lblIngresoDistribucionTotal')
+            .toggleClass('text-success', ok)
+            .toggleClass('text-danger', !ok)
+            .text(`Distribuido: ${distribuido} / ${total} un.`);
     }
 
     // 2. Buscador (Copia optimizada del de Salida)
@@ -1158,6 +1244,24 @@ $permisosJS = [
 
         let btn = $(this).find('button[type="submit"]');
         let originalHtml = btn.html();
+
+        if ($('#chkIngresoDistribuir').is(':checked')) {
+            let total = parseInt($('#inputIngresoCantidad').val()) || 0;
+            let distribuido = 0;
+
+            $('.input-ingreso-distribucion').each(function() {
+                distribuido += parseInt($(this).val()) || 0;
+            });
+
+            if (distribuido !== total) {
+                $('.input-ingreso-distribucion').addClass('is-invalid');
+                ToastCentro.fire({
+                    icon: 'error',
+                    title: 'La distribución debe sumar la cantidad ingresada.'
+                });
+                return;
+            }
+        }
 
         estaProcesandoIngreso = true;
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> PROCESANDO...');

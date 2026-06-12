@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Inventario\MedicamentoSucursal;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Inventario\MovimientoInventario;
+use App\Models\Sucursal;
 
 
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,7 @@ class CompraController extends Controller
             'proveedor',
             'sucursal',
             'detalles.lote.medicamento',
+            'detalles.lote.sucursal',
         ])->findOrFail($id);
 
         // Seguridad básica por sucursal
@@ -123,6 +125,7 @@ class CompraController extends Controller
             'proveedores'          => $proveedores,
             'medicamentos'         => $medicamentos,
             'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
+            'sucursalesDistribucion' => $this->sucursalesOperacion($user),
         ]);
     }
 
@@ -156,7 +159,32 @@ class CompraController extends Controller
             'items.*.precio_venta_caja'        => 'nullable|numeric|min:0',
             'items.*.precio_oferta'            => 'nullable|numeric|min:0',
             'items.*.ubicacion'                => 'nullable|string',
+            'items.*.distribuciones'           => 'nullable|array',
+            'items.*.distribuciones.*'         => 'nullable|integer|min:0',
         ]);
+
+        $sucursalesPermitidas = $this->sucursalesOperacion($user)->pluck('id')->all();
+        foreach ($data['items'] as $item) {
+            $distribuciones = collect($item['distribuciones'] ?? [])
+                ->map(fn($cantidad) => (int) $cantidad)
+                ->filter(fn($cantidad) => $cantidad > 0);
+
+            if ($distribuciones->isEmpty()) {
+                continue;
+            }
+
+            $idsNoPermitidos = $distribuciones->keys()
+                ->map(fn($id) => (int) $id)
+                ->diff($sucursalesPermitidas);
+
+            if ($idsNoPermitidos->isNotEmpty()) {
+                return redirect()->back()->withInput()->with('error', 'Hay sucursales no permitidas en la distribución.');
+            }
+
+            if ($distribuciones->sum() !== (int) $item['cantidad_recibida']) {
+                return redirect()->back()->withInput()->with('error', 'La distribución por sucursales debe sumar exactamente la cantidad recibida de cada item.');
+            }
+        }
 
         // 2. PROCESAR ARCHIVO (Almacenamiento Privado)
         $pathArchivo = null;
@@ -191,50 +219,70 @@ class CompraController extends Controller
 
                 // B. Procesar Items
                 foreach ($data['items'] as $item) {
-                    // 1. Crear Lote
-                    $lote = Lote::create([
-                        'medicamento_id'    => $item['medicamento_id'],
-                        'sucursal_id'       => $sucursalSeleccionada->id,
-                        'codigo_lote'       => strtoupper($item['codigo_lote']),
-                        'stock_actual'      => $item['cantidad_recibida'],
-                        'fecha_vencimiento' => $item['fecha_vencimiento'],
-                        'ubicacion'         => $item['ubicacion'] ?? null,
-                        'precio_compra'     => $item['precio_compra_unitario'],
-                        'precio_oferta'     => $item['precio_oferta'] ?? null,
-                    ]);
+                    $distribuciones = collect($item['distribuciones'] ?? [])
+                        ->map(fn($cantidad) => (int) $cantidad)
+                        ->filter(fn($cantidad) => $cantidad > 0);
 
-                    // 2. Detalle Compra
-                    DetalleCompra::create([
-                        'compra_id'              => $compra->id,
-                        'lote_id'                => $lote->id,
-                        'cantidad_recibida'      => $item['cantidad_recibida'],
-                        'precio_compra_unitario' => $item['precio_compra_unitario'],
-                    ]);
+                    if ($distribuciones->isEmpty()) {
+                        $distribuciones = collect([$sucursalSeleccionada->id => (int) $item['cantidad_recibida']]);
+                    }
 
-                    MovimientoInventario::create([
-                        'tipo'           => 'entrada',
-                        'medicamento_id' => $item['medicamento_id'],
-                        'sucursal_id'    => $sucursalSeleccionada->id,
-                        'lote_id'        => $lote->id,
-                        'cantidad'       => $item['cantidad_recibida'],
-                        'motivo'         => 'COMPRA',
-                        'referencia' => ($data['tipo_comprobante'] ?? 'Doc.') . ' N° ' . ($data['numero_factura_proveedor'] ?? 'S/N'),
-                        'user_id'        => $user->id,
-                        'stock_final'    => $lote->stock_actual
-                    ]);
+                    foreach ($distribuciones as $sucursalId => $cantidadSucursal) {
+                        $sucursalId = (int) $sucursalId;
 
-                    // 3. Actualizar Precios (MedicamentoSucursal)
-                    $ms = MedicamentoSucursal::withTrashed()->firstOrNew([
-                        'medicamento_id' => $item['medicamento_id'],
-                        'sucursal_id'    => $sucursalSeleccionada->id
-                    ]);
-                    if ($ms->trashed()) $ms->restore();
+                        $lote = Lote::where('medicamento_id', $item['medicamento_id'])
+                            ->where('sucursal_id', $sucursalId)
+                            ->where('codigo_lote', strtoupper($item['codigo_lote']))
+                            ->lockForUpdate()
+                            ->first();
 
-                    $ms->precio_venta   = $item['precio_venta'];
-                    $ms->precio_blister = $item['precio_venta_blister'] ?? null;
-                    $ms->precio_caja    = $item['precio_venta_caja'] ?? null;
-                    $ms->activo         = true;
-                    $ms->save();
+                        if (!$lote) {
+                            $lote = new Lote([
+                                'medicamento_id'    => $item['medicamento_id'],
+                                'sucursal_id'       => $sucursalId,
+                                'codigo_lote'       => strtoupper($item['codigo_lote']),
+                                'stock_actual'      => 0,
+                            ]);
+                        }
+
+                        $lote->stock_actual += $cantidadSucursal;
+                        $lote->fecha_vencimiento = $item['fecha_vencimiento'];
+                        $lote->ubicacion = $item['ubicacion'] ?? $lote->ubicacion;
+                        $lote->precio_compra = $item['precio_compra_unitario'];
+                        $lote->precio_oferta = $item['precio_oferta'] ?? $lote->precio_oferta;
+                        $lote->save();
+
+                        DetalleCompra::create([
+                            'compra_id'              => $compra->id,
+                            'lote_id'                => $lote->id,
+                            'cantidad_recibida'      => $cantidadSucursal,
+                            'precio_compra_unitario' => $item['precio_compra_unitario'],
+                        ]);
+
+                        MovimientoInventario::create([
+                            'tipo'           => 'entrada',
+                            'medicamento_id' => $item['medicamento_id'],
+                            'sucursal_id'    => $sucursalId,
+                            'lote_id'        => $lote->id,
+                            'cantidad'       => $cantidadSucursal,
+                            'motivo'         => 'COMPRA',
+                            'referencia'     => ($data['tipo_comprobante'] ?? 'Doc.') . ' N° ' . ($data['numero_factura_proveedor'] ?? 'S/N'),
+                            'user_id'        => $user->id,
+                            'stock_final'    => $lote->stock_actual
+                        ]);
+
+                        $ms = MedicamentoSucursal::withTrashed()->firstOrNew([
+                            'medicamento_id' => $item['medicamento_id'],
+                            'sucursal_id'    => $sucursalId
+                        ]);
+                        if ($ms->trashed()) $ms->restore();
+
+                        $ms->precio_venta   = $item['precio_venta'];
+                        $ms->precio_blister = $item['precio_venta_blister'] ?? null;
+                        $ms->precio_caja    = $item['precio_venta_caja'] ?? null;
+                        $ms->activo         = true;
+                        $ms->save();
+                    }
 
                     $totalCompra += ($item['cantidad_recibida'] * $item['precio_compra_unitario']);
                 }
@@ -371,5 +419,14 @@ class CompraController extends Controller
         return redirect()
             ->route('compras.index')
             ->with('success', 'Compra anulada (no se ha borrado físicamente).');
+    }
+
+    private function sucursalesOperacion($user)
+    {
+        if ($user->hasRole('Administrador')) {
+            return Sucursal::where('activo', true)->orderBy('nombre')->get();
+        }
+
+        return $user->sucursales()->where('activo', true)->orderBy('nombre')->get();
     }
 }

@@ -7,6 +7,8 @@
 <script>
     // === CONFIGURACIÓN GLOBAL ===
     const RUTA_LOOKUP = "{{ route('inventario.medicamentos.lookup') }}";
+    const SUCURSAL_SELECCIONADA_ID = {{ $sucursalSeleccionada ? $sucursalSeleccionada->id : 'null' }};
+    const SUCURSALES_DISTRIBUCION = @json($sucursalesDistribucion ?? []);
     let itemIndex = 0;
     let timeoutBusqueda = null;
     let sufijoAleatorio = "";
@@ -144,6 +146,32 @@
         // A. Cálculos al cambiar inputs (Cantidad, Precio, Unidad)
         $(document).on('input change', '.input-cantidad-visual, .input-precio-visual, .select-unidad-compra', function() {
             recalcularFila($(this).closest('tr'));
+        });
+
+        $(document).on('change', '.chk-distribuir-stock', function() {
+            let $row = $(this).closest('tr');
+            let activo = $(this).is(':checked');
+            $row.find('.box-distribucion').toggle(activo);
+            $row.find('.input-distribucion').prop('disabled', !activo);
+            $row.find('.input-cantidad-visual, .select-unidad-compra').prop('disabled', activo).toggleClass('bg-light', activo);
+
+            if (activo && !$row.data('distribucion-inicializada')) {
+                $row.find('.input-distribucion').val('');
+                if (SUCURSAL_SELECCIONADA_ID) {
+                    $row.find(`.input-distribucion[data-sucursal-id="${SUCURSAL_SELECCIONADA_ID}"]`).val($row.find('.input-cantidad-hidden').val());
+                }
+                $row.data('distribucion-inicializada', true);
+            }
+
+            if (activo) {
+                actualizarCantidadDesdeDistribucion($row);
+            } else {
+                recalcularFila($row);
+            }
+        });
+
+        $(document).on('input change', '.input-distribucion', function() {
+            actualizarCantidadDesdeDistribucion($(this).closest('tr'));
         });
 
         // B. Escribir en el Buscador
@@ -537,6 +565,22 @@
                         rowErrors = true;
                     }
 
+                    if (row.find('.chk-distribuir-stock').is(':checked')) {
+                        let totalReal = parseInt(row.find('.input-cantidad-hidden').val()) || 0;
+                        let totalDistribuido = 0;
+                        row.find('.input-distribucion').each(function() {
+                            totalDistribuido += parseInt($(this).val()) || 0;
+                        });
+
+                        if (totalDistribuido !== totalReal) {
+                            row.find('.input-distribucion').addClass('is-invalid');
+                            rowErrors = true;
+                            if (!errores.includes("• La distribución por sucursales debe sumar la cantidad exacta de cada fila.")) {
+                                errores.push("• La distribución por sucursales debe sumar la cantidad exacta de cada fila.");
+                            }
+                        }
+                    }
+
                     // 5. Costo (Precio Compra)
                     let precioC = parseFloat(row.find('.input-precio-visual').val());
                     // Permitimos 0 si es bonificación, pero avisamos si está vacío vacío
@@ -718,6 +762,11 @@
     window.recalcularFila = function(row) {
         row = $(row);
 
+        if (row.find('.chk-distribuir-stock').is(':checked')) {
+            actualizarCantidadDesdeDistribucion(row);
+            return;
+        }
+
         // Entradas
         let cantidadVisual = parseFloat(row.find('.input-cantidad-visual').val()) || 0;
         let precioCompraVisual = parseFloat(row.find('.input-precio-visual').val()) || 0;
@@ -737,11 +786,64 @@
         row.find('.input-cantidad-hidden').val(totalUnidadesReales);
         row.find('.input-precio-hidden').val(costoUnitarioReal.toFixed(4));
 
+        if (row.find('.chk-distribuir-stock').is(':checked')) {
+            recalcularDistribucion(row);
+        }
+
         recalcularTotalGeneral();
+    }
+
+    function actualizarCantidadDesdeDistribucion(row) {
+        row = $(row);
+        let totalDistribuido = 0;
+
+        row.find('.input-distribucion').each(function() {
+            totalDistribuido += parseInt($(this).val()) || 0;
+        });
+
+        let $option = row.find('.select-unidad-compra option:selected');
+        let factor = parseInt($option.data('factor')) || 1;
+        let cantidadVisual = factor > 0 ? totalDistribuido / factor : totalDistribuido;
+        let precioCompraVisual = parseFloat(row.find('.input-precio-visual').val()) || 0;
+        let costoUnitarioReal = factor > 0 ? (precioCompraVisual / factor) : 0;
+        let subtotalDinero = cantidadVisual * precioCompraVisual;
+
+        row.find('.input-cantidad-visual').val(Number.isInteger(cantidadVisual) ? cantidadVisual : cantidadVisual.toFixed(2));
+        row.find('.input-cantidad-hidden').val(totalDistribuido);
+        row.find('.input-precio-hidden').val(costoUnitarioReal.toFixed(4));
+        row.find('.lbl-info-conversion').text(`Entran: ${totalDistribuido} un.`);
+        row.find('.subtotal-fila').text('S/ ' + subtotalDinero.toFixed(2));
+        recalcularDistribucion(row);
+        recalcularTotalGeneral();
+    }
+
+    function recalcularDistribucion(row) {
+        row = $(row);
+        let totalReal = parseInt(row.find('.input-cantidad-hidden').val()) || 0;
+        let totalDistribuido = 0;
+
+        row.find('.input-distribucion').each(function() {
+            totalDistribuido += parseInt($(this).val()) || 0;
+        });
+
+        let ok = totalDistribuido === totalReal;
+        row.find('.lbl-distribucion-total')
+            .toggleClass('text-success', ok)
+            .toggleClass('text-danger', !ok)
+            .text(`Distribuido: ${totalDistribuido} / ${totalReal} un.`);
     }
 
     window.agregarFilaItem = function() {
         itemIndex++;
+        let distribucionHtml = SUCURSALES_DISTRIBUCION.map(s => `
+            <div class="col-md-6 mb-2">
+                <label class="small mb-1">${s.nombre}</label>
+                <input type="number" min="0" step="1" disabled
+                    name="items[${itemIndex}][distribuciones][${s.id}]"
+                    data-sucursal-id="${s.id}"
+                    class="input-modern input-distribucion text-center" placeholder="0">
+            </div>
+        `).join('');
         let h = `
         <tr class="fila-item">
             <td class="align-middle text-center"><span class="badge bg-light text-dark border indice-fila">${$('.fila-item').length + 1}</span></td>
@@ -780,6 +882,16 @@
                     </div>
                 </div>
                 <div><span class="label-mini">UBICACIÓN</span><input type="text" name="items[${itemIndex}][ubicacion]" class="input-modern input-ubicacion"></div>
+                <div class="mt-2">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input chk-distribuir-stock" id="chk_dist_${itemIndex}">
+                        <label class="custom-control-label small font-weight-bold text-primary" for="chk_dist_${itemIndex}">Distribuir por sucursales</label>
+                    </div>
+                    <div class="box-distribucion border rounded bg-light p-2 mt-2" style="display: none;">
+                        <div class="row g-2">${distribucionHtml}</div>
+                        <small class="lbl-distribucion-total text-muted">Distribuido: 0 / 0 un.</small>
+                    </div>
+                </div>
             </td>
 
             {{-- PRECIOS --}}

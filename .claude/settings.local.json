@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(php -l app/Services/VentaService.php)",
+      "Bash(php -l app/Mail/ComprobanteMailable.php)",
+      "Bash(php -l app/Http/Controllers/Ventas/VentaController.php)"
+    ]
+  }
+}

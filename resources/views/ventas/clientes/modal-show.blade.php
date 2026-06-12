@@ -265,7 +265,7 @@
             // --- D. HISTORIAL ---
             const rows = currentVentas.map((v, index) => `
                 <tr>
-                    <td class="text-muted small align-middle">${new Date(v.created_at).toLocaleDateString('es-PE')}</td>
+                    <td class="text-muted small align-middle">${new Date(v.fecha_emision || v.created_at).toLocaleDateString('es-PE')}</td>
                     <td class="font-weight-bold align-middle">S/ ${parseFloat(v.total_neto || v.total).toFixed(2)}</td>
                     <td class="align-middle">
                         <button class="btn btn-sm btn-outline-info" onclick="verDetalleVenta(${index})" title="Ver productos">
@@ -329,7 +329,7 @@
         htmlDetalles += `</tbody></table>`;
 
         Swal.fire({
-            title: `Venta del ${new Date(venta.created_at).toLocaleDateString('es-PE')}`,
+            title: `Venta del ${new Date(venta.fecha_emision || venta.created_at).toLocaleDateString('es-PE')}`,
             html: htmlDetalles,
             width: '600px',
             confirmButtonText: 'Cerrar',

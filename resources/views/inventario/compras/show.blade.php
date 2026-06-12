@@ -77,6 +77,7 @@
                         <th style="width: 5%" class="pl-3">#</th>
                         <th style="width: 30%">Medicamento</th>
                         <th style="width: 15%" class="text-center d-none d-sm-table-cell">Lote</th>
+                        <th style="width: 15%" class="text-center d-none d-lg-table-cell">Sucursal</th>
                         <th style="width: 15%" class="text-center d-none d-md-table-cell">Vencimiento</th>
                         <th style="width: 10%" class="text-end">Cant.</th>
                         <th style="width: 10%" class="text-end d-none d-lg-table-cell">P. Unit.</th>
@@ -104,6 +105,8 @@
                         {{-- Lote (visible desde sm) --}}
                         <td class="text-center align-middle d-none d-sm-table-cell small">{{ $lote->codigo_lote ?? '-' }}</td>
 
+                        <td class="text-center align-middle d-none d-lg-table-cell small">{{ optional($lote->sucursal)->nombre ?? '-' }}</td>
+
                         {{-- Fecha de vencimiento (visible desde md) --}}
                         <td class="text-center align-middle d-none d-md-table-cell small">
                             @if(optional($lote->fecha_vencimiento)->isPast())
@@ -126,7 +129,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             No hay detalles registrados para esta compra.
                         </td>
                     </tr>

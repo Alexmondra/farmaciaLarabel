@@ -10,6 +10,7 @@ use App\Services\SucursalResolver;
 use App\Repositories\MedicamentoRepository;
 use App\Http\Requests\Inventario\MedicamentoRequest;
 use App\Models\Inventario\Categoria;
+use App\Models\Sucursal;
 
 class MedicamentoController extends Controller
 {
@@ -38,6 +39,7 @@ class MedicamentoController extends Controller
             'q'                    => $q,
             'esAdmin'              => $ctx['es_admin'],
             'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
+            'sucursalesIngreso'    => $this->sucursalesOperacion($user),
         ];
 
         if ($request->ajax()) {
@@ -45,6 +47,15 @@ class MedicamentoController extends Controller
         }
 
         return view('inventario.medicamentos.index', $data);
+    }
+
+    private function sucursalesOperacion($user)
+    {
+        if ($user->hasRole('Administrador')) {
+            return Sucursal::where('activo', true)->orderBy('nombre')->get();
+        }
+
+        return $user->sucursales()->where('activo', true)->orderBy('nombre')->get();
     }
 
     public function indexGeneral(Request $request)

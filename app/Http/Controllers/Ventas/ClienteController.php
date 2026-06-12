@@ -127,7 +127,7 @@ class ClienteController extends Controller
     {
         $cliente = Cliente::with([
             'ventas' => function ($query) {
-                $query->orderBy('created_at', 'desc')->limit(50);
+                $query->orderBy('fecha_emision', 'desc')->limit(50);
             },
             'ventas.detalle_ventas.medicamento'
         ])->find($id);
