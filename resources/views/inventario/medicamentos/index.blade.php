@@ -2,6 +2,11 @@
 
 @section('title', 'Inventario')
 
+@section('css')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
+@endsection
+
 @section('content_header')
 <div class="d-flex justify-content-between align-items-center flex-wrap">
     <h1 class="text-dark font-weight-bold mb-2">
@@ -184,6 +189,139 @@
 </div>
 @endcan
 
+{{-- MODAL EDITAR MEDICAMENTO DESDE AJUSTE / ENTRADA --}}
+<div class="modal fade" id="modalEditarIngresoMedicamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <form id="formEditarIngresoMedicamento" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="id" id="edit_ing_med_id">
+
+                <div class="modal-header bg-warning py-2">
+                    <h5 class="modal-title font-weight-bold text-dark"><i class="fas fa-edit mr-2"></i> Editar Producto</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="row">
+                        <div class="col-md-3 border-right">
+                            <div class="text-center mb-2">
+                                <img id="img_ing_med_foto_edit" src="" class="img-fluid rounded shadow-sm border w-100 mb-2" style="height: 150px; object-fit: cover; display: none;">
+                                <div id="div_ing_med_placeholder_edit" class="mb-2 p-4 bg-light border rounded">
+                                    <i class="fas fa-camera fa-3x mb-2 text-secondary opacity-50"></i>
+                                </div>
+                                <label class="btn btn-outline-dark btn-sm btn-block shadow-sm">
+                                    <i class="fas fa-camera"></i> Cambiar
+                                    <input type="file" name="imagen" class="d-none" accept="image/*" id="edit_ing_med_imagen">
+                                </label>
+                            </div>
+
+                            <div class="text-center mb-3">
+                                <label class="small font-weight-bold text-muted mb-0">SKU / INTERNO</label>
+                                <input type="text" name="codigo" id="edit_ing_med_codigo" class="form-control form-control-sm text-center font-weight-bold border-0 bg-light text-secondary" readonly>
+                            </div>
+
+                            <hr>
+
+                            <div class="form-group mb-3">
+                                <label class="small font-weight-bold text-muted">CATEGORÍA</label>
+                                <select name="categoria_id" id="edit_ing_med_cat" class="form-control form-control-sm border-secondary">
+                                    <option value="">-- Sin Categoría --</option>
+                                    @foreach(($categorias ?? []) as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="bg-light p-2 rounded border">
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input" id="edit_ing_med_igv" name="afecto_igv" value="1">
+                                    <label class="custom-control-label small font-weight-bold" for="edit_ing_med_igv">Afecto IGV</label>
+                                </div>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="edit_ing_med_receta" name="receta_medica" value="1">
+                                    <label class="custom-control-label small font-weight-bold text-danger" for="edit_ing_med_receta">Pide Receta</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-9 pl-md-4">
+                            <div class="form-group mb-2">
+                                <label class="small font-weight-bold">NOMBRE COMERCIAL</label>
+                                <input type="text" name="nombre" id="edit_ing_med_nombre" class="form-control font-weight-bold bg-white" required style="font-size: 1.2rem;">
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="col-4">
+                                    <label class="small text-primary font-weight-bold">CÓDIGO DIGEMID</label>
+                                    <input type="text" name="codigo_digemid" id="edit_ing_med_digemid" class="form-control form-control-sm border-primary font-weight-bold">
+                                </div>
+                                <div class="col-8">
+                                    <label class="small">LABORATORIO</label>
+                                    <input type="text" name="laboratorio" id="edit_ing_med_lab" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row mb-2 bg-light p-2 rounded mx-0 border-left border-warning">
+                                <div class="col-6">
+                                    <label class="small font-weight-bold"><i class="fas fa-barcode"></i> CODIGO BARRA CAJA</label>
+                                    <input type="text" name="codigo_barra" id="edit_ing_med_barra" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-6">
+                                    <label class="small font-weight-bold"><i class="fas fa-barcode"></i> CODIGO BARRA BLÍSTER</label>
+                                    <input type="text" name="codigo_barra_blister" id="edit_ing_med_barra_blister" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <label class="small text-success font-weight-bold">UNIDADES POR CAJA</label>
+                                    <input type="number" name="unidades_por_envase" id="edit_ing_med_unidades" class="form-control form-control-sm border-success font-weight-bold text-center" required min="1">
+                                </div>
+                                <div class="col-6">
+                                    <label class="small text-info font-weight-bold">UNIDADES POR BLÍSTER</label>
+                                    <input type="number" name="unidades_por_blister" id="edit_ing_med_unidades_blister" class="form-control form-control-sm border-info font-weight-bold text-center" min="0">
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="col-4">
+                                    <label class="small font-weight-bold">FORMA FARM.</label>
+                                    <input type="text" name="forma_farmaceutica" id="edit_ing_med_forma" class="form-control form-control-sm" placeholder="Ej: Tableta">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small">PRESENTACIÓN</label>
+                                    <input type="text" name="presentacion" id="edit_ing_med_pres" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small">CONCENTRACIÓN</label>
+                                    <input type="text" name="concentracion" id="edit_ing_med_conc" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-4">
+                                    <label class="small font-weight-bold text-primary">REG. SANITARIO</label>
+                                    <input type="text" name="registro_sanitario" id="edit_ing_med_reg" class="form-control form-control-sm border-primary">
+                                </div>
+                                <div class="col-8">
+                                    <label class="small">DESCRIPCIÓN / NOTAS</label>
+                                    <textarea name="descripcion" id="edit_ing_med_desc" class="form-control form-control-sm" rows="1"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer py-2 bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning btn-sm shadow-sm font-weight-bold">Actualizar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @can('medicamentos.editar')
 <div class="modal fade" id="modalStockMin" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -353,8 +491,34 @@
 
                     <div class="card shadow-sm border-0">
                         <div class="card-header bg-white border-bottom-0">
-                            <h6 class="text-success font-weight-bold mb-0" id="lblIngresoProducto"></h6>
-                            <small class="text-muted">Ingresa los datos del stock a añadir:</small>
+                            <div class="row align-items-end">
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <div class="d-flex align-items-center" style="gap: 8px;">
+                                        <h6 class="text-success font-weight-bold mb-0" id="lblIngresoProducto"></h6>
+                                        <button type="button" id="btnEditarIngresoMedicamento" class="btn btn-xs btn-outline-primary" style="display: none;" title="Editar medicamento">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Ingresa los datos del stock a añadir:</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small font-weight-bold text-muted mb-1">Categoría</label>
+                                    <div class="input-group">
+                                        <select name="categoria_id" id="selectIngresoCategoria" class="form-control" style="width: 100%;">
+                                            <option value="">Sin categoría</option>
+                                            @foreach(($categorias ?? []) as $categoria)
+                                            <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                        <div class="input-group-append">
+                                            <button type="button" id="btnGuardarNuevaCategoria" class="btn btn-primary" disabled>
+                                                Guardar
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Busca o escribe una nueva categoría.</small>
+                                </div>
+                            </div>
                         </div>
                         <div class="card-body pt-0">
                             <div class="row">
@@ -388,11 +552,19 @@
 
                             <div class="card border-success mb-3">
                                 <div class="card-body py-2">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="chkIngresoDistribuir">
-                                        <label class="custom-control-label font-weight-bold text-success" for="chkIngresoDistribuir">
-                                            Distribuir este lote por sucursales
-                                        </label>
+                                    <div class="d-flex flex-wrap align-items-center" style="gap: 18px;">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="chkIngresoDistribuir">
+                                            <label class="custom-control-label font-weight-bold text-success" for="chkIngresoDistribuir">
+                                                Distribuir este lote por sucursales
+                                            </label>
+                                        </div>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="chkIngresoVerPrecios">
+                                            <label class="custom-control-label font-weight-bold text-primary" for="chkIngresoVerPrecios">
+                                                Ver precio venta
+                                            </label>
+                                        </div>
                                     </div>
                                     <div id="boxIngresoDistribucion" class="mt-3" style="display: none;">
                                         <div class="row">
@@ -408,6 +580,25 @@
                                             @endforeach
                                         </div>
                                         <small id="lblIngresoDistribucionTotal" class="text-muted">Distribuido: 0 / 1 un.</small>
+                                    </div>
+                                    <div id="boxIngresoPrecios" class="mt-3" style="display: none;">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered bg-white mb-1">
+                                                <thead class="thead-light">
+                                                    <tr>
+                                                        <th>Sucursal</th>
+                                                        <th style="width: 150px;">Precio venta</th>
+                                                        <th style="width: 100px;">Acción</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbodyIngresoPrecios">
+                                                    <tr>
+                                                        <td colspan="3" class="text-center text-muted">Selecciona un medicamento.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <small class="text-muted">El precio se guarda por sucursal.</small>
                                     </div>
                                 </div>
                             </div>
@@ -451,6 +642,7 @@ $permisosJS = [
 @endsection
 
 @section('js')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     let estaProcesandoIngreso = false; // Variable de control global
     // 1. CONFIGURACIÓN TOAST
@@ -742,6 +934,9 @@ $permisosJS = [
 
     const RUTA_BUSCAR = "{{ route('ventas.lookup_medicamentos') }}";
     const RUTA_LOTES = "{{ route('ventas.lookup_lotes') }}";
+    const RUTA_ACTUALIZAR_CATEGORIA_BASE = "{{ url('inventario/medicamentos') }}";
+    const RUTA_PRECIOS_SUCURSALES_BASE = "{{ url('inventario/medicamentos') }}";
+    const RUTA_MEDICAMENTO_BASE = "{{ url('inventario/medicamentos') }}";
     const SUCURSAL_ID = "{{ $sucursalSeleccionada ? $sucursalSeleccionada->id : '' }}";
 
     let timeoutSalida = null;
@@ -1061,6 +1256,37 @@ $permisosJS = [
     let idxIngreso = -1;
     let countIngreso = 0;
 
+    $('#selectIngresoCategoria').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Buscar o crear categoría',
+        allowClear: true,
+        tags: true,
+        width: '100%',
+        dropdownParent: $('#modalIngresoStock'),
+        createTag: function(params) {
+            const term = $.trim(params.term);
+            if (term === '') return null;
+
+            return {
+                id: term,
+                text: term,
+                newTag: true
+            };
+        }
+    });
+
+    $('#selectIngresoCategoria').on('change', function() {
+        actualizarBotonNuevaCategoria();
+
+        if ($('#hiddenIngresoMedId').val() && !categoriaIngresoEsNueva()) {
+            guardarCategoriaIngreso(false);
+        }
+    });
+
+    $('#btnGuardarNuevaCategoria').on('click', function() {
+        guardarCategoriaIngreso(true);
+    });
+
     // 1. Abrir Modal
     function abrirModalIngreso() {
         $('#searchInput').val('');
@@ -1071,9 +1297,15 @@ $permisosJS = [
             });
             return;
         }
+        $('#hiddenIngresoMedId').val('');
         $('#formIngresoStock')[0].reset();
+        $('#selectIngresoCategoria').val('').trigger('change.select2');
+        actualizarBotonNuevaCategoria();
         $('#chkIngresoDistribuir').prop('checked', false);
+        $('#chkIngresoVerPrecios').prop('checked', false);
         $('#boxIngresoDistribucion').hide();
+        $('#boxIngresoPrecios').hide();
+        $('#tbodyIngresoPrecios').html('<tr><td colspan="3" class="text-center text-muted">Selecciona un medicamento.</td></tr>');
         $('.input-ingreso-distribucion').prop('disabled', true).val('').removeClass('is-invalid');
         $('#inputIngresoCantidad').prop('readonly', false).removeClass('bg-light');
         recalcularIngresoDistribucion();
@@ -1084,7 +1316,7 @@ $permisosJS = [
         $('#txtBuscarIngreso').val('');
         $('#listaResultadosIngreso').hide();
         $('#formIngresoStock').hide();
-        $('#hiddenIngresoMedId').val('');
+        $('#btnEditarIngresoMedicamento').hide();
         $('#inputIngresoVencimiento').prop('readonly', false).removeClass('bg-light').val('');
         $('#avisoLoteExistente').hide();
         $('#modalIngresoStock').modal('show');
@@ -1107,6 +1339,15 @@ $permisosJS = [
         }
 
         actualizarCantidadIngresoDesdeDistribucion();
+    });
+
+    $('#chkIngresoVerPrecios').on('change', function() {
+        const activo = $(this).is(':checked');
+        $('#boxIngresoPrecios').toggle(activo);
+
+        if (activo) {
+            cargarPreciosIngreso();
+        }
     });
 
     $('#inputIngresoCantidad, .input-ingreso-distribucion').on('input change', function() {
@@ -1180,11 +1421,15 @@ $permisosJS = [
                             </div>`;
                     } else {
                         data.forEach((m, i) => {
+                            const nombre = JSON.stringify(m.nombre || '');
+                            const presentacion = JSON.stringify(m.presentacion || '');
+                            const categoriaNombre = JSON.stringify(m.categoria_nombre || '');
+                            const categoriaId = m.categoria_id ? parseInt(m.categoria_id) : 'null';
                             html += `
                                 <a href="#" class="list-group-item list-group-item-action py-2 item-ingreso" 
                                    id="ing-item-${i}"
-                                   onclick="seleccionarMedIngreso(${m.medicamento_id}, '${m.nombre}', '${m.presentacion || ''}'); return false;">
-                                    <strong>${m.nombre}</strong> <small class="text-muted">(${m.presentacion || ''})</small>
+                                   onclick='seleccionarMedIngreso(${m.medicamento_id}, ${nombre}, ${presentacion}, ${categoriaId}, ${categoriaNombre}); return false;'>
+                                     <strong>${m.nombre}</strong> <small class="text-muted">(${m.presentacion || ''})</small>
                                 </a>`;
                         });
                     }
@@ -1225,17 +1470,297 @@ $permisosJS = [
     }
 
     // 4. Seleccionar Producto -> Mostrar Formulario
-    window.seleccionarMedIngreso = function(id, nombre, pres) {
+    window.seleccionarMedIngreso = function(id, nombre, pres, categoriaId = null, categoriaNombre = '') {
         $('#txtBuscarIngreso').val('');
         $('#listaResultadosIngreso').hide();
 
         $('#hiddenIngresoMedId').val(id);
         $('#lblIngresoProducto').text(nombre + ' ' + pres);
+        $('#btnEditarIngresoMedicamento').show();
+
+        if (categoriaId) {
+            if (!$('#selectIngresoCategoria option[value="' + categoriaId + '"]').length) {
+                $('#selectIngresoCategoria').append(new Option(categoriaNombre, categoriaId, false, false));
+            }
+            $('#selectIngresoCategoria').val(categoriaId).trigger('change.select2');
+        } else {
+            $('#selectIngresoCategoria').val('').trigger('change.select2');
+        }
+        actualizarBotonNuevaCategoria();
+
+        if ($('#chkIngresoVerPrecios').is(':checked')) {
+            cargarPreciosIngreso();
+        }
 
         $('#formIngresoStock').fadeIn();
         // Enfocar campo de Lote automáticamente
         setTimeout(() => $('#inputIngresoLote').focus(), 200);
     };
+
+    $('#btnEditarIngresoMedicamento').on('click', function() {
+        const medId = $('#hiddenIngresoMedId').val();
+        if (!medId) return;
+
+        $.ajax({
+            url: RUTA_MEDICAMENTO_BASE + '/' + medId + '/detalle-json',
+            method: 'GET',
+            success: function(info) {
+                cargarModalEditarIngresoMedicamento(info);
+                $('#modalEditarIngresoMedicamento').modal({
+                    backdrop: 'static',
+                    keyboard: false,
+                    show: true
+                });
+            },
+            error: function() {
+                ToastCentro.fire({
+                    icon: 'error',
+                    title: 'No se pudo cargar el medicamento'
+                });
+            }
+        });
+    });
+
+    $('#modalEditarIngresoMedicamento').on('show.bs.modal', function() {
+        $(this).css('z-index', 1070);
+        setTimeout(() => {
+            $('.modal-backdrop').not('.modal-backdrop-ingreso-edit').last()
+                .addClass('modal-backdrop-ingreso-edit')
+                .css('z-index', 1060);
+        }, 0);
+    });
+
+    $('#modalEditarIngresoMedicamento').on('hidden.bs.modal', function() {
+        $('.modal-backdrop-ingreso-edit').remove();
+        if ($('#modalIngresoStock').hasClass('show')) {
+            $('body').addClass('modal-open');
+        }
+    });
+
+    function cargarModalEditarIngresoMedicamento(info) {
+        $('#edit_ing_med_id').val(info.id);
+        $('#edit_ing_med_nombre').val(info.nombre);
+        $('#edit_ing_med_codigo').val(info.codigo);
+        $('#edit_ing_med_digemid').val(info.codigo_digemid);
+        $('#edit_ing_med_lab').val(info.laboratorio);
+        $('#edit_ing_med_cat').val(info.categoria_id);
+        $('#edit_ing_med_pres').val(info.presentacion);
+        $('#edit_ing_med_conc').val(info.concentracion);
+        $('#edit_ing_med_forma').val(info.forma_farmaceutica);
+        $('#edit_ing_med_desc').val(info.descripcion);
+        $('#edit_ing_med_barra').val(info.codigo_barra);
+        $('#edit_ing_med_barra_blister').val(info.codigo_barra_blister);
+        $('#edit_ing_med_unidades').val(info.unidades_por_envase);
+        $('#edit_ing_med_unidades_blister').val(info.unidades_por_blister);
+        $('#edit_ing_med_reg').val(info.registro_sanitario);
+        $('#edit_ing_med_igv').prop('checked', info.afecto_igv == 1 || info.afecto_igv === true);
+        $('#edit_ing_med_receta').prop('checked', info.receta_medica == 1 || info.receta_medica === true);
+        $('#edit_ing_med_imagen').val('');
+
+        if (info.imagen_url) {
+            $('#img_ing_med_foto_edit').attr('src', info.imagen_url).show();
+            $('#div_ing_med_placeholder_edit').hide();
+        } else {
+            $('#img_ing_med_foto_edit').hide();
+            $('#div_ing_med_placeholder_edit').show();
+        }
+    }
+
+    $('#edit_ing_med_imagen').on('change', function() {
+        if (!this.files || !this.files[0]) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('#img_ing_med_foto_edit').attr('src', e.target.result).show();
+            $('#div_ing_med_placeholder_edit').hide();
+        };
+        reader.readAsDataURL(this.files[0]);
+    });
+
+    $('#formEditarIngresoMedicamento').on('submit', function(e) {
+        e.preventDefault();
+
+        const medId = $('#edit_ing_med_id').val();
+        const $btn = $(this).find('button[type="submit"]');
+        const originalText = $btn.text();
+        const formData = new FormData(this);
+        formData.append('_method', 'PUT');
+
+        $btn.prop('disabled', true).text('Actualizando...');
+
+        $.ajax({
+            url: RUTA_MEDICAMENTO_BASE + '/' + medId + '/update-rapido',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function() {
+                $('#modalEditarIngresoMedicamento').modal('hide');
+                $('#lblIngresoProducto').text($('#edit_ing_med_nombre').val() + ' ' + ($('#edit_ing_med_forma').val() || ''));
+                $('#selectIngresoCategoria').val($('#edit_ing_med_cat').val()).trigger('change.select2');
+                actualizarBotonNuevaCategoria();
+                ToastCentro.fire({
+                    icon: 'success',
+                    title: 'Medicamento actualizado'
+                });
+                aplicarFiltros();
+            },
+            error: function(xhr) {
+                let msg = xhr.responseJSON ? (xhr.responseJSON.message || 'Error al actualizar') : 'Error al actualizar';
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    msg = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                }
+                ToastCentro.fire({
+                    icon: 'error',
+                    title: msg
+                });
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(originalText);
+            }
+        });
+    });
+
+    function categoriaIngresoEsNueva() {
+        const valor = $('#selectIngresoCategoria').val();
+        return !!valor && !/^\d+$/.test(valor);
+    }
+
+    function actualizarBotonNuevaCategoria() {
+        $('#btnGuardarNuevaCategoria').prop('disabled', !categoriaIngresoEsNueva());
+    }
+
+    function guardarCategoriaIngreso(mostrarToast = true) {
+        const medId = $('#hiddenIngresoMedId').val();
+        const valor = $('#selectIngresoCategoria').val();
+
+        if (!medId) return $.Deferred().resolve().promise();
+
+        const data = {
+            _token: "{{ csrf_token() }}"
+        };
+
+        if (!valor) {
+            data.categoria_id = '';
+        } else if (/^\d+$/.test(valor)) {
+            data.categoria_id = valor;
+        } else {
+            data.categoria_nombre = valor;
+        }
+
+        return $.ajax({
+            url: RUTA_ACTUALIZAR_CATEGORIA_BASE + '/' + medId + '/categoria',
+            method: 'PUT',
+            data: data,
+            success: function(res) {
+                if (res.categoria) {
+                    const id = String(res.categoria.id);
+                    if (!$('#selectIngresoCategoria option[value="' + id + '"]').length) {
+                        $('#selectIngresoCategoria').append(new Option(res.categoria.nombre, id, false, false));
+                    }
+                    $('#selectIngresoCategoria').val(id).trigger('change.select2');
+                }
+                actualizarBotonNuevaCategoria();
+
+                if (mostrarToast) {
+                    ToastCentro.fire({
+                        icon: 'success',
+                        title: 'Categoría actualizada'
+                    });
+                }
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON ? (xhr.responseJSON.message || 'No se pudo guardar categoría') : 'No se pudo guardar categoría';
+                ToastCentro.fire({
+                    icon: 'error',
+                    title: msg
+                });
+            }
+        });
+    }
+
+    function cargarPreciosIngreso() {
+        const medId = $('#hiddenIngresoMedId').val();
+        const $tbody = $('#tbodyIngresoPrecios');
+
+        if (!medId) {
+            $tbody.html('<tr><td colspan="3" class="text-center text-muted">Selecciona un medicamento.</td></tr>');
+            return;
+        }
+
+        $tbody.html('<tr><td colspan="3" class="text-center text-muted">Cargando precios...</td></tr>');
+
+        $.ajax({
+            url: RUTA_PRECIOS_SUCURSALES_BASE + '/' + medId + '/precios-sucursales',
+            method: 'GET',
+            success: function(res) {
+                let html = '';
+
+                res.precios.forEach(function(item) {
+                    html += `
+                        <tr>
+                            <td class="align-middle font-weight-bold">${item.sucursal_nombre}</td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-prepend"><span class="input-group-text">S/</span></div>
+                                    <input type="number" min="0" step="0.01"
+                                        class="form-control input-ingreso-precio"
+                                        data-sucursal-id="${item.sucursal_id}"
+                                        value="${parseFloat(item.precio_venta || 0).toFixed(2)}">
+                                </div>
+                            </td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-primary btn-sm btn-guardar-precio-ingreso"
+                                    data-sucursal-id="${item.sucursal_id}">
+                                    Guardar
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+
+                $tbody.html(html || '<tr><td colspan="3" class="text-center text-muted">No hay sucursales disponibles.</td></tr>');
+            },
+            error: function() {
+                $tbody.html('<tr><td colspan="3" class="text-center text-danger">No se pudieron cargar los precios.</td></tr>');
+            }
+        });
+    }
+
+    $(document).on('click', '.btn-guardar-precio-ingreso', function() {
+        const medId = $('#hiddenIngresoMedId').val();
+        const sucursalId = $(this).data('sucursal-id');
+        const precio = $(`.input-ingreso-precio[data-sucursal-id="${sucursalId}"]`).val();
+        const $btn = $(this);
+
+        if (!medId) return;
+
+        $btn.prop('disabled', true).text('...');
+
+        $.ajax({
+            url: RUTA_ACTUALIZAR_CATEGORIA_BASE + '/' + medId + '/sucursales/' + sucursalId,
+            type: 'PUT',
+            data: {
+                _token: "{{ csrf_token() }}",
+                precio: precio
+            },
+            success: function() {
+                ToastCentro.fire({
+                    icon: 'success',
+                    title: 'Precio actualizado'
+                });
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON ? (xhr.responseJSON.error || xhr.responseJSON.message || 'Error al guardar precio') : 'Error al guardar precio';
+                ToastCentro.fire({
+                    icon: 'error',
+                    title: msg
+                });
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text('Guardar');
+            }
+        });
+    });
 
     // 5. Guardar (AJAX)
     $('#formIngresoStock').on('submit', function(e) {
@@ -1266,29 +1791,34 @@ $permisosJS = [
         estaProcesandoIngreso = true;
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> PROCESANDO...');
 
-        $.ajax({
-            url: "{{ route('inventario.movimientos.store_ingreso') }}",
-            method: 'POST',
-            data: $(this).serialize(),
-            success: function(res) {
-                $('#modalIngresoStock').modal('hide');
-                ToastCentro.fire({
-                    icon: 'success',
-                    title: 'Ingreso registrado correctamente'
-                });
-                aplicarFiltros();
-            },
-            error: function(xhr) {
-                let msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error al guardar';
-                ToastCentro.fire({
-                    icon: 'error',
-                    title: msg
-                });
-            },
-            complete: function() {
-                estaProcesandoIngreso = false;
-                btn.prop('disabled', false).html(originalHtml);
-            }
+        guardarCategoriaIngreso(false).done(() => {
+            $.ajax({
+                url: "{{ route('inventario.movimientos.store_ingreso') }}",
+                method: 'POST',
+                data: $(this).serialize(),
+                success: function(res) {
+                    $('#modalIngresoStock').modal('hide');
+                    ToastCentro.fire({
+                        icon: 'success',
+                        title: 'Ingreso registrado correctamente'
+                    });
+                    aplicarFiltros();
+                },
+                error: function(xhr) {
+                    let msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error al guardar';
+                    ToastCentro.fire({
+                        icon: 'error',
+                        title: msg
+                    });
+                },
+                complete: function() {
+                    estaProcesandoIngreso = false;
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        }).fail(() => {
+            estaProcesandoIngreso = false;
+            btn.prop('disabled', false).html(originalHtml);
         });
     });
 </script>
@@ -1367,5 +1897,10 @@ $permisosJS = [
         font-weight: bold;
         text-transform: uppercase;
         font-size: 0.75rem;
+    }
+
+    #selectIngresoCategoria+.select2-container {
+        flex: 1 1 auto;
+        width: 1% !important;
     }
 </style>

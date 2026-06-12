@@ -12,6 +12,7 @@ use App\Services\SucursalResolver;
 use App\Models\Sucursal;
 use Illuminate\Support\Facades\DB;
 use App\Models\Inventario\MovimientoInventario;
+use App\Models\Inventario\Categoria;
 
 
 class MedicamentoSucursalController extends Controller
@@ -273,6 +274,64 @@ class MedicamentoSucursalController extends Controller
         ]);
     }
 
+    public function updateCategoria(Request $request, $medicamentoId)
+    {
+        $data = $request->validate([
+            'categoria_id'     => ['nullable', 'integer', 'exists:categorias,id'],
+            'categoria_nombre' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        $categoriaId = $data['categoria_id'] ?? null;
+        $nombre = trim((string)($data['categoria_nombre'] ?? ''));
+
+        if (!$categoriaId && $nombre !== '') {
+            $categoria = Categoria::firstOrCreate(
+                ['nombre' => $nombre],
+                ['activo' => true]
+            );
+            $categoriaId = $categoria->id;
+        }
+
+        $medicamento = Medicamento::findOrFail($medicamentoId);
+        $medicamento->categoria_id = $categoriaId;
+        $medicamento->save();
+
+        return response()->json([
+            'success' => true,
+            'categoria' => $categoriaId ? Categoria::find($categoriaId) : null,
+        ]);
+    }
+
+    public function preciosSucursales(Request $request, $medicamentoId)
+    {
+        $user = Auth::user();
+        $medicamento = Medicamento::findOrFail($medicamentoId);
+
+        $precios = $this->sucursalesOperacion($user)->map(function ($sucursal) use ($medicamentoId) {
+            $pivot = MedicamentoSucursal::withTrashed()
+                ->where('medicamento_id', $medicamentoId)
+                ->where('sucursal_id', $sucursal->id)
+                ->first();
+
+            return [
+                'sucursal_id'     => $sucursal->id,
+                'sucursal_nombre' => $sucursal->nombre,
+                'precio_venta'    => $pivot ? (float) $pivot->precio_venta : 0,
+                'precio_blister'  => $pivot ? (float) $pivot->precio_blister : 0,
+                'precio_caja'     => $pivot ? (float) $pivot->precio_caja : 0,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'medicamento' => [
+                'id' => $medicamento->id,
+                'nombre' => $medicamento->nombre,
+            ],
+            'precios' => $precios,
+        ]);
+    }
+
 
     // =========================================================================
     //  NUEVA FUNCIÓN: REGISTRAR BAJA / SALIDA DE STOCK
@@ -341,6 +400,7 @@ class MedicamentoSucursalController extends Controller
             'vencimiento'    => 'nullable|date',
             'motivo'         => 'required|string',
             'observacion'    => 'nullable|string|max:255',
+            'categoria_id'   => 'nullable|integer|exists:categorias,id',
             'distribuciones' => 'nullable|array',
             'distribuciones.*' => 'nullable|integer|min:0',
         ]);
@@ -379,6 +439,11 @@ class MedicamentoSucursalController extends Controller
 
         DB::beginTransaction();
         try {
+            if ($request->filled('categoria_id')) {
+                Medicamento::where('id', $request->medicamento_id)
+                    ->update(['categoria_id' => $request->categoria_id]);
+            }
+
             foreach ($distribuciones as $sucursalId => $cantidadSucursal) {
                 $sucursalId = (int) $sucursalId;
 

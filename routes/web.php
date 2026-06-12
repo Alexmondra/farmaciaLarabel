@@ -101,6 +101,7 @@ Route::middleware(['auth'])->group(function () {
         // Medicamentos: Rutas Custom
         Route::controller(MedicamentoController::class)->group(function () {
             Route::get('medicamentos/buscar', 'lookup')->name('medicamentos.lookup');
+            Route::get('medicamentos/{medicamento}/detalle-json', 'detalleJson')->name('medicamentos.detalle_json');
             Route::post('medicamentos/store-rapido', 'storeRapido')->name('medicamentos.storeRapido');
             Route::put('medicamentos/{id}/update-rapido', 'updateRapido')->name('medicamentos.updateRapido');
         });
@@ -113,6 +114,11 @@ Route::middleware(['auth'])->group(function () {
                 ->name('medicamento_sucursal.destroy');
 
             Route::post('medicamentos/{medicamento}/sucursales', 'attach')->name('medicamento_sucursal.store');
+
+            Route::put('medicamentos/{medicamento}/categoria', 'updateCategoria')
+                ->name('medicamentos.update_categoria');
+            Route::get('medicamentos/{medicamento}/precios-sucursales', 'preciosSucursales')
+                ->name('medicamentos.precios_sucursales');
 
             Route::get('medicamentos/{medicamento}/sucursales/{sucursal}/historial', 'historial')
                 ->name('medicamento_sucursal.historial');

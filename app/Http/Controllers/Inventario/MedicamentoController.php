@@ -40,6 +40,7 @@ class MedicamentoController extends Controller
             'esAdmin'              => $ctx['es_admin'],
             'sucursalSeleccionada' => $ctx['sucursal_seleccionada'],
             'sucursalesIngreso'    => $this->sucursalesOperacion($user),
+            'categorias'           => Categoria::where('activo', true)->orderBy('nombre')->get(),
         ];
 
         if ($request->ajax()) {
@@ -242,5 +243,32 @@ class MedicamentoController extends Controller
         });
 
         return response()->json(['results' => $results]);
+    }
+
+    public function detalleJson($id)
+    {
+        $med = Medicamento::with('categoria')->findOrFail($id);
+
+        return response()->json([
+            'id' => $med->id,
+            'codigo' => $med->codigo,
+            'codigo_digemid' => $med->codigo_digemid,
+            'codigo_barra' => $med->codigo_barra,
+            'codigo_barra_blister' => $med->codigo_barra_blister,
+            'nombre' => $med->nombre,
+            'laboratorio' => $med->laboratorio,
+            'presentacion' => $med->presentacion,
+            'concentracion' => $med->concentracion,
+            'forma_farmaceutica' => $med->forma_farmaceutica,
+            'descripcion' => $med->descripcion,
+            'registro_sanitario' => $med->registro_sanitario,
+            'categoria_id' => $med->categoria_id,
+            'categoria_nombre' => $med->categoria->nombre ?? '',
+            'unidades_por_envase' => $med->unidades_por_envase,
+            'unidades_por_blister' => $med->unidades_por_blister,
+            'afecto_igv' => $med->afecto_igv,
+            'receta_medica' => $med->receta_medica,
+            'imagen_url' => $med->imagen_path ? asset('storage/' . $med->imagen_path) : null,
+        ]);
     }
 }

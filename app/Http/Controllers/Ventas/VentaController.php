@@ -385,6 +385,7 @@ class VentaController extends Controller
 
         $query = \App\Models\Inventario\Medicamento::query()
             ->withoutGlobalScopes()
+            ->with('categoria')
             ->where('activo', true);
 
         $query->with(['sucursales' => function ($q) use ($sucursalId) {
@@ -430,6 +431,8 @@ class VentaController extends Controller
                 'nombre'                  => $med->nombre,
                 'codigo'                  => $med->codigo,
                 'presentacion'            => $med->forma_farmaceutica ?? '',
+                'categoria_id'            => $med->categoria_id,
+                'categoria_nombre'        => $med->categoria->nombre ?? '',
                 'precio_venta'            => $estaAsignado ? (float) $pivot->precio_venta : 0.00,
             ];
         });
