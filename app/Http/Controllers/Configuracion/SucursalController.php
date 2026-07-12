@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Configuracion;
 use App\Http\Controllers\Controller;
 use App\Models\Sucursal;
 use App\Http\Requests\SucursalRequest; // <--- Importamos el Request
+use App\Support\WebpImage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request; // Solo para el index si usas Request genérico allí
 
@@ -56,7 +57,7 @@ class SucursalController extends Controller
 
         // 2. Imagen
         if ($request->hasFile('imagen_sucursal')) {
-            $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
+            $data['imagen_sucursal'] = WebpImage::store($request->file('imagen_sucursal'), 'sucursales');
         }
 
         // 3. Crear
@@ -83,7 +84,7 @@ class SucursalController extends Controller
             if ($sucursal->imagen_sucursal) {
                 Storage::disk('public')->delete($sucursal->imagen_sucursal);
             }
-            $data['imagen_sucursal'] = $request->file('imagen_sucursal')->store('sucursales', 'public');
+            $data['imagen_sucursal'] = WebpImage::store($request->file('imagen_sucursal'), 'sucursales');
         }
 
         // 3. Actualizar

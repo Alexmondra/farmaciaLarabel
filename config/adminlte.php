@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'title' => 'FarmaciaSys', // Nombre más profesional
+    'title' => 'Mundo_farma', // Nombre más profesional
     'title_prefix' => '',
     'title_postfix' => '',
 
@@ -244,6 +244,7 @@ return [
                     'can'  => 'ventas.ver',
                     'icon' => 'fas fa-file-invoice-dollar',
                 ],
+                
                 // --- AQUÍ AGREGAMOS LAS GUÍAS ---
                 /* [
                     'text'   => 'Guías de Remisión',
@@ -261,6 +262,29 @@ return [
                 ],
             ],
         ],
+
+        //3.4
+        ['header' => 'COMERCIO ELECTRÓNICO'],
+        [
+            'text'    => 'Tienda virtual', // Título del menú desplegable
+            'icon'    => 'fas fa-store', 
+            'submenu' => [
+                [
+                    'text' => 'Pedidos Online',
+                    'url'  => 'ventas/pedidos-online',
+                    'icon' => 'fas fa-receipt',
+                    'active' => ['ventas/pedidos-online*'],
+                ],
+                [
+                    'text' => 'Productos Tienda',
+                    'url'  => 'tienda-admin/productos',
+                    'icon' => 'fas fa-box-open',
+                    'active' => ['tienda-admin/productos*'],
+                ],
+
+            ],
+        ],        
+
 
         // 3.5 
 

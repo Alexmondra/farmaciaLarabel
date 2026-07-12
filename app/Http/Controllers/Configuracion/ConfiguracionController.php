@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Configuracion;
 
 use App\Http\Controllers\Controller;
 use App\Models\Configuracion;
+use App\Support\WebpImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -51,7 +52,7 @@ class ConfiguracionController extends Controller
             'puntos_por_moneda'    => 'required|integer|min:1',
             'valor_punto_canje'    => 'required|numeric|min:0',
             'mensaje_ticket'       => 'nullable|string|max:200',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
         ]);
 
         // Manejo del checkbox (si no viene checkeado, es false)
@@ -63,8 +64,10 @@ class ConfiguracionController extends Controller
                 Storage::disk('public')->delete($config->ruta_logo);
             }
 
-            // Guardar nuevo en carpeta 'public/logos'
-            $path = $request->file('logo')->store('logos', 'public');
+            $file = $request->file('logo');
+            $path = $file->getMimeType() === 'image/svg+xml'
+                ? $file->store('logos', 'public')
+                : WebpImage::store($file, 'logos');
             $data['ruta_logo'] = $path;
         }
         // --- LÓGICA DE CERTIFICADO INTELIGENTE ---

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seguridad;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Sucursal;
+use App\Support\WebpImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +58,7 @@ class UsuarioController extends Controller
 
         // Subida de Imagen
         if ($request->hasFile('imagen_perfil')) {
-            $data['imagen_perfil'] = $request->file('imagen_perfil')->store('usuarios', 'local');
+            $data['imagen_perfil'] = WebpImage::store($request->file('imagen_perfil'), 'usuarios', 'local');
         }
 
         $user = User::create($data);
@@ -115,7 +116,7 @@ class UsuarioController extends Controller
             if ($usuario->imagen_perfil) {
                 Storage::disk('local')->delete($usuario->imagen_perfil);
             }
-            $data['imagen_perfil'] = $request->file('imagen_perfil')->store('usuarios', 'local');
+            $data['imagen_perfil'] = WebpImage::store($request->file('imagen_perfil'), 'usuarios', 'local');
         }
         $usuario->update($data);
 
@@ -207,7 +208,7 @@ class UsuarioController extends Controller
             if ($user->imagen_perfil) {
                 \Illuminate\Support\Facades\Storage::disk('local')->delete($user->imagen_perfil);
             }
-            $data['imagen_perfil'] = $request->file('imagen_perfil')->store('usuarios', 'local');
+            $data['imagen_perfil'] = WebpImage::store($request->file('imagen_perfil'), 'usuarios', 'local');
         }
 
         $user->update($data);

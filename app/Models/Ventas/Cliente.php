@@ -2,10 +2,10 @@
 
 namespace App\Models\Ventas;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Cliente extends Model
+class Cliente extends Authenticatable
 {
     use HasFactory;
 
@@ -22,15 +22,30 @@ class Cliente extends Model
         'puntos',
         'telefono',
         'email',
+        'tienda_password',
+        'tienda_email_verified_at',
+        'tienda_last_login_at',
         'direccion',
         'activo',
     ];
 
+    protected $hidden = [
+        'tienda_password',
+        'remember_token',
+    ];
+
     protected $casts = [
         'fecha_nacimiento' => 'date',
+        'tienda_email_verified_at' => 'datetime',
+        'tienda_last_login_at' => 'datetime',
         'activo' => 'boolean',
         'puntos' => 'integer',
     ];
+
+    public function getAuthPassword()
+    {
+        return $this->tienda_password;
+    }
 
     public function getNombreCompletoAttribute()
     {
@@ -40,15 +55,18 @@ class Cliente extends Model
         return trim("{$this->nombre} {$this->apellidos}");
     }
 
-
     public function ventas()
     {
         return $this->hasMany(Venta::class);
     }
 
+    public function pedidosOnline()
+    {
+        return $this->hasMany(\App\Models\Tienda\PedidoOnline::class);
+    }
+
     public function getPuntosAttribute($value)
     {
-        // Si es el cliente genérico, siempre decimos que tiene 0
         if ($this->id === 1) {
             return 0;
         }

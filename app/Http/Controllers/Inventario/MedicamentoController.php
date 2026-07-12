@@ -9,6 +9,7 @@ use App\Models\Inventario\Medicamento;
 use App\Services\SucursalResolver;
 use App\Repositories\MedicamentoRepository;
 use App\Http\Requests\Inventario\MedicamentoRequest;
+use App\Support\WebpImage;
 use App\Models\Inventario\Categoria;
 use App\Models\Sucursal;
 
@@ -97,7 +98,7 @@ class MedicamentoController extends Controller
     {
         $data = $request->validated();
         if ($request->hasFile('imagen')) {
-            $data['imagen_path'] = $request->file('imagen')->store('medicamentos', 'public');
+            $data['imagen_path'] = WebpImage::store($request->file('imagen'), 'medicamentos');
         }
         $data['user_id']       = auth()->id();
         $data['activo']        = true;
@@ -119,7 +120,11 @@ class MedicamentoController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('imagen')) {
-            $data['imagen_path'] = $request->file('imagen')->store('medicamentos', 'public');
+            if ($med->imagen_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($med->imagen_path);
+            }
+
+            $data['imagen_path'] = WebpImage::store($request->file('imagen'), 'medicamentos');
         }
 
         $data['afecto_igv']    = $request->has('afecto_igv');

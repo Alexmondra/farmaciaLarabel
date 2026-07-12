@@ -38,7 +38,7 @@ class SucursalRequest extends FormRequest
             'telefono'            => ['nullable', 'string', 'max:30'],
             'email'               => ['nullable', 'email', 'max:120'],
             'impuesto_porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
-            'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'imagen_sucursal'     => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'serie_boleta'        => ['required', 'string', 'max:4', Rule::unique('sucursales')->ignore($id)],
             'serie_factura'       => ['required', 'string', 'max:4', Rule::unique('sucursales')->ignore($id)],
             'serie_ticket'        => ['required', 'string', 'max:4', Rule::unique('sucursales')->ignore($id)],
