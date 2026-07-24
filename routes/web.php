@@ -29,6 +29,7 @@ Route::get('/', function () {
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/tienda.php';
+require __DIR__ . '/pago.php';
 
 
 Route::view('/consultar', 'publico.buscar')->name('publico.buscar_vista');

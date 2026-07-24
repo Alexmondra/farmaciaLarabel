@@ -1,60 +1,337 @@
+@php
+    $empresa = cache()->remember('datos_empresa_config', 1440, function () {
+        return \App\Models\Configuracion::first();
+    });
+    $nombreTienda = $empresa->empresa_razon_social ?? 'Farmacia Online';
+    $logoUrl = ($empresa && $empresa->ruta_logo) ? asset('storage/' . $empresa->ruta_logo) : null;
+@endphp
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Tienda Virtual')</title>
+    <title>@yield('title', 'Tienda Virtual') - {{ $nombreTienda }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
-            --store-green: #008f5f;
-            --store-green-dark: #006b48;
-            --store-green-soft: #e8f8f1;
-            --store-red: #e52f3f;
-            --store-ink: #102033;
+            --store-green: #0d9488;
+            --store-green-dark: #0f766e;
+            --store-green-soft: #f0fdfa;
+            --store-red: #0284c7;
+            --store-ink: #0f172a;
             --store-muted: #64748b;
         }
 
-        body { background: #f5f7f6; color: var(--store-ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        .top-strip { background: var(--store-green-dark); color: #dff8ec; font-size: .875rem; }
-        .store-header { background: var(--store-green); box-shadow: 0 10px 30px rgba(0, 107, 72, .14); color: white; position: sticky; top: 0; z-index: 20; }
-        .brand-mark { align-items: center; color: white; display: inline-flex; font-size: 1.35rem; font-weight: 800; gap: .65rem; letter-spacing: -.03em; text-decoration: none; }
-        .brand-icon { align-items: center; background: var(--store-red); border-radius: 1rem; display: inline-flex; height: 42px; justify-content: center; width: 42px; }
-        .header-link { color: rgba(255, 255, 255, .88); font-weight: 600; text-decoration: none; }
-        .header-link:hover { color: white; }
-        .cart-pill { background: white; border-radius: 999px; color: var(--store-green-dark); font-weight: 800; padding: .6rem 1rem; text-decoration: none; }
-        .store-shell { margin-top: 1.25rem; }
-        .store-card { border: 0; border-radius: 1rem; box-shadow: 0 12px 28px rgba(15, 23, 42, .08); }
-        .price { color: var(--store-red); font-weight: 800; }
-        .btn-store { background: var(--store-red); border-color: var(--store-red); color: white; font-weight: 700; }
-        .btn-store:hover { background: #c91f2f; border-color: #c91f2f; color: white; }
-        .btn-store-outline { border-color: var(--store-green); color: var(--store-green-dark); font-weight: 700; }
-        .btn-store-outline:hover { background: var(--store-green); color: white; }
-        .search-box { background: white; border: 1px solid rgba(0, 143, 95, .12); border-radius: 1rem; box-shadow: 0 12px 28px rgba(15, 23, 42, .08); padding: 1rem; }
-        .filter-label { color: var(--store-muted); font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .category-chip { background: white; border: 1px solid #d9e8df; border-radius: 999px; color: var(--store-green-dark); display: inline-flex; font-weight: 700; padding: .55rem .9rem; text-decoration: none; }
-        .category-chip:hover, .category-chip.active { background: var(--store-green); border-color: var(--store-green); color: white; }
-        .branch-badge { background: var(--store-green-soft); border-radius: 999px; color: var(--store-green-dark); font-weight: 800; padding: .4rem .7rem; }
+        body { background: #f8fafc; color: var(--store-ink); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+        .top-strip { background: #0f172a; color: #94a3b8; font-size: .82rem; font-weight: 500; }
+        .store-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            transition: all 0.3s ease;
+        }
+        .brand-mark {
+            align-items: center;
+            color: var(--store-ink);
+            display: inline-flex;
+            font-size: 1.35rem;
+            font-weight: 800;
+            gap: .65rem;
+            letter-spacing: -.03em;
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+        .brand-mark:hover {
+            color: var(--store-ink);
+            opacity: 0.9;
+        }
+        .brand-icon {
+            align-items: center;
+            background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
+            border-radius: 0.85rem;
+            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+            color: white;
+            display: inline-flex;
+            height: 38px;
+            justify-content: center;
+            width: 38px;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+        .brand-logo-img {
+            height: 38px;
+            width: 38px;
+            object-fit: contain;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .header-link {
+            color: var(--store-muted);
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-size: 0.95rem;
+        }
+        .header-link:hover {
+            color: var(--store-green);
+        }
+        .cart-pill {
+            background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
+            border-radius: 999px;
+            color: white !important;
+            font-weight: 700;
+            padding: .5rem 1.25rem;
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .cart-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+        }
+        .store-shell { margin-top: 2rem; }
+        .store-card {
+            border: 0;
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.03), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+            border: 1px solid rgba(226, 232, 240, 0.7);
+        }
+        .price { color: var(--store-green); font-weight: 800; }
+        .btn-store {
+            background: linear-gradient(135deg, var(--store-red) 0%, #0284c7 100%);
+            border: 0;
+            color: white;
+            font-weight: 700;
+            border-radius: 0.85rem;
+            padding: 0.6rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+            transition: all 0.3s ease;
+        }
+        .btn-store:hover {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25);
+        }
+        .btn-store:active {
+            transform: scale(0.98);
+        }
+        .btn-store-outline {
+            border: 2px solid var(--store-green);
+            background: transparent;
+            color: var(--store-green-dark);
+            font-weight: 700;
+            border-radius: 0.85rem;
+            padding: 0.6rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .btn-store-outline:hover {
+            background: var(--store-green);
+            color: white;
+            border-color: var(--store-green);
+        }
+        .search-box {
+            background: white;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.02), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
+            padding: 1.75rem;
+        }
+        .filter-label {
+            color: var(--store-muted);
+            font-size: .8rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+        .category-chip {
+            background: white;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 999px;
+            color: var(--store-ink);
+            display: inline-flex;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: .5rem 1.1rem;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .category-chip:hover, .category-chip.active {
+            background: var(--store-green);
+            border-color: var(--store-green);
+            color: white;
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+            transform: translateY(-1px);
+        }
+        .branch-badge {
+            background: var(--store-green-soft);
+            border-radius: 999px;
+            color: var(--store-green-dark);
+            font-weight: 700;
+            padding: .35rem .8rem;
+            font-size: 0.85rem;
+            border: 1px solid rgba(13, 148, 136, 0.1);
+        }
         .muted-copy { color: var(--store-muted); }
-        .quick-banner { background: linear-gradient(135deg, #fff 0%, #eafff4 100%); border-radius: 1rem; padding: 1rem; }
+        .quick-banner {
+            background: linear-gradient(135deg, #fff 0%, #f0fdfa 100%);
+            border-radius: 1.25rem;
+            padding: 1.25rem;
+            border: 1px solid rgba(13, 148, 136, 0.08);
+        }
         .quick-banner strong { color: var(--store-green-dark); }
-        .product-card { background: white; border: 1px solid #e7eee9; border-radius: 1rem; display: flex; flex-direction: column; overflow: hidden; transition: box-shadow .16s ease, transform .16s ease; }
-        .product-card:hover { box-shadow: 0 18px 38px rgba(15, 23, 42, .11); transform: translateY(-2px); }
-        .product-media { align-items: center; background: #f7faf8; display: flex; height: 170px; justify-content: center; overflow: hidden; position: relative; text-decoration: none; }
-        .product-media img { height: 100%; object-fit: contain; padding: 1rem; width: 100%; }
+        .product-card {
+            background: white;
+            border: 1px solid rgba(241, 245, 249, 0.9);
+            border-radius: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        }
+        .product-card:hover {
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.06), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+            transform: translateY(-4px);
+            border-color: rgba(13, 148, 136, 0.15);
+        }
+        .product-media {
+            align-items: center;
+            background: #f8fafc;
+            display: flex;
+            height: 180px;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(241, 245, 249, 0.5);
+        }
+        .product-media img {
+            height: 100%;
+            object-fit: contain;
+            padding: 1.25rem;
+            width: 100%;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .product-card:hover .product-media img {
+            transform: scale(1.06);
+        }
         .product-gallery { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
         .product-gallery-item { align-items: center; background: #f7faf8; border: 1px solid #e7eee9; border-radius: .85rem; display: flex; height: 86px; justify-content: center; overflow: hidden; }
         .product-gallery-item img { height: 100%; object-fit: contain; padding: .45rem; width: 100%; }
-        .product-placeholder { align-items: center; background: var(--store-green-soft); border-radius: 1rem; color: var(--store-green-dark); display: flex; font-size: 2rem; font-weight: 900; height: 80px; justify-content: center; width: 80px; }
-        .deal-tag { background: var(--store-red); border-radius: 999px; color: white; font-size: .75rem; font-weight: 800; left: .75rem; padding: .28rem .6rem; position: absolute; top: .75rem; }
-        .product-info { display: flex; flex: 1; flex-direction: column; padding: .95rem; }
-        .product-meta, .product-lab, .product-branch { color: var(--store-muted); font-size: .78rem; }
-        .product-title { font-size: .98rem; font-weight: 800; line-height: 1.25; margin: .25rem 0 .35rem; min-height: 2.45rem; }
-        .product-description { color: var(--store-muted); flex: 1; font-size: .82rem; margin-bottom: .5rem; }
-        .product-branch { background: var(--store-green-soft); border-radius: .6rem; color: var(--store-green-dark); display: inline-flex; font-weight: 700; margin-top: .35rem; padding: .25rem .45rem; width: fit-content; }
-        .product-bottom { align-items: center; display: flex; gap: .75rem; justify-content: space-between; margin-top: .75rem; }
-        .btn-add { background: var(--store-red); border: 0; border-radius: .65rem; color: white; font-size: .85rem; font-weight: 800; padding: .5rem .75rem; }
-        .btn-add:hover { background: #c91f2f; }
+        .product-placeholder {
+            align-items: center;
+            background: var(--store-green-soft);
+            border-radius: 1.25rem;
+            color: var(--store-green);
+            display: flex;
+            font-size: 2.25rem;
+            font-weight: 700;
+            height: 80px;
+            justify-content: center;
+            width: 80px;
+            box-shadow: inset 0 2px 4px rgba(13, 148, 136, 0.05);
+        }
+        .deal-tag {
+            background: #f43f5e;
+            border-radius: 999px;
+            color: white;
+            font-size: .7rem;
+            font-weight: 700;
+            left: .75rem;
+            padding: .3rem .7rem;
+            position: absolute;
+            top: .75rem;
+            box-shadow: 0 4px 8px rgba(244, 63, 94, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .product-info {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            padding: 1.25rem;
+        }
+        .product-meta {
+            color: var(--store-green);
+            font-size: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+        .product-lab {
+            color: var(--store-muted);
+            font-size: .8rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .product-title {
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin: .25rem 0 .5rem;
+            min-height: 2.8rem;
+            color: var(--store-ink);
+        }
+        .product-description {
+            color: var(--store-muted);
+            flex: 1;
+            font-size: .85rem;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+        .product-branch {
+            background: rgba(13, 148, 136, 0.06);
+            border: 1px solid rgba(13, 148, 136, 0.1);
+            border-radius: .5rem;
+            color: var(--store-green-dark);
+            display: inline-flex;
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-top: .35rem;
+            padding: .2rem .5rem;
+            width: fit-content;
+        }
+        .product-bottom {
+            align-items: center;
+            display: flex;
+            gap: .75rem;
+            justify-content: space-between;
+            margin-top: 1rem;
+            border-top: 1px solid rgba(241, 245, 249, 0.8);
+            padding-top: 0.75rem;
+        }
+        .product-bottom .price {
+            font-size: 1.15rem;
+            color: var(--store-ink);
+            font-weight: 800;
+        }
+        .btn-add {
+            background: var(--store-green);
+            border: 0;
+            border-radius: .75rem;
+            color: white;
+            font-size: .85rem;
+            font-weight: 700;
+            padding: .5rem 1rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.1);
+        }
+        .btn-add:hover {
+            background: var(--store-green-dark);
+            box-shadow: 0 6px 12px rgba(13, 148, 136, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn-add:active {
+            transform: scale(0.95);
+        }
         .infinite-loader { color: var(--store-muted); display: none; font-weight: 700; padding: 1rem; text-align: center; }
         .infinite-loader.is-visible { display: block; }
 
@@ -62,11 +339,11 @@
             .brand-mark { font-size: 1.1rem; }
             .brand-icon { height: 36px; width: 36px; }
             .top-strip { display: none; }
-            .store-header { position: static; }
-            .product-media { height: 132px; }
-            .product-title { font-size: .88rem; min-height: 2.2rem; }
+            .store-header { position: sticky; top: 0; z-index: 50; }
+            .product-media { height: 140px; }
+            .product-title { font-size: .9rem; min-height: 2.4rem; }
             .product-description, .product-lab { display: none; }
-            .product-info { padding: .75rem; }
+            .product-info { padding: 1rem; }
             .product-bottom { align-items: stretch; flex-direction: column; gap: .55rem; }
             .btn-add { width: 100%; }
         }
@@ -76,41 +353,55 @@
 <body>
     <div class="top-strip py-2">
         <div class="container d-flex justify-content-between gap-3">
-            <span>Compra online y recoge en tu sucursal preferida</span>
-            <span>Atencion rapida por tienda virtual</span>
+            <span>🚀 Compra online y recoge en tu sucursal preferida</span>
+            <span>📞 Atención rápida por tienda virtual</span>
         </div>
     </div>
 
     <header class="store-header py-3">
         <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
             <a href="{{ route('tienda.index') }}" class="brand-mark">
-                <span class="brand-icon">+</span>
-                <span>Farmacia Online</span>
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="{{ $nombreTienda }}" class="brand-logo-img">
+                @else
+                    <span class="brand-icon">+</span>
+                @endif
+                <span>{{ $nombreTienda }}</span>
             </a>
             <nav class="d-flex align-items-center gap-3">
-                <a href="{{ route('tienda.index') }}" class="header-link">Catalogo</a>
+                <a href="{{ route('tienda.index') }}" class="header-link">Catálogo</a>
                 @auth('tienda')
                     <div class="dropdown">
                         <a href="#" class="header-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                             Hola, {{ Str::words(auth('tienda')->user()->nombre_completo, 1, '') }}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a href="{{ route('tienda.perfil') }}" class="dropdown-item">Mi Perfil</a></li>
-                            <li><a href="{{ route('tienda.mis-pedidos') }}" class="dropdown-item">Mis Pedidos</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-xl mt-2">
+                            <li><a href="{{ route('tienda.perfil') }}" class="dropdown-item py-2 px-3">Mi Perfil</a></li>
+                            <li><a href="{{ route('tienda.mis-pedidos') }}" class="dropdown-item py-2 px-3">Mis Pedidos</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <form method="POST" action="{{ route('tienda.logout') }}">
                                     @csrf
-                                    <button class="dropdown-item">Cerrar sesion</button>
+                                    <button class="dropdown-item py-2 px-3 text-danger">Cerrar sesión</button>
                                 </form>
                             </li>
                         </ul>
                     </div>
                 @else
-                    <a href="{{ route('tienda.login') }}" class="header-link">Iniciar sesion</a>
+                    <a href="{{ route('tienda.login') }}" class="header-link">Iniciar sesión</a>
                     <a href="{{ route('tienda.register') }}" class="header-link">Registrarse</a>
                 @endauth
-                <a href="{{ route('tienda.carrito.index') }}" class="cart-pill">Carrito</a>
+                <a href="{{ route('tienda.carrito.index') }}" class="cart-pill d-inline-flex align-items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.1rem; height: 1.1rem;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span>Carrito</span>
+                    @if(count(session('tienda_carrito', [])) > 0)
+                        <span class="badge bg-danger text-white rounded-full px-2 py-0.5" style="font-size: 0.72rem; min-width: 1.25rem; line-height: 1.25;">
+                            {{ array_sum(session('tienda_carrito', [])) }}
+                        </span>
+                    @endif
+                </a>
             </nav>
         </div>
     </header>

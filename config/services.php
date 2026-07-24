@@ -40,4 +40,11 @@ return [
         'ruc_url' => env('API_RUC_URL'),
     ],
 
+    'culqi' => [
+        'public_key' => env('CULQI_PUBLIC_KEY'),
+        'secret_key' => env('CULQI_SECRET_KEY'),
+        'rsa_id' => env('CULQI_RSA_ID'),
+        'rsa_public_key' => env('CULQI_RSA_PUBLIC_KEY'),
+    ],
+
 ];

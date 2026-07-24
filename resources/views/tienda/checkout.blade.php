@@ -15,12 +15,19 @@
             </div>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Telefono</label>
-                    <input name="cliente_telefono" value="{{ old('cliente_telefono', $cliente->telefono) }}" class="form-control">
+                    <label class="form-label">Telefono <span id="labelTelefonoReq" class="text-danger">*</span></label>
+                    <input name="cliente_telefono" id="clienteTelefono" value="{{ old('cliente_telefono', $cliente->telefono) }}" class="form-control @error('cliente_telefono') is-invalid @enderror" placeholder="987654321">
+                    @error('cliente_telefono')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    <small id="helpTelefono" class="text-muted">Requerido para pago online.</small>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email</label>
-                    <input type="email" name="cliente_email" value="{{ old('cliente_email', $cliente->email) }}" class="form-control">
+                    <input type="email" name="cliente_email" value="{{ old('cliente_email', $cliente->email) }}" class="form-control @error('cliente_email') is-invalid @enderror" placeholder="ejemplo@correo.com">
+                    @error('cliente_email')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -49,10 +56,24 @@
 
                 <div class="col-md-6">
                     <label class="form-label">Pago</label>
-                    <select name="metodo_pago" class="form-control">
+                    <select name="metodo_pago" class="form-control @error('metodo_pago') is-invalid @enderror">
                         <option value="PAGO_AL_RECOGER" @selected(old('metodo_pago') === 'PAGO_AL_RECOGER')>Pagar al recoger</option>
-                        <option value="PAGO_ONLINE" @selected(old('metodo_pago') === 'PAGO_ONLINE')>Pago online</option>
+                        @if($montoInsuficienteOnline)
+                            <option value="PAGO_ONLINE" disabled>Pago online (Monto mínimo S/ 15.00)</option>
+                        @elseif($limiteOnlineAlcanzado)
+                            <option value="PAGO_ONLINE" disabled>Pago online (Límite: 3 pendientes alcanzado)</option>
+                        @else
+                            <option value="PAGO_ONLINE" @selected(old('metodo_pago') === 'PAGO_ONLINE')>Pago online</option>
+                        @endif
                     </select>
+                    @error('metodo_pago')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                    @if($montoInsuficienteOnline)
+                        <small class="text-danger d-block mt-1">Pago online requiere compras de S/ 15.00 o más.</small>
+                    @elseif($limiteOnlineAlcanzado)
+                        <small class="text-danger d-block mt-1">Tienes 3 pedidos pendientes de pago online. Paga tus pedidos anteriores para habilitar esta opción.</small>
+                    @endif
                 </div>
                 <div class="col-12">
                     <label class="form-label">Fecha y hora de recojo</label>
@@ -158,3 +179,32 @@
 </script>
 @endpush
 @endif
+
+@push('scripts')
+<script>
+(function () {
+    var selectMetodo = document.querySelector('[name="metodo_pago"]');
+    var telefonoInput = document.getElementById('clienteTelefono');
+    var labelReq = document.getElementById('labelTelefonoReq');
+    var helpTelefono = document.getElementById('helpTelefono');
+
+    function actualizarTelefono() {
+        var esOnline = selectMetodo && selectMetodo.value === 'PAGO_ONLINE';
+        if (telefonoInput) {
+            telefonoInput.required = esOnline;
+        }
+        if (labelReq) {
+            labelReq.style.display = esOnline ? 'inline' : 'none';
+        }
+        if (helpTelefono) {
+            helpTelefono.style.display = esOnline ? 'block' : 'none';
+        }
+    }
+
+    if (selectMetodo) {
+        selectMetodo.addEventListener('change', actualizarTelefono);
+        actualizarTelefono();
+    }
+})();
+</script>
+@endpush

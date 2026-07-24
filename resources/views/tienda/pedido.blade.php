@@ -32,6 +32,14 @@
                 </table>
             </div>
             <strong class="h4">Total: S/ {{ number_format((float) $pedido->total, 2) }}</strong>
+
+            @if($pedido->metodo_pago === 'PAGO_ONLINE' && $pedido->estado_pago === 'PENDIENTE')
+                <div class="mt-3">
+                    <a href="{{ route('tienda.pago.show', $pedido->codigo) }}" class="btn btn-store btn-lg">
+                        Pagar ahora S/ {{ number_format((float) $pedido->total, 2) }}
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
     <div class="col-lg-4">

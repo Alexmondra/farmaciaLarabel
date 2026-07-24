@@ -119,6 +119,7 @@
                                 <th>Sucursal</th>
                                 <th>Total</th>
                                 <th>Pago</th>
+                                <th>Estado Pago</th>
                                 <th>Entrega</th>
                                 <th>Estado</th>
                                 <th></th>
@@ -135,6 +136,12 @@
                                         <span class="badge bg-{{ $pedido->metodo_pago === 'PAGO_ONLINE' ? 'info' : 'secondary' }}">
                                             {{ $pedido->metodo_pago === 'PAGO_ONLINE' ? 'Online' : 'Al recoger' }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ $pedido->estado_pago === 'COMPLETADO' ? 'success' : 'warning' }}">
+                                            {{ $pedido->estado_pago === 'COMPLETADO' ? 'Completado' : 'Pendiente' }}
+                                        </span>
+
                                     </td>
                                     <td>
                                         Recojo en tienda

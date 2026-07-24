@@ -34,7 +34,16 @@ class CheckoutController extends Controller
 
         $sucursales = \App\Models\Sucursal::whereIn('id', $sucursalIds)->get();
 
-        return view('tienda.checkout', compact('items', 'total', 'cliente', 'fechaRecojoDefault', 'fechaRecojoMin', 'esMultiSucursal', 'sucursales'));
+        $pagosOnlinePendientes = PedidoOnline::where('cliente_id', $cliente->id)
+            ->where('metodo_pago', 'PAGO_ONLINE')
+            ->where('estado_pago', 'PENDIENTE')
+            ->whereIn('estado', ['PENDIENTE', 'CONFIRMADO'])
+            ->count();
+
+        $limiteOnlineAlcanzado = $pagosOnlinePendientes >= 3;
+        $montoInsuficienteOnline = $total < 15.00;
+
+        return view('tienda.checkout', compact('items', 'total', 'cliente', 'fechaRecojoDefault', 'fechaRecojoMin', 'esMultiSucursal', 'sucursales', 'limiteOnlineAlcanzado', 'montoInsuficienteOnline'));
     }
 
     public function store(Request $request)
@@ -50,8 +59,14 @@ class CheckoutController extends Controller
 
         $fechaRecojoMin = $esMultiSucursal ? now()->addWeek()->startOfDay() : now();
 
+        $metodoPagoEsOnline = $request->input('metodo_pago') === 'PAGO_ONLINE';
+
+        $reglasTelefono = $metodoPagoEsOnline
+            ? ['required', 'string', 'max:30', 'min:6']
+            : ['nullable', 'string', 'max:30'];
+
         $data = $request->validate([
-            'cliente_telefono' => ['nullable', 'string', 'max:30'],
+            'cliente_telefono' => $reglasTelefono,
             'cliente_email' => ['nullable', 'email', 'max:120'],
             'tipo_entrega' => ['required', 'in:RECOJO_SUCURSAL'],
             'metodo_pago' => ['required', 'in:PAGO_AL_RECOGER,PAGO_ONLINE'],
@@ -102,6 +117,26 @@ class CheckoutController extends Controller
             }
         }
 
+        if ($data['metodo_pago'] === 'PAGO_ONLINE') {
+            if ($total < 15.00) {
+                return back()->withInput()->withErrors([
+                    'metodo_pago' => 'El pago online solo esta disponible para compras de S/ 15.00 o mas. Por favor, selecciona Pago al Recoger.',
+                ]);
+            }
+
+            $pagosOnlinePendientes = PedidoOnline::where('cliente_id', $cliente->id)
+                ->where('metodo_pago', 'PAGO_ONLINE')
+                ->where('estado_pago', 'PENDIENTE')
+                ->whereIn('estado', ['PENDIENTE', 'CONFIRMADO'])
+                ->count();
+
+            if ($pagosOnlinePendientes >= 3) {
+                return back()->withInput()->withErrors([
+                    'metodo_pago' => 'Tienes 3 pedidos pendientes de pago online. Paga tus pedidos anteriores para habilitar esta opcion o selecciona Pago al Recoger.',
+                ]);
+            }
+        }
+
         $pedido = DB::transaction(function () use ($data, $items, $total, $cliente, $esMultiSucursal) {
             $cliente->update([
                 'telefono' => $data['cliente_telefono'] ?? $cliente->telefono,
@@ -145,6 +180,7 @@ class CheckoutController extends Controller
 
             if ($data['metodo_pago'] === 'PAGO_ONLINE') {
                 $pedido->pagos()->create([
+                    'proveedor' => 'CULQI',
                     'estado' => 'PENDIENTE',
                     'monto' => $pedido->total,
                     'moneda' => 'PEN',
@@ -156,6 +192,11 @@ class CheckoutController extends Controller
 
         session()->forget('tienda_carrito');
         Carrito::where('cliente_id', $cliente->id)->delete();
+
+        if ($data['metodo_pago'] === 'PAGO_ONLINE') {
+            return redirect()->route('tienda.pago.show', $pedido->codigo)
+                ->with('info', 'Completa el pago para confirmar tu pedido.');
+        }
 
         return redirect()->route('tienda.pedidos.show', $pedido->codigo)
             ->with('success', 'Pedido registrado correctamente.');
