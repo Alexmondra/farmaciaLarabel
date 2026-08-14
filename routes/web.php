@@ -24,7 +24,7 @@ use App\Http\Controllers\SunatVerificacion\NotasCredito\NotaCreditoMonitorContro
 // 1. RUTAS PÚBLICAS
 // =========================================================================
 Route::get('/', function () {
-    return view('auth/login');
+    return redirect()->route('tienda.index');
 });
 
 require __DIR__ . '/auth.php';
@@ -45,7 +45,7 @@ Route::get('/descargar-comprobante/{id}', [PublicoController::class, 'descargar'
 Route::middleware(['auth'])->group(function () {
 
     // --- Dashboard y Perfil Base ---
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'edit')->name('profile.edit');
@@ -186,6 +186,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('clientes/check-documento', [ClienteController::class, 'checkDocumento'])->name('clientes.check');
     Route::get('clientes/search', [ClienteController::class, 'search'])->name('clientes.search');
     Route::resource('clientes', ClienteController::class);
+
+    // Perfiles Médicos de Clientes
+    Route::get('clientes/{cliente}/perfiles-medicos', [App\Http\Controllers\Ventas\ClientePerfilMedicoController::class, 'index'])->name('clientes.perfiles-medicos.index');
+    Route::post('clientes/{cliente}/perfiles-medicos', [App\Http\Controllers\Ventas\ClientePerfilMedicoController::class, 'store'])->name('clientes.perfiles-medicos.store');
+    Route::put('clientes/perfiles-medicos/{perfil}', [App\Http\Controllers\Ventas\ClientePerfilMedicoController::class, 'update'])->name('clientes.perfiles-medicos.update');
+    Route::delete('clientes/perfiles-medicos/{perfil}', [App\Http\Controllers\Ventas\ClientePerfilMedicoController::class, 'destroy'])->name('clientes.perfiles-medicos.destroy');
     // =================================================================
     // MÓDULO: CONFIGURACIÓN
     // =================================================================

@@ -298,6 +298,201 @@ $userPermisos = [
             });
         });
 
+        // ==========================================
+        // LÓGICA DE PERFILES MÉDICOS (CRUD AJAX)
+        // ==========================================
+        let currentPMClienteId = null;
+        let currentPMMedicalProfiles = [];
+
+        window.openMedicalProfilesModal = function(clienteId, clienteNombre) {
+            currentPMClienteId = clienteId;
+            $('#pm_cliente_nombre').text(clienteNombre);
+            $('#pm_cliente_id').val(clienteId);
+            
+            if (!userPermissions.canEdit) {
+                $('#pm_list_actions .btn-add-pm').addClass('d-none');
+            } else {
+                $('#pm_list_actions .btn-add-pm').removeClass('d-none');
+            }
+
+            hidePMForm();
+            loadMedicalProfiles(clienteId);
+            $('#modalPerfilesMedicos').modal('show');
+        };
+
+        window.closePMModal = function() {
+            $('#modalPerfilesMedicos').modal('hide');
+            reloadTable();
+        };
+
+        window.loadMedicalProfiles = function(clienteId) {
+            const tbody = $('#pm_table_body');
+            tbody.html('<tr><td colspan="4" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-success"></i><p class="mt-2 text-muted small">Cargando perfiles...</p></td></tr>');
+
+            $.get(`/clientes/${clienteId}/perfiles-medicos`, function(response) {
+                if (!response.success) {
+                    tbody.html('<tr><td colspan="4" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle"></i> Error al cargar datos.</td></tr>');
+                    return;
+                }
+
+                currentPMMedicalProfiles = response.data || [];
+                renderPMTable();
+            }).fail(function() {
+                tbody.html('<tr><td colspan="4" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle"></i> Error de conexión con el servidor.</td></tr>');
+            });
+        };
+
+        function renderPMTable() {
+            const tbody = $('#pm_table_body');
+            tbody.empty();
+
+            if (currentPMMedicalProfiles.length === 0) {
+                tbody.html('<tr><td colspan="4" class="text-center py-4 text-muted"><i class="fas fa-notes-medical fa-3x mb-2 text-muted opacity-25"></i><p class="mb-0 font-weight-bold">No hay perfiles médicos registrados</p><small>Haz clic en "Nuevo Perfil" para agregar el primero.</small></td></tr>');
+                return;
+            }
+
+            currentPMMedicalProfiles.forEach((pm, idx) => {
+                const fingerprint = pm.device_fingerprint ? `<span class="badge badge-info px-2 py-1 rounded-pill"><i class="fas fa-mobile-alt mr-1"></i> ${pm.device_fingerprint}</span>` : '<span class="text-muted small">Manual</span>';
+                const fecha = new Date(pm.created_at).toLocaleDateString('es-PE') + ' ' + new Date(pm.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                
+                let actionsHtml = '';
+                if (userPermissions.canEdit) {
+                    actionsHtml = `
+                        <button class="btn btn-sm btn-outline-primary rounded-circle mr-1" onclick="showPMForm(true, ${idx})" title="Editar">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="deletePM(${pm.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                } else {
+                    actionsHtml = `<span class="text-muted small"><i class="fas fa-lock"></i> Sin permisos</span>`;
+                }
+
+                tbody.append(`
+                    <tr>
+                        <td class="text-wrap align-middle" style="max-width: 300px; white-space: normal;">
+                            <span class="text-dark font-weight-medium">${pm.antecedentes}</span>
+                        </td>
+                        <td class="align-middle">${fingerprint}</td>
+                        <td class="align-middle text-center text-muted small">${fecha}</td>
+                        <td class="align-middle text-right">${actionsHtml}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        window.showPMForm = function(editMode = false, idx = null) {
+            if (!userPermissions.canEdit) return;
+
+            $('#pm_form')[0].reset();
+            $('#pm_id').val('');
+            
+            if (editMode && idx !== null) {
+                const pm = currentPMMedicalProfiles[idx];
+                $('#pm_id').val(pm.id);
+                $('#pm_antecedentes').val(pm.antecedentes);
+                $('#pm_device_fingerprint').val(pm.device_fingerprint || '');
+                $('#pm_form_title').html('<i class="fas fa-edit mr-1"></i> Editar Perfil Médico');
+            } else {
+                $('#pm_form_title').html('<i class="fas fa-plus mr-1"></i> Registrar Perfil Médico');
+            }
+
+            $('#pm_list_container').addClass('d-none');
+            $('#pm_list_actions').addClass('d-none');
+            $('#pm_form_container').removeClass('d-none');
+        };
+
+        window.hidePMForm = function() {
+            $('#pm_form_container').addClass('d-none');
+            $('#pm_list_container').removeClass('d-none');
+            $('#pm_list_actions').removeClass('d-none');
+        };
+
+        $('#pm_form').submit(function(e) {
+            e.preventDefault();
+            if (!userPermissions.canEdit) return;
+
+            const btn = $('#btnSavePM');
+            const id = $('#pm_id').val();
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+
+            const url = id ? `/clientes/perfiles-medicos/${id}` : `/clientes/${currentPMClienteId}/perfiles-medicos`;
+            const method = id ? 'PUT' : 'POST';
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: {
+                    _method: method,
+                    _token: '{{ csrf_token() }}',
+                    antecedentes: $('#pm_antecedentes').val(),
+                    device_fingerprint: $('#pm_device_fingerprint').val()
+                },
+                success: function(res) {
+                    if (res.success) {
+                        if (typeof toastr !== 'undefined') toastr.success(res.message);
+                        hidePMForm();
+                        loadMedicalProfiles(currentPMClienteId);
+                    } else {
+                        alert(res.message || 'Error al guardar.');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        let errMsg = '';
+                        $.each(errors, function(key, val) {
+                            errMsg += val.join('\n') + '\n';
+                        });
+                        alert('Errores de validación:\n' + errMsg);
+                    } else {
+                        alert('Error al procesar la solicitud.');
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Guardar Cambios');
+                }
+            });
+        });
+
+        window.deletePM = function(perfilId) {
+            if (!userPermissions.canEdit) return;
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción eliminará el perfil médico de forma permanente.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/clientes/perfiles-medicos/${perfilId}`,
+                        method: 'POST',
+                        data: {
+                            _method: 'DELETE',
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(res) {
+                            if (res.success) {
+                                if (typeof toastr !== 'undefined') toastr.success(res.message);
+                                loadMedicalProfiles(currentPMClienteId);
+                            } else {
+                                Swal.fire('Error', res.message || 'No se pudo eliminar.', 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'Error de conexión.', 'error');
+                        }
+                    });
+                }
+            });
+        };
+
         $('.close, [data-dismiss="modal"]').on('click', () => $('.modal').modal('hide'));
     });
 </script>

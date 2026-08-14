@@ -10,6 +10,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Tienda Virtual') - {{ $nombreTienda }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -345,7 +346,20 @@
             .product-description, .product-lab { display: none; }
             .product-info { padding: 1rem; }
             .product-bottom { align-items: stretch; flex-direction: column; gap: .55rem; }
-            .btn-add { width: 100%; }
+        }
+        .store-footer {
+            background: #0f172a;
+            color: #94a3b8;
+            border-top: 1px solid #1e293b;
+            font-size: 0.9rem;
+        }
+        .store-footer a {
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.3s ease-in-out;
+        }
+        .store-footer a:hover {
+            color: var(--store-green);
         }
     </style>
     @stack('styles')
@@ -369,7 +383,8 @@
                 <span>{{ $nombreTienda }}</span>
             </a>
             <nav class="d-flex align-items-center gap-3">
-                <a href="{{ route('tienda.index') }}" class="header-link">Catálogo</a>
+                <a href="{{ route('tienda.index') }}" class="header-link">Catalogo</a>
+                <a href="#" class="header-link open-chat-widget">Chat Asistente</a>
                 @auth('tienda')
                     <div class="dropdown">
                         <a href="#" class="header-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -488,5 +503,19 @@
         })();
     </script>
     @endif
+
+    <footer class="store-footer py-4 mt-5">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <span class="small">&copy; {{ date('Y') }} {{ $nombreTienda }}. Todos los derechos reservados.</span>
+            <a href="{{ route('login') }}" class="small d-inline-flex align-items-center gap-1.5 font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <span>Acceso Personal</span>
+            </a>
+        </div>
+    </footer>
+
+    @include('tienda.partials.chat-widget')
 </body>
 </html>

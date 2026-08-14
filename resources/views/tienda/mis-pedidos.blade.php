@@ -125,43 +125,20 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="pedidos-tbody" data-current-page="1">
                             @foreach($pedidos as $pedido)
-                                <tr>
-                                    <td><strong>{{ $pedido->codigo }}</strong></td>
-                                    <td>{{ $pedido->created_at->format('d/m/Y') }}</td>
-                                    <td>{{ $pedido->sucursal->nombre ?? '-' }}</td>
-                                    <td class="price">S/ {{ number_format((float) $pedido->total, 2) }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ $pedido->metodo_pago === 'PAGO_ONLINE' ? 'info' : 'secondary' }}">
-                                            {{ $pedido->metodo_pago === 'PAGO_ONLINE' ? 'Online' : 'Al recoger' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $pedido->estado_pago === 'COMPLETADO' ? 'success' : 'warning' }}">
-                                            {{ $pedido->estado_pago === 'COMPLETADO' ? 'Completado' : 'Pendiente' }}
-                                        </span>
-
-                                    </td>
-                                    <td>
-                                        Recojo en tienda
-                                        @if($pedido->fecha_recojo)
-                                            <br><small class="text-muted">{{ $pedido->fecha_recojo->format('d/m/Y H:i') }}</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $pedido->estado === 'PENDIENTE' ? 'warning' : ($pedido->estado === 'CONFIRMADO' ? 'success' : 'secondary') }}">
-                                            {{ $pedido->estado }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('tienda.pedidos.show', $pedido->codigo) }}" class="btn btn-sm btn-store-outline">Ver</a>
-                                    </td>
-                                </tr>
+                                @include('tienda.partials.pedido-row', compact('pedido'))
                             @endforeach
                         </tbody>
                     </table>
                 </div>
+                @if($pedidos->hasMorePages())
+                    <div class="text-center mt-3 pt-2 border-top">
+                        <button type="button" id="btn-cargar-pedidos" class="btn btn-sm btn-store-outline px-4">
+                            Ver más pedidos
+                        </button>
+                    </div>
+                @endif
             </div>
         @else
             <div class="tab-empty">
@@ -185,28 +162,20 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="ventas-tbody" data-current-page="1">
                             @foreach($ventas as $venta)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $venta->tipo_comprobante }}</strong>
-                                        @if($venta->serie && $venta->numero)
-                                            <br><small class="text-muted">{{ $venta->serie }}-{{ $venta->numero }}</small>
-                                        @endif
-                                    </td>
-                                    <td>{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y') : '-' }}</td>
-                                    <td>{{ $venta->sucursal->nombre ?? '-' }}</td>
-                                    <td class="price">S/ {{ number_format((float) $venta->total_neto, 2) }}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-store-outline btn-ver-venta" data-venta-id="{{ $venta->id }}">
-                                            Ver detalle
-                                        </button>
-                                    </td>
-                                </tr>
+                                @include('tienda.partials.venta-row', compact('venta'))
                             @endforeach
                         </tbody>
                     </table>
                 </div>
+                @if($ventas->hasMorePages())
+                    <div class="text-center mt-3 pt-2 border-top">
+                        <button type="button" id="btn-cargar-ventas" class="btn btn-sm btn-store-outline px-4">
+                            Ver más compras
+                        </button>
+                    </div>
+                @endif
             </div>
         @else
             <div class="tab-empty">
@@ -228,6 +197,11 @@
                 <div class="text-center py-4">
                     <div class="spinner-border text-success"></div>
                 </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 d-none" id="modal-venta-footer">
+                <a href="#" id="btn-descargar-pdf" target="_blank" class="btn btn-store font-weight-bold">
+                    <i class="fas fa-file-pdf mr-1"></i> Imprimir / Descargar PDF
+                </a>
             </div>
         </div>
     </div>
@@ -277,43 +251,124 @@
         if (e.target === modal) hideModal();
     });
 
-    document.querySelectorAll('.btn-ver-venta').forEach(btn => {
-        btn.addEventListener('click', async function () {
-            const ventaId = this.dataset.ventaId;
-            btn.disabled = true;
-            btn.innerHTML = '...';
-
-            modalTitulo.textContent = 'Detalle de compra';
-            modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-success" role="status"></div></div>';
-            showModal();
-
+    // Carga de Pedidos Incremental (Ver más)
+    const btnCargarPedidos = document.getElementById('btn-cargar-pedidos');
+    const pedidosTbody = document.getElementById('pedidos-tbody');
+    if (btnCargarPedidos && pedidosTbody) {
+        btnCargarPedidos.addEventListener('click', async function() {
+            const offset = pedidosTbody.children.length;
+            btnCargarPedidos.disabled = true;
+            btnCargarPedidos.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cargando...';
+            
             try {
-                const resp = await fetch(`{{ route('tienda.mis-pedidos') }}/venta/${ventaId}`);
-                const data = await resp.json();
-
-                modalTitulo.textContent = `${data.tipo_comprobante} ${data.serie || ''}-${data.numero || ''}`;
-
-                let html = `
-                    <p class="text-muted mb-2">Fecha: ${data.fecha} | Sucursal: ${data.sucursal}</p>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead class="table-light"><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
-                            <tbody>`;
-
-                data.detalles.forEach(d => {
-                    html += `<tr><td>${d.producto}</td><td>${d.cantidad}</td><td>S/ ${d.precio}</td><td>S/ ${d.subtotal}</td></tr>`;
+                const response = await fetch(`{{ route('tienda.mis-pedidos') }}?type=pedidos&offset=${offset}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
-
-                html += `</tbody><tfoot><tr class="fw-bold"><td colspan="3" class="text-end">Total</td><td>S/ ${data.total}</td></tr></tfoot></table></div>`;
-
-                modalBody.innerHTML = html;
+                const data = await response.json();
+                
+                // Anexar las nuevas filas
+                pedidosTbody.insertAdjacentHTML('beforeend', data.html);
+                
+                if (!data.hasMore) {
+                    btnCargarPedidos.parentElement.remove();
+                } else {
+                    btnCargarPedidos.disabled = false;
+                    btnCargarPedidos.innerHTML = 'Ver más pedidos';
+                }
             } catch (err) {
-                modalBody.innerHTML = '<div class="alert alert-danger">Error al cargar los detalles.</div>';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Ver detalle';
+                console.error(err);
+                btnCargarPedidos.disabled = false;
+                btnCargarPedidos.innerHTML = 'Ver más pedidos';
             }
         });
+    }
+
+    // Carga de Ventas Incremental (Ver más)
+    const btnCargarVentas = document.getElementById('btn-cargar-ventas');
+    const ventasTbody = document.getElementById('ventas-tbody');
+    if (btnCargarVentas && ventasTbody) {
+        btnCargarVentas.addEventListener('click', async function() {
+            const offset = ventasTbody.children.length;
+            btnCargarVentas.disabled = true;
+            btnCargarVentas.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cargando...';
+            
+            try {
+                const response = await fetch(`{{ route('tienda.mis-pedidos') }}?type=ventas&offset=${offset}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+                
+                // Anexar las nuevas filas
+                ventasTbody.insertAdjacentHTML('beforeend', data.html);
+                
+                if (!data.hasMore) {
+                    btnCargarVentas.parentElement.remove();
+                } else {
+                    btnCargarVentas.disabled = false;
+                    btnCargarVentas.innerHTML = 'Ver más compras';
+                }
+            } catch (err) {
+                console.error(err);
+                btnCargarVentas.disabled = false;
+                btnCargarVentas.innerHTML = 'Ver más compras';
+            }
+        });
+    }
+
+    // Delegación de eventos para .btn-ver-venta
+    const modalFooter = document.getElementById('modal-venta-footer');
+    const btnDescargarPdf = document.getElementById('btn-descargar-pdf');
+
+    document.addEventListener('click', async function(e) {
+        const btn = e.target.closest('.btn-ver-venta');
+        if (!btn) return;
+        
+        const ventaId = btn.dataset.ventaId;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '...';
+
+        modalTitulo.textContent = 'Detalle de compra';
+        modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-success" role="status"></div></div>';
+        
+        // Ocultar footer durante la carga
+        if (modalFooter) modalFooter.classList.add('d-none');
+        
+        showModal();
+
+        try {
+            const resp = await fetch(`{{ route('tienda.mis-pedidos') }}/venta/${ventaId}`);
+            const data = await resp.json();
+
+            modalTitulo.textContent = `${data.tipo_comprobante} ${data.serie || ''}-${data.numero || ''}`;
+
+            let html = `
+                <p class="text-muted mb-2">Fecha: ${data.fecha} | Sucursal: ${data.sucursal}</p>
+                <div class="table-responsive">
+                    <table class="table table-sm text-secondary">
+                        <thead class="table-light"><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
+                        <tbody>`;
+
+            data.detalles.forEach(d => {
+                html += `<tr><td>${d.producto}</td><td>${d.cantidad}</td><td>S/ ${d.precio}</td><td>S/ ${d.subtotal}</td></tr>`;
+            });
+
+            html += `</tbody><tfoot><tr class="fw-bold"><td colspan="3" class="text-end text-dark">Total</td><td class="text-dark">S/ ${data.total}</td></tr></tfoot></table></div>`;
+
+            modalBody.innerHTML = html;
+            
+            // Setear href firmado y mostrar botón en el footer
+            if (btnDescargarPdf && data.url_pdf) {
+                btnDescargarPdf.href = data.url_pdf;
+            }
+            if (modalFooter) modalFooter.classList.remove('d-none');
+
+        } catch (err) {
+            modalBody.innerHTML = '<div class="alert alert-danger">Error al cargar los detalles.</div>';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     });
 </script>
 @endpush

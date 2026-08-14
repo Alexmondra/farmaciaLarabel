@@ -65,6 +65,11 @@ class Cliente extends Authenticatable
         return $this->hasMany(\App\Models\Tienda\PedidoOnline::class);
     }
 
+    public function perfilesMedicos()
+    {
+        return $this->hasMany(\App\Models\Tienda\ChatPerfilMedico::class, 'cliente_id');
+    }
+
     public function getPuntosAttribute($value)
     {
         if ($this->id === 1) {

@@ -7,6 +7,9 @@
     <h1 class="m-0 text-dark font-weight-bold">
         <i class="fas fa-cash-register mr-2 text-success"></i>Punto de Venta
     </h1>
+    <button type="button" class="btn btn-outline-info font-weight-bold shadow-sm transition-all duration-300 hover:scale-102 py-2 px-3" id="btn-modal-pedido-online" style="border-radius: 12px; border-width: 2px;">
+        <i class="fas fa-qrcode mr-2 text-info"></i> Atender Pedido Online
+    </button>
 </div>
 @stop
 
@@ -72,6 +75,7 @@
 @include('ventas.clientes.modal-create-edit')
 @include('ventas.clientes.modal-show')
 @include('ventas.ventas.partials.modal_create_rapido')
+@include('ventas.ventas.partials.modal_pedido_online')
 <input type="hidden" id="cliente_id_hidden" name="cliente_id">
 @stop
 

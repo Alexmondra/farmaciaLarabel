@@ -1152,5 +1152,441 @@
                 $('#busqueda_cliente').removeClass('is-invalid');
             }, 2500);
         }
+
+        // ==========================================================
+        // 9. LÓGICA DE PEDIDOS ONLINE (MÓDULO QR & LOOKUP)
+        // ==========================================================
+        let currentPedidoOnline = null;
+
+        // Apertura del Modal y Enfoque Automático
+        $('#btn-modal-pedido-online').click(function() {
+            $('#modalPedidoOnline').modal('show');
+        });
+
+        $('#modalPedidoOnline').on('shown.bs.modal', function () {
+            $('#input-scan-pedido').val('').focus();
+            resetModalScanInfo();
+        });
+
+        function resetModalScanInfo() {
+            currentPedidoOnline = null;
+            $('#scan-pedido-warning').addClass('d-none');
+            $('#container-reimprimir-directo').addClass('d-none');
+            $('.btn-reimprimir-pedido').addClass('d-none');
+            $('#scan-pedido-details').addClass('d-none');
+            $('#scan-pedido-spinner').addClass('d-none');
+            $('#btn-cargar-carrito-pos').addClass('d-none');
+            $('#btn-procesar-pedido-online').addClass('d-none');
+            $('#ped-det-items-tbody').empty();
+            $('#ped-fact-ruc').val('');
+            $('#ped-fact-razon-social').val('');
+            $('#container-ped-factura-datos').addClass('d-none');
+            $('#ped-det-fecha-entrega-container').addClass('d-none');
+            $('#ped-det-fecha-entrega').text('');
+        }
+
+        function buscarPedidoOnline() {
+            let term = $('#input-scan-pedido').val().trim();
+            if (!term) return;
+
+            resetModalScanInfo();
+            $('#scan-pedido-spinner').removeClass('d-none');
+
+            $.ajax({
+                url: "{{ route('tienda.admin.pedidos.buscar_ajax') }}",
+                method: 'GET',
+                data: { q: term },
+                success: function(res) {
+                    $('#scan-pedido-spinner').addClass('d-none');
+                    if (res.success) {
+                        currentPedidoOnline = res;
+                        renderPedidoDetails(res);
+                    } else {
+                        mostrarErrorScan(res.message || 'Pedido no encontrado.');
+                    }
+                },
+                error: function(xhr) {
+                    $('#scan-pedido-spinner').addClass('d-none');
+                    let msg = 'Error al buscar el pedido.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    mostrarErrorScan(msg);
+                }
+            });
+        }
+
+        function mostrarErrorScan(msg) {
+            $('#scan-pedido-warning').removeClass('d-none');
+            $('#scan-pedido-warning .warning-message').text(msg);
+        }
+
+        $('#btn-cerrar-warning').click(function() {
+            $('#scan-pedido-warning').addClass('d-none');
+        });
+
+        $('#input-scan-pedido').keypress(function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                buscarPedidoOnline();
+            }
+        });
+
+        $('#btn-buscar-pedido-scan').click(function() {
+            buscarPedidoOnline();
+        });
+
+        function renderPedidoDetails(data) {
+            let p = data.pedido;
+            let items = data.detalles;
+
+            // Rellenar tarjetas cliente y sucursal
+            $('#ped-det-cliente-nombre').text(p.cliente_nombre);
+            $('#ped-det-cliente-doc').text(p.cliente_documento || 'No especificado');
+            $('#ped-det-sucursal').text(p.sucursal);
+            $('#ped-det-fecha-recojo').text(p.fecha_recojo || 'No especificada');
+
+            // Badges de estado de pedido y pago
+            let $estPedido = $('#ped-det-estado');
+            $estPedido.text(p.estado).removeClass().addClass('badge px-2.5 py-1 text-white');
+            if (p.estado === 'PENDIENTE') $estPedido.addClass('bg-warning');
+            else if (p.estado === 'CONFIRMADO') $estPedido.addClass('bg-info');
+            else if (p.estado === 'ENTREGADO') $estPedido.addClass('bg-success');
+            else $estPedido.addClass('bg-secondary');
+
+            let $estPago = $('#ped-det-pago-estado');
+            $estPago.text(p.estado_pago).removeClass().addClass('badge px-2.5 py-1 text-white');
+            if (p.estado_pago === 'PAGADO' || p.estado_pago === 'COMPLETADO') $estPago.addClass('bg-success');
+            else $estPago.addClass('bg-danger');
+
+            $('#ped-det-pago-metodo').text(p.metodo_pago);
+
+            // Renderizar productos
+            let tbody = $('#ped-det-items-tbody').empty();
+            items.forEach(i => {
+                tbody.append(`
+                    <tr>
+                        <td class="pl-3 py-2">
+                            <strong>${i.nombre}</strong><br>
+                            <small class="text-muted">${i.presentacion}</small>
+                        </td>
+                        <td class="text-center align-middle">${i.cantidad}</td>
+                        <td class="text-right align-middle">S/ ${i.precio_unitario.toFixed(2)}</td>
+                        <td class="text-right pr-3 align-middle font-weight-bold">S/ ${i.subtotal.toFixed(2)}</td>
+                    </tr>
+                `);
+            });
+
+            $('#ped-det-total').text(p.total.toFixed(2));
+
+            // Mostrar fecha de entrega si ya fue entregado
+            if (p.estado === 'ENTREGADO' && p.entregado_at) {
+                $('#ped-det-fecha-entrega').text(p.entregado_at);
+                $('#ped-det-fecha-entrega-container').removeClass('d-none');
+            } else {
+                $('#ped-det-fecha-entrega-container').addClass('d-none');
+            }
+
+            // Advertir si ya fue entregado o cancelado
+            if (data.warning) {
+                mostrarErrorScan(data.warning);
+                $('#panel-facturacion-directa').addClass('d-none');
+                
+                // Si el pedido ya tiene venta_id, habilitar reimpresión
+                if (p.venta_id) {
+                    $('#container-reimprimir-directo').removeClass('d-none');
+                    $('#btn-reimprimir-pedido-footer').removeClass('d-none');
+                }
+            } else {
+                $('#panel-facturacion-directa').removeClass('d-none');
+                
+                // Si el pago ya fue completado/pagado, configurar visualización en línea
+                if (p.estado_pago === 'PAGADO' || p.estado_pago === 'COMPLETADO') {
+                    $('#ped-fact-pago-online-badge').removeClass('d-none');
+                    $('#ped-fact-pago-caja-select').addClass('d-none');
+                    $('#container-ped-paga-con').addClass('d-none');
+                } else {
+                    $('#ped-fact-pago-online-badge').addClass('d-none');
+                    $('#ped-fact-pago-caja-select').removeClass('d-none');
+                    $('#container-ped-paga-con').removeClass('d-none');
+                }
+                
+                $('#ped-fact-paga-con').val(p.total.toFixed(2));
+
+                // Configurar si es factura
+                if (p.cliente_documento && p.cliente_documento.length === 11) {
+                    $('#ped-fact-tipo-comprobante').val('FACTURA').trigger('change');
+                    $('#ped-fact-ruc').val(p.cliente_documento);
+                    $('#ped-fact-razon-social').val(p.cliente_nombre);
+                } else {
+                    $('#ped-fact-tipo-comprobante').val('BOLETA').trigger('change');
+                    $('#ped-fact-ruc').val('');
+                    $('#ped-fact-razon-social').val('');
+                }
+
+                $('#btn-procesar-pedido-online').removeClass('d-none');
+            }
+
+            // Mostrar opción de cargar en el POS sólo si no está entregado ni cancelado (por seguridad)
+            if (p.estado !== 'ENTREGADO' && p.estado !== 'CANCELADO') {
+                $('#btn-cargar-carrito-pos').removeClass('d-none');
+            } else {
+                $('#btn-cargar-carrito-pos').addClass('d-none');
+            }
+            $('#scan-pedido-details').removeClass('d-none');
+        }
+
+        // Lógica de Facturación del Modal
+        $('#ped-fact-tipo-comprobante').change(function() {
+            let isFactura = ($(this).val() === 'FACTURA');
+            if (isFactura) {
+                $('#container-ped-factura-datos').removeClass('d-none');
+            } else {
+                $('#container-ped-factura-datos').addClass('d-none');
+            }
+        });
+
+        $('#ped-fact-medio-pago').change(function() {
+            let esEfectivo = ($(this).val() === 'EFECTIVO');
+            if (esEfectivo) {
+                $('#container-ped-paga-con').removeClass('d-none');
+            } else {
+                $('#container-ped-paga-con').addClass('d-none');
+            }
+        });
+
+        $('#btn-procesar-pedido-online').click(function() {
+            if (!currentPedidoOnline) return;
+
+            let p = currentPedidoOnline.pedido;
+
+            let yaPagado = (p.estado_pago === 'PAGADO' || p.estado_pago === 'COMPLETADO');
+
+            // Tomar siempre los valores seleccionados/ingresados en el modal del formulario
+            let tipoComprobante = $('#ped-fact-tipo-comprobante').val();
+            let medioPago = yaPagado ? 'TARJETA' : $('#ped-fact-medio-pago').val();
+            let pagaCon = yaPagado ? p.total : ($('#ped-fact-paga-con').val() || p.total);
+            let ruc = $('#ped-fact-ruc').val();
+            let razonSocial = $('#ped-fact-razon-social').val();
+
+            if (tipoComprobante === 'FACTURA') {
+                if (!ruc || ruc.length !== 11 || !/^\d+$/.test(ruc)) {
+                    return toastr.error('Debe ingresar un número de RUC válido de 11 dígitos.');
+                }
+                if (!razonSocial || razonSocial.trim().length === 0) {
+                    return toastr.error('Debe ingresar la Razón Social.');
+                }
+            }
+
+            Swal.fire({
+                title: '¿Confirmar entrega y facturación?',
+                text: yaPagado 
+                    ? `Se registrará la entrega del pedido ${p.codigo} (Ya Pagado Online) por S/ ${p.total.toFixed(2)}.`
+                    : `Se generará una ${tipoComprobante} para el pedido ${p.codigo} por S/ ${p.total.toFixed(2)}.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check mr-1"></i> Sí, entregar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando entrega...',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    let url = "{{ route('tienda.admin.pedidos.entregar_facturar', ':id') }}".replace(':id', p.id);
+
+                    $.ajax({
+                        url: url,
+                        method: 'POST',
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            tipo_comprobante: tipoComprobante,
+                            medio_pago: medioPago,
+                            paga_con: pagaCon,
+                            cliente_ruc: ruc,
+                            cliente_razon_social: razonSocial
+                        },
+                        success: function(res) {
+                            Swal.close();
+                            if (res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Éxito!',
+                                    text: res.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    if (res.print_ticket_url && res.print_a4_url) {
+                                        abrirSelectorImpresion(res.print_ticket_url, res.print_a4_url);
+                                    }
+                                });
+
+                                $('#modalPedidoOnline').modal('hide');
+                                resetCliente();
+                                carrito = {};
+                                renderCarrito();
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: res.message || 'Error al procesar la entrega.'
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.close();
+                            let msg = 'Error al procesar la entrega del pedido.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            }
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: msg
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        // Acción de Cargar al Carrito del POS
+        $('#btn-cargar-carrito-pos').click(async function() {
+            if (!currentPedidoOnline) return;
+
+            let p = currentPedidoOnline.pedido;
+            let items = currentPedidoOnline.detalles;
+
+            Swal.fire({
+                title: 'Cargando pedido en el POS...',
+                text: 'Buscando lotes y asignando stock...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                // Limpiar carrito actual del POS
+                carrito = {};
+
+                for (const item of items) {
+                    let lotes = await $.get(RUTA_LOOKUP_LOTES, {
+                        medicamento_id: item.medicamento_id,
+                        sucursal_id: sucursalId
+                    });
+
+                    let cantidadRequerida = item.cantidad;
+
+                    // Asignación PEPS
+                    for (const lote of lotes) {
+                        if (cantidadRequerida <= 0) break;
+
+                        let stockLote = parseInt(lote.stock_actual);
+                        if (stockLote <= 0) continue;
+
+                        let cantidadATomar = Math.min(stockLote, cantidadRequerida);
+                        let uniqueId = lote.id + '-UNIDAD';
+
+                        carrito[uniqueId] = {
+                            unique_id: uniqueId,
+                            unidad_medida: 'UNIDAD',
+                            lote_id: lote.id,
+                            nombre: item.nombre,
+                            presentacion: item.presentacion ? `${item.presentacion} [UNIDAD]` : '[UNIDAD]',
+                            codigo_lote: lote.codigo_lote,
+                            cantidad: cantidadATomar,
+                            precio_venta: item.precio_unitario, // Precio de la compra online
+                            stock_max: stockLote,
+                            factor: 1
+                        };
+
+                        cantidadRequerida -= cantidadATomar;
+                    }
+
+                    // Forzar saldo en el primer lote si falta stock
+                    if (cantidadRequerida > 0 && lotes.length > 0) {
+                        let primerLote = lotes[0];
+                        let uniqueId = primerLote.id + '-UNIDAD';
+
+                        if (carrito[uniqueId]) {
+                            carrito[uniqueId].cantidad += cantidadRequerida;
+                        } else {
+                            carrito[uniqueId] = {
+                                unique_id: uniqueId,
+                                unidad_medida: 'UNIDAD',
+                                lote_id: primerLote.id,
+                                nombre: item.nombre,
+                                presentacion: item.presentacion ? `${item.presentacion} [UNIDAD]` : '[UNIDAD]',
+                                codigo_lote: primerLote.codigo_lote,
+                                cantidad: cantidadRequerida,
+                                precio_venta: item.precio_unitario,
+                                stock_max: primerLote.stock_actual,
+                                factor: 1
+                            };
+                        }
+                    }
+                }
+
+                // Renderizar cambios
+                renderCarrito();
+
+                // Sincronizar Cliente
+                if (p.cliente_documento) {
+                    let isFactura = (p.cliente_documento.length === 11);
+                    $tipo.val(isFactura ? 'FACTURA' : 'BOLETA').trigger('change');
+                    $input.val(p.cliente_documento);
+                    buscarCliente(p.cliente_documento);
+                } else {
+                    resetCliente();
+                }
+
+                Swal.close();
+                $('#modalPedidoOnline').modal('hide');
+                toastr.success(`Pedido ${p.codigo} cargado en el carrito con éxito.`);
+
+            } catch (err) {
+                console.error("Error al cargar carrito:", err);
+                Swal.close();
+                toastr.error('Ocurrió un error al cargar los productos en el POS.');
+            }
+        });
+
+        // Selector de Impresión Ticket vs A4 (Mediante Swal con Deny/Confirm)
+        function abrirSelectorImpresion(printTicketUrl, printA4Url) {
+            Swal.fire({
+                title: '¿Cómo desea imprimir el comprobante?',
+                text: 'Seleccione el formato en el que desea imprimir o guardar el comprobante de pago:',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: '<i class="fas fa-receipt mr-1"></i> Formato Ticket',
+                denyButtonText: '<i class="fas fa-file-pdf mr-1"></i> Formato A4',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#17a2b8', // Info
+                denyButtonColor: '#6c757d', // Gray
+                cancelButtonColor: '#343a40', // Dark
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.open(printTicketUrl + '?imprimir=si', '_blank');
+                } else if (result.isDenied) {
+                    window.open(printA4Url + '?imprimir=si', '_blank');
+                }
+            });
+        }
+
+        // Clic en Reimprimir desde el modal
+        $(document).on('click', '.btn-reimprimir-pedido', function() {
+            if (currentPedidoOnline && currentPedidoOnline.pedido && currentPedidoOnline.pedido.print_ticket_url) {
+                let p = currentPedidoOnline.pedido;
+                abrirSelectorImpresion(p.print_ticket_url, p.print_a4_url);
+            } else {
+                toastr.error('No hay URLs de impresión disponibles para este pedido.');
+            }
+        });
     });
 </script>

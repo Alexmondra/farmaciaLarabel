@@ -162,7 +162,7 @@ class CarritoController extends Controller
     private function itemsCarrito(): array
     {
         $carrito = session('tienda_carrito', []);
-        $productos = TiendaProducto::with(['medicamento', 'sucursal'])
+        $productos = TiendaProducto::with(['medicamento.categoria', 'sucursal'])
             ->whereIn('id', array_keys($carrito))
             ->get();
 

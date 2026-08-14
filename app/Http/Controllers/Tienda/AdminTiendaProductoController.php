@@ -31,6 +31,12 @@ class AdminTiendaProductoController extends Controller
             ->paginate(20)
             ->appends($request->query());
 
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('tienda.admin.productos.partials.table', compact('productos'))->render(),
+            ]);
+        }
+
         return view('tienda.admin.productos.index', compact('productos'));
     }
 

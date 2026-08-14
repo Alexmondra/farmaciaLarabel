@@ -56,6 +56,9 @@
                     @endif
                 </td>
                 <td class="text-right align-middle">
+                    <button class="btn btn-outline-success btn-sm rounded-circle mr-1 btn-pm-trigger" onclick="openMedicalProfilesModal({{ $cliente->id }}, '{{ addslashes($cliente->nombre_completo) }}')" title="Perfiles Médicos">
+                        <i class="fas fa-file-medical"></i>
+                    </button>
                     <button class="btn btn-outline-secondary btn-sm rounded-circle mr-1" onclick="openShowModal({{ $cliente->id }})" title="Ver Expediente">
                         <i class="fas fa-eye"></i>
                     </button>

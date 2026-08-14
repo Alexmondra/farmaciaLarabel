@@ -86,6 +86,9 @@ class TiendaAuthController extends Controller
         ]);
 
         $documento = trim($data['documento']);
+        if (in_array($data['tipo_documento'] ?? '', ['DNI', 'RUC'])) {
+            $documento = preg_replace('/\D/', '', $documento);
+        }
         $clienteExistente = Cliente::where('documento', $documento)->first();
 
         if ($clienteExistente) {

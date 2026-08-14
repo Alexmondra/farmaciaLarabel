@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
 
     {
         Paginator::useBootstrap();
+
+        // Evitar Lazy Loading (N+1) en entornos locales/desarrollo
+        \Illuminate\Database\Eloquent\Model::preventLazyLoading(! app()->isProduction());
+
         if (Schema::hasTable('configuraciones')) {
 
             $empresa = Cache::remember('datos_empresa_config', 1440, function () {

@@ -121,6 +121,7 @@
 @include('ventas.clientes.partials.modal_config_puntos')
 @include('ventas.clientes.modal-create-edit')
 @include('ventas.clientes.modal-show')
+@include('ventas.clientes.partials.modal_perfiles_medicos')
 
 @endsection
 

@@ -5,22 +5,78 @@ namespace App\Http\Controllers\Tienda;
 use App\Http\Controllers\Controller;
 use App\Models\Tienda\PedidoOnline;
 use App\Models\Ventas\Venta;
+use Illuminate\Support\Facades\URL;
 
 class MisPedidosController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
         $cliente = auth('tienda')->user();
 
+        // Si es una petición AJAX para "Cargar más"
+        if ($request->ajax() && $request->has('type')) {
+            $type = $request->input('type');
+            $offset = (int) $request->input('offset', 5);
+            
+            if ($type === 'pedidos') {
+                $pedidos = PedidoOnline::with(['detalles', 'sucursal'])
+                    ->where('cliente_id', $cliente->id)
+                    ->latest()
+                    ->skip($offset)
+                    ->take(15)
+                    ->get();
+
+                $total = PedidoOnline::where('cliente_id', $cliente->id)->count();
+                $hasMore = ($offset + $pedidos->count()) < $total;
+
+                $html = '';
+                foreach ($pedidos as $pedido) {
+                    $html .= view('tienda.partials.pedido-row', compact('pedido'))->render();
+                }
+
+                return response()->json([
+                    'html' => $html,
+                    'hasMore' => $hasMore
+                ]);
+            }
+
+            if ($type === 'ventas') {
+                $ventas = Venta::with(['sucursal'])
+                    ->where('cliente_id', $cliente->id)
+                    ->whereDoesntHave('pedidoOnline')
+                    ->latest('fecha_emision')
+                    ->skip($offset)
+                    ->take(15)
+                    ->get();
+
+                $total = Venta::where('cliente_id', $cliente->id)
+                    ->whereDoesntHave('pedidoOnline')
+                    ->count();
+                $hasMore = ($offset + $ventas->count()) < $total;
+
+                $html = '';
+                foreach ($ventas as $venta) {
+                    $html .= view('tienda.partials.venta-row', compact('venta'))->render();
+                }
+
+                return response()->json([
+                    'html' => $html,
+                    'hasMore' => $hasMore
+                ]);
+            }
+        }
+
+        // Carga inicial (primeros 5 elementos)
         $pedidos = PedidoOnline::with(['detalles', 'sucursal'])
             ->where('cliente_id', $cliente->id)
             ->latest()
-            ->take(5)->get();
+            ->paginate(5, ['*'], 'pedidos_page');
 
         $ventas = Venta::with(['sucursal'])
             ->where('cliente_id', $cliente->id)
+            ->whereDoesntHave('pedidoOnline')
             ->latest('fecha_emision')
-            ->take(5)->get();
+            ->paginate(5, ['*'], 'ventas_page');
 
         return view('tienda.mis-pedidos', compact('pedidos', 'ventas'));
     }
@@ -52,6 +108,7 @@ class MisPedidosController extends Controller
             'sucursal' => $venta->sucursal->nombre ?? '-',
             'total' => number_format((float) $venta->total_neto, 2),
             'detalles' => $detalles,
+            'url_pdf' => URL::temporarySignedRoute('publico.descargar', now()->addHours(24), ['id' => $venta->id])
         ]);
     }
 }

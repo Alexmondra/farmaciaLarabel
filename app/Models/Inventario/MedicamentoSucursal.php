@@ -55,8 +55,7 @@ class MedicamentoSucursal extends Model
     // Relación con los Lotes (para calcular el stock real)
     public function lotes()
     {
-        return $this->hasMany(Lote::class, 'medicamento_id', 'medicamento_id')
-            ->where('sucursal_id', $this->sucursal_id);
+        return $this->hasMany(Lote::class, 'medicamento_id', 'medicamento_id');
     }
 
 

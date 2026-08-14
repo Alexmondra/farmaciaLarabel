@@ -106,4 +106,9 @@ class Venta extends Model
     {
         return $this->hasMany(NotaCredito::class, 'venta_id');
     }
+
+    public function pedidoOnline()
+    {
+        return $this->hasOne(\App\Models\Tienda\PedidoOnline::class, 'venta_id');
+    }
 }

@@ -365,4 +365,94 @@
             /* Mover paginación a la derecha */
         }
     }
+
+    /* ==========================================
+       ESTILOS PERFILES MÉDICOS (tiendafarma-ux)
+       ========================================== */
+    .bg-light-green {
+        background-color: rgba(16, 172, 132, 0.08) !important;
+    }
+    .text-teal {
+        color: #0f8062 !important;
+    }
+    .rounded-xl {
+        border-radius: 12px !important;
+    }
+    .rounded-lg {
+        border-radius: 8px !important;
+    }
+    .transition-all {
+        transition: all 0.3s ease-in-out;
+    }
+    .duration-300 {
+        transition-duration: 300ms;
+    }
+    .btn-pm-trigger {
+        transition: all 0.2s ease-in-out;
+    }
+    .btn-pm-trigger:hover {
+        transform: scale(1.1);
+        background-color: #28a745;
+        color: #fff !important;
+    }
+    .btn-add-pm {
+        box-shadow: 0 4px 10px rgba(40, 167, 69, 0.2);
+        transition: all 0.3s ease;
+    }
+    .btn-add-pm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    /* MODO OSCURO - PERFILES MÉDICOS */
+    .dark-mode #modalPerfilesMedicos .modal-content {
+        background-color: #343a40;
+        color: #fff;
+    }
+    .dark-mode #modalPerfilesMedicos .bg-light {
+        background-color: #3f474e !important;
+    }
+    .dark-mode #modalPerfilesMedicos .alert {
+        background-color: rgba(16, 172, 132, 0.15) !important;
+        color: #52d2b5 !important;
+    }
+    .dark-mode #modalPerfilesMedicos .alert .text-dark {
+        color: #fff !important;
+    }
+    .dark-mode #modalPerfilesMedicos .table {
+        color: #fff;
+        background-color: #343a40;
+    }
+    .dark-mode #modalPerfilesMedicos .table thead th {
+        background-color: #454d55 !important;
+        color: #e9ecef;
+        border-color: #56606a;
+    }
+    .dark-mode #modalPerfilesMedicos .table td {
+        border-top-color: #56606a;
+    }
+    .dark-mode #modalPerfilesMedicos .table-hover tbody tr:hover {
+        background-color: #3f474e;
+    }
+    .dark-mode #modalPerfilesMedicos .card {
+        background-color: #3f474e !important;
+    }
+    .dark-mode #pm_form label {
+        color: #e9ecef !important;
+    }
+    .dark-mode #pm_form textarea,
+    .dark-mode #pm_form input {
+        background-color: #454d55 !important;
+        color: #fff !important;
+        border: 1px solid #56606a !important;
+    }
+    .dark-mode #pm_form textarea:focus,
+    .dark-mode #pm_form input:focus {
+        border-color: #10ac84 !important;
+        box-shadow: 0 0 0 0.2rem rgba(16, 172, 132, 0.25) !important;
+    }
+    .dark-mode #pm_form textarea::placeholder,
+    .dark-mode #pm_form input::placeholder {
+        color: #adb5bd;
+    }
 </style>

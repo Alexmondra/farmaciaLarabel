@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tienda\AdminPedidoOnlineController;
 use App\Http\Controllers\Tienda\AdminTiendaProductoController;
 use App\Http\Controllers\Tienda\CarritoController;
+use App\Http\Controllers\Tienda\ChatController;
 use App\Http\Controllers\Tienda\CheckoutController;
 use App\Http\Controllers\Tienda\MisPedidosController;
 use App\Http\Controllers\Tienda\PedidoOnlineController;
@@ -23,6 +24,14 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
         Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
         Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     });
+
+    Route::get('/chat', [ChatController::class, 'showChat'])->name('chat');
+    Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+    Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
+    Route::post('/chat/reset', [ChatController::class, 'resetHistory'])->name('chat.reset');
+    Route::get('/productos/json/{producto}', [ChatController::class, 'getProductJson'])->name('productos.json');
+    Route::get('/chat/conversaciones', [ChatController::class, 'getConversations'])->name('chat.conversaciones');
+    Route::post('/chat/conversaciones/{conversacion}/active', [ChatController::class, 'selectConversation'])->name('chat.conversaciones.active');
 
     Route::get('/pedido/{codigo}', [PedidoOnlineController::class, 'show'])->name('pedidos.show');
     Route::get('/recojo/{token}', [PedidoOnlineController::class, 'recojo'])->name('pedidos.recojo');
@@ -61,6 +70,8 @@ Route::middleware(['auth'])
     ->name('tienda.admin.pedidos.')
     ->group(function () {
         Route::get('/', [AdminPedidoOnlineController::class, 'index'])->name('index');
+        Route::get('/buscar-ajax', [AdminPedidoOnlineController::class, 'buscarAjax'])->name('buscar_ajax');
         Route::get('/{pedido}', [AdminPedidoOnlineController::class, 'show'])->name('show');
         Route::patch('/{pedido}/estado', [AdminPedidoOnlineController::class, 'updateEstado'])->name('estado');
+        Route::post('/{pedido}/entregar-facturar', [AdminPedidoOnlineController::class, 'entregarYFacturar'])->name('entregar_facturar');
     });

@@ -80,14 +80,7 @@ class Medicamento extends Model
         return $query->whereHas('sucursales', fn($q) => $q->where('sucursal_id', $sucursalId));
     }
 
-    public function medicamentos()
-    {
-        return $this->belongsToMany(
-            \App\Models\Inventario\Medicamento::class,
-            'medicamento_sucursal'
-        )->withPivot(['precio_venta', 'deleted_at'])
-            ->withTimestamps();
-    }
+
 
 
     public function scopeConStockBajo($query, $sucursalId = null)
