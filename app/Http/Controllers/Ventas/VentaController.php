@@ -393,17 +393,23 @@ class VentaController extends Controller
         }]);
 
         if ($term) {
+            // Detectamos si es un ID de base de datos directo (numérico corto)
+            $esId = (is_numeric($term) && strlen($term) < 5);
             // Detectamos si es código de barras (Numérico y largo)
             $esCodigoBarra = (is_numeric($term) && strlen($term) >= 5);
 
-            if ($esCodigoBarra) {
+            if ($esId) {
+                // --- MODO ID DIRECTO ---
+                $query->where('id', $term);
+                $query->limit(1);
+            } elseif ($esCodigoBarra) {
                 // --- MODO ESCÁNER: BÚSQUEDA EXACTA ---
                 $query->where(function ($q) use ($term) {
-                    $q->where('codigo_barra', '=', $term) // Uso de '=' en lugar de LIKE
+                    $q->where('codigo_barra', '=', $term)
                         ->orWhere('codigo_barra_blister', '=', $term)
                         ->orWhere('codigo', '=', $term);
                 });
-                $query->limit(1); // Solo necesitamos el primero si es exacto
+                $query->limit(1);
             } else {
                 // --- MODO TEXTO: BÚSQUEDA POR PARECIDO ---
                 $query->where(function ($q) use ($term) {

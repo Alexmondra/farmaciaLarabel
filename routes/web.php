@@ -296,4 +296,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('reporte-digemid', [DigemidReporteController::class, 'index'])->name('digemid.index');
         Route::get('reporte-digemid/exportar', [DigemidReporteController::class, 'exportar'])->name('digemid.exportar');
     });
+
+    // Chatbot de Personal Interno (FarmaCopiloto)
+    Route::get('personal-chat/history', [App\Http\Controllers\Seguridad\PersonalChatController::class, 'getHistory'])->name('personal-chat.history');
+    Route::post('personal-chat/message', [App\Http\Controllers\Seguridad\PersonalChatController::class, 'sendMessage'])->name('personal-chat.message');
+    Route::post('personal-chat/reset', [App\Http\Controllers\Seguridad\PersonalChatController::class, 'resetChat'])->name('personal-chat.reset');
+    Route::get('personal-chat/conversaciones', [App\Http\Controllers\Seguridad\PersonalChatController::class, 'getConversaciones'])->name('personal-chat.conversaciones');
+    Route::post('personal-chat/conversaciones/{id}/active', [App\Http\Controllers\Seguridad\PersonalChatController::class, 'activateConversacion'])->name('personal-chat.activate');
 });

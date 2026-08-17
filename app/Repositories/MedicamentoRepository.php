@@ -41,6 +41,10 @@ class MedicamentoRepository
                     'medicamento_sucursal.precio_venta as precio_v'
                 ]);
 
+            $query->with(['sucursales' => function ($q) use ($sid) {
+                $q->where('sucursales.id', $sid);
+            }]);
+
             $query->selectSub(function ($sub) use ($sid, $hoy) {
                 $sub->from('lotes')
                     ->whereColumn('lotes.medicamento_id', 'medicamentos.id')

@@ -281,6 +281,12 @@ return [
                     'icon' => 'fas fa-box-open',
                     'active' => ['tienda-admin/productos*'],
                 ],
+                [
+                    'text' => 'Visitar tienda',
+                    'url'  => 'tienda',
+                    'icon' => 'fas fa-box-open',
+                    'active' => ['tienda'],
+                ],
 
             ],
         ],        

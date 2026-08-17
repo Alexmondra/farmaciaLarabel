@@ -160,6 +160,9 @@
     @if($layoutHelper->isRightSidebarEnabled())
     @include('adminlte::partials.sidebar.right-sidebar')
     @endif
+
+    {{-- Chatbot de Personal Interno (FarmaCopiloto) --}}
+    @include('seguridad.chat_personal.widget')
 </div>
 @stop
 

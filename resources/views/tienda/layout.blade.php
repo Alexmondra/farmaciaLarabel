@@ -144,6 +144,23 @@
             box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.02), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
             padding: 1.75rem;
         }
+        .search-box-compact {
+            background: white;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03);
+            padding: 0.75rem 1.25rem;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        [x-cloak] {
+            display: none !important;
+        }
         .filter-label {
             color: var(--store-muted);
             font-size: .8rem;
@@ -345,7 +362,7 @@
             .product-title { font-size: .9rem; min-height: 2.4rem; }
             .product-description, .product-lab { display: none; }
             .product-info { padding: 1rem; }
-            .product-bottom { align-items: stretch; flex-direction: column; gap: .55rem; }
+            .product-bottom { gap: .55rem; }
         }
         .store-footer {
             background: #0f172a;

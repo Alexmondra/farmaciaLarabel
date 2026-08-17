@@ -279,6 +279,196 @@ PROMPT;
         return $fullResponse;
     }
 
+    public function buildPersonalCatalogTextForQuery(string $userQuery, int $sucursalId): string
+    {
+        $cleanQuery = preg_replace('/[^\p{L}\p{N}\s]/u', '', strtolower($userQuery));
+        $allWords = explode(' ', $cleanQuery);
+        
+        $stopWords = [
+            'para', 'tengo', 'duele', 'dolor', 'busco', 'algo', 'como', 'con', 'por', 'que', 
+            'una', 'este', 'esta', 'unos', 'unas', 'tiene', 'tienen', 'hola', 'buenos', 'dias',
+            'tardes', 'noches', 'ayuda', 'favor', 'recomienda', 'sugiere', 'receta', 'medico',
+            'tenemos', 'stock', 'de', 'del', 'la', 'el', 'en', 'hay'
+        ];
+        
+        $keywords = array_filter($allWords, function($word) use ($stopWords) {
+            return strlen($word) > 2 && !in_array($word, $stopWords);
+        });
+
+        // 1. Buscamos IDs de medicamentos de forma directa en Medicamento para evitar subconsultas lentas
+        $medicamentoQuery = \App\Models\Inventario\Medicamento::query();
+        
+        $medicamentoQuery->where(function($q) use ($keywords, $cleanQuery) {
+            if (strlen($cleanQuery) > 2) {
+                $q->orWhere('nombre', 'LIKE', '%' . $cleanQuery . '%')
+                  ->orWhere('descripcion', 'LIKE', '%' . $cleanQuery . '%');
+            }
+            foreach ($keywords as $word) {
+                $q->orWhere('nombre', 'LIKE', '%' . $word . '%')
+                  ->orWhere('descripcion', 'LIKE', '%' . $word . '%')
+                  ->orWhere('laboratorio', 'LIKE', '%' . $word . '%')
+                  ->orWhere('codigo', 'LIKE', '%' . $word . '%');
+            }
+        });
+
+        $medIds = $medicamentoQuery->pluck('id');
+
+        // FALLBACK: Si no hay resultados directos, buscamos por prefijo (3 primeros caracteres) para tolerar errores tipográficos
+        if ($medIds->isEmpty() && !empty($keywords)) {
+            $fallbackQuery = \App\Models\Inventario\Medicamento::query();
+            $fallbackQuery->where(function($q) use ($keywords) {
+                foreach ($keywords as $word) {
+                    if (strlen($word) >= 3) {
+                        $prefix = substr($word, 0, 3) . '%';
+                        $q->orWhere('nombre', 'LIKE', $prefix)
+                          ->orWhere('laboratorio', 'LIKE', $prefix);
+                    }
+                }
+            });
+            $medIds = $fallbackQuery->pluck('id');
+        }
+
+        // 2. Buscamos la relación en MedicamentoSucursal con sus lotes activos (>0 stock)
+        $productos = \App\Models\Inventario\MedicamentoSucursal::with(['medicamento.categoria', 'lotes' => function($q) use ($sucursalId) {
+            $q->where('sucursal_id', $sucursalId)->where('stock_actual', '>', 0);
+        }])
+        ->where('sucursal_id', $sucursalId)
+        ->where('activo', true)
+        ->whereIn('medicamento_id', $medIds)
+        ->get();
+
+        // 3. Filtrar estrictamente: Solo nos interesan productos que tengan stock > 0 real en sus lotes vigentes
+        $productosConStock = $productos->filter(function($p) {
+            return $p->lotes->sum('stock_actual') > 0;
+        })->take(30);
+
+        // Si no hay productos con stock que coincidan con la búsqueda, traemos los primeros 30 productos con stock de la sucursal de forma genérica
+        if ($productosConStock->isEmpty()) {
+            $productosConStock = \App\Models\Inventario\MedicamentoSucursal::with(['medicamento.categoria', 'lotes' => function($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId)->where('stock_actual', '>', 0);
+            }])
+            ->where('sucursal_id', $sucursalId)
+            ->where('activo', true)
+            ->get()
+            ->filter(function($p) {
+                return $p->lotes->sum('stock_actual') > 0;
+            })
+            ->take(30);
+        }
+
+        $lines = [];
+        foreach ($productosConStock as $p) {
+            $m = $p->medicamento;
+            if (!$m) continue;
+
+            $stockTotal = $p->lotes->sum('stock_actual');
+            $line = "ID: {$p->medicamento_id} | Nombre: {$m->nombre} | Stock Total: {$stockTotal}";
+            $lines[] = $line;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    public function buildPersonalSystemPrompt(string $catalog, string $nombreUsuario, string $nombreSucursal): string
+    {
+        return <<<PROMPT
+Eres FarmaCopiloto, un asistente clinico y de inventario inteligente para el personal interno de la farmacia. Estas hablando con el empleado: {$nombreUsuario}, de la sucursal activa: {$nombreSucursal}.
+
+Tu proposito es ayudar al farmaceutico en sus labores diarias: consultar rápidamente la disponibilidad de medicamentos y abrir el flujo de venta directa.
+
+## DIRECTRICES DE RESPUESTA (ESTRICTAS)
+- **Formato Ultra Simplificado (Solo Nombre y Botón Usar):**
+  - Muestra la lista de medicamentos encontrados usando viñetas simples (`-`).
+  - Para cada medicamento, debes imprimir **ÚNICAMENTE** el nombre del medicamento en negrita seguido inmediatamente del botón de venta `[Vender:[ID]]` y nada más.
+  - **NO incluyas** laboratorio, lotes, fecha de vencimiento, categoría, precios, stock restante ni ninguna otra especificación o texto de relleno.
+  - Ejemplo de formato exacto a seguir:
+    `- **Amoxicilina 500mg** [Vender:12]`
+- **Manejo de Existencias:** El catálogo de abajo solo contiene los medicamentos que **sí tienen stock** en la sucursal. Si el usuario te pregunta por un medicamento que no está en el catálogo, dile de forma muy breve que no se encontraron existencias del producto con ese nombre en esta sucursal y sugiérele buscar con otro nombre o principio activo.
+- **Máximo de Medicamentos:** En tu respuesta, **sugiere o muestra un máximo de 5 medicamentos o menos** para mantener la respuesta limpia. Solo si el usuario te solicita explícitamente listar más o mostrar todas las alternativas disponibles, puedes exceder este límite.
+- **Sin Rodeos ni Repeticiones:** Sé extremadamente claro, directo al grano y preciso. No repitas información en la misma respuesta ni des explicaciones redundantes. Evita introducciones largas o saludos repetitivos en cada mensaje.
+- **Tono Profesional y Tecnico:** Puedes usar terminologia clinica porque estas hablando con un profesional o auxiliar de farmacia calificado, no con el cliente final. Se preciso, breve y util.
+
+## INVENTARIO CON STOCK EN LA SUCURSAL ({$nombreSucursal})
+{$catalog}
+PROMPT;
+    }
+
+    public function chatStreamPersonal(string $userMessage, array $history, string $catalog, string $nombreUsuario, string $nombreSucursal, callable $onChunk): string
+    {
+        $systemPrompt = $this->buildPersonalSystemPrompt($catalog, $nombreUsuario, $nombreSucursal);
+
+        $messages = [['role' => 'system', 'content' => $systemPrompt]];
+
+        $maxHistory = config('ai-chat.max_history_messages', 20);
+        $recentHistory = array_slice($history, -$maxHistory);
+
+        foreach ($recentHistory as $msg) {
+            $messages[] = [
+                'role' => $msg['role'],
+                'content' => $msg['content'],
+            ];
+        }
+
+        $messages[] = ['role' => 'user', 'content' => $userMessage];
+
+        $fullResponse = '';
+
+        try {
+            $response = Http::timeout(60)
+                ->withToken($this->apiKey)
+                ->withHeaders([
+                    'Accept' => 'text/event-stream',
+                    'Content-Type' => 'application/json',
+                ])
+                ->withOptions(['stream' => true])
+                ->post("{$this->baseUrl}/chat/completions", [
+                    'model' => $this->model,
+                    'messages' => $messages,
+                    'temperature' => 0.2,
+                    'max_tokens' => $this->maxTokens,
+                    'stream' => true,
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Personal AI Chat API error', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                $onChunk("Tuvimos un problema al obtener la respuesta de la IA. Por favor, vuelva a preguntar o reinicie el chat.");
+                return '';
+            }
+
+            $body = $response->toPsrResponse()->getBody();
+
+            while (!$body->eof()) {
+                $line = $this->readLine($body);
+
+                if (empty($line)) {
+                    continue;
+                }
+
+                if ($line === 'data: [DONE]') {
+                    break;
+                }
+
+                $data = $this->parseChunk($line);
+
+                if ($data && isset($data['choices'][0]['delta']['content'])) {
+                    $content = $data['choices'][0]['delta']['content'];
+                    if ($content) {
+                        $fullResponse .= $content;
+                        $onChunk($content);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Personal AI Chat stream error: ' . $e->getMessage());
+            $onChunk("Tuvimos un problema al obtener la respuesta de la IA. Por favor, vuelva a preguntar o reinicie el chat.");
+        }
+
+        return $fullResponse;
+    }
+
     private function readLine($stream): string
     {
         $buffer = '';

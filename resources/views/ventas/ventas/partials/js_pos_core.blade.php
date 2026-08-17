@@ -1588,5 +1588,15 @@
                 toastr.error('No hay URLs de impresión disponibles para este pedido.');
             }
         });
+
+        // Exponer funciones y variables de estado al objeto global window para permitir la integración con FarmaCopiloto
+        window.posEngine = {
+            cargarLotesMedicamento: cargarLotesMedicamento,
+            renderCarrito: renderCarrito,
+            get medicamentoSeleccionado() { return medicamentoSeleccionado; },
+            set medicamentoSeleccionado(val) { medicamentoSeleccionado = val; },
+            get carrito() { return carrito; },
+            set carrito(val) { carrito = val; }
+        };
     });
 </script>
