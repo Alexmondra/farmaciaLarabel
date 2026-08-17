@@ -35,7 +35,6 @@
                             'LISTO' => 'Listo para Recojo',
                             'ENTREGADO' => 'Entregado',
                             'CANCELADO' => 'Cancelado',
-                            'CONVERTIDO_A_VENTA' => 'Facturado/Venta'
                         ] as $valor => $label)
                             <option value="{{ $valor }}" @selected(request('estado') === $valor)>{{ $label }}</option>
                         @endforeach
@@ -217,96 +216,6 @@
 
 @push('js')
 <script>
-// Función global para actualizar el estado del pedido con AJAX
-async function actualizarEstadoPedido(select) {
-    const url = select.dataset.url;
-    const nuevoEstado = select.value;
-    const previoEstado = select.dataset.prevVal;
-    
-    // Obtener elementos de carga locales en la fila
-    const spinner = select.nextElementSibling;
-    
-    // Deshabilitar y mostrar loader
-    select.disabled = true;
-    if (spinner) spinner.classList.remove('d-none');
-
-    try {
-        const response = await fetch(url, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({ estado: nuevoEstado })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            // Actualizar valor de referencia y estilo visual
-            select.dataset.prevVal = nuevoEstado;
-            
-            // Cambiar color de fondo dinámicamente según el estado
-            actualizarEstiloSelect(select, nuevoEstado);
-            
-            // Toast de éxito
-            Swal.fire({
-                icon: 'success',
-                title: 'Estado Actualizado',
-                text: data.message,
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
-        } else {
-            throw new Error(data.message || 'Error al actualizar el estado');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        // Revertir valor
-        select.value = previoEstado;
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message || 'No se pudo actualizar el estado del pedido.',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 4000
-        });
-    } finally {
-        // Habilitar y ocultar loader
-        select.disabled = false;
-        if (spinner) spinner.classList.add('d-none');
-    }
-}
-
-// Actualiza los estilos visuales del select según su valor
-function actualizarEstiloSelect(select, valor) {
-    // Remover colores previos
-    select.style.backgroundColor = '';
-    select.style.color = '';
-
-    const colores = {
-        'PENDIENTE': { bg: '#f1f5f9', text: '#475569' },
-        'CONFIRMADO': { bg: '#dbeafe', text: '#1d4ed8' },
-        'PREPARANDO': { bg: '#eff6ff', text: '#1e40af' },
-        'LISTO': { bg: '#d1fae5', text: '#065f46' },
-        'ENTREGADO': { bg: '#10b981', text: '#ffffff' },
-        'CANCELADO': { bg: '#fee2e2', text: '#991b1b' },
-        'CONVERTIDO_A_VENTA': { bg: '#ccfbf1', text: '#0f766e' }
-    };
-
-    if (colores[valor]) {
-        select.style.backgroundColor = colores[valor].bg;
-        select.style.color = colores[valor].text;
-    }
-}
-
 // Función global para actualizar el estado del pedido con AJAX o modal de entrega
 async function actualizarEstadoPedido(select) {
     const url = select.dataset.url;

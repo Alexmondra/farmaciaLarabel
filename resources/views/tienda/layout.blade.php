@@ -4,6 +4,9 @@
     });
     $nombreTienda = $empresa->empresa_razon_social ?? 'Farmacia Online';
     $logoUrl = ($empresa && $empresa->ruta_logo) ? asset('storage/' . $empresa->ruta_logo) : null;
+    $sucursalesFooter = cache()->remember('sucursales_activas_footer', 1440, function () {
+        return \App\Models\Sucursal::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'direccion', 'telefono']);
+    });
 @endphp
 <!doctype html>
 <html lang="es">
@@ -23,7 +26,7 @@
             --store-muted: #64748b;
         }
 
-        body { background: #f8fafc; color: var(--store-ink); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background: #f8fafc; color: var(--store-ink); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
         .top-strip { background: #0f172a; color: #94a3b8; font-size: .82rem; font-weight: 500; }
         .store-header {
             background: rgba(255, 255, 255, 0.85);
@@ -96,7 +99,7 @@
             transform: translateY(-1px);
             box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
         }
-        .store-shell { margin-top: 2rem; }
+        .store-shell { margin-top: 2rem; flex-grow: 1; padding-bottom: 80px; }
         .store-card {
             border: 0;
             border-radius: 1.25rem;
@@ -358,30 +361,56 @@
             .brand-icon { height: 36px; width: 36px; }
             .top-strip { display: none; }
             .store-header { position: sticky; top: 0; z-index: 50; }
+            .store-header .container {
+                flex-direction: row !important;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.5rem;
+            }
+            .store-header nav {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem 0;
+            }
             .product-media { height: 140px; }
             .product-title { font-size: .9rem; min-height: 2.4rem; }
             .product-description, .product-lab { display: none; }
             .product-info { padding: 1rem; }
             .product-bottom { gap: .55rem; }
         }
+
         .store-footer {
-            background: #0f172a;
-            color: #94a3b8;
-            border-top: 1px solid #1e293b;
-            font-size: 0.9rem;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #cbd5e1;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 45;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
         }
+
         .store-footer a {
-            color: #64748b;
+            color: #cbd5e1 !important;
             text-decoration: none;
-            transition: color 0.3s ease-in-out;
+            transition: color 0.2s ease-in-out;
         }
         .store-footer a:hover {
-            color: var(--store-green);
+            color: #5eead4 !important;
         }
     </style>
     @stack('styles')
 </head>
 <body>
+    <div class="d-flex flex-column min-vh-100">
     <div class="top-strip py-2">
         <div class="container d-flex justify-content-between gap-3">
             <span>🚀 Compra online y recoge en tu sucursal preferida</span>
@@ -401,7 +430,8 @@
             </a>
             <nav class="d-flex align-items-center gap-3">
                 <a href="{{ route('tienda.index') }}" class="header-link">Catalogo</a>
-                <a href="#" class="header-link open-chat-widget">Chat Asistente</a>
+                <a href="{{ route('tienda.sucursales') }}" class="header-link">Sucursales</a>
+               <a href="#" class="header-link open-chat-widget d-none d-md-inline">Chat Asistente</a>
                 @auth('tienda')
                     <div class="dropdown">
                         <a href="#" class="header-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -421,7 +451,6 @@
                     </div>
                 @else
                     <a href="{{ route('tienda.login') }}" class="header-link">Iniciar sesión</a>
-                    <a href="{{ route('tienda.register') }}" class="header-link">Registrarse</a>
                 @endauth
                 <a href="{{ route('tienda.carrito.index') }}" class="cart-pill d-inline-flex align-items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.1rem; height: 1.1rem;">
@@ -521,17 +550,56 @@
     </script>
     @endif
 
-    <footer class="store-footer py-4 mt-5">
+    <footer class="store-footer py-3">
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <span class="small">&copy; {{ date('Y') }} {{ $nombreTienda }}. Todos los derechos reservados.</span>
-            <a href="{{ route('login') }}" class="small d-inline-flex align-items-center gap-1.5 font-semibold">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;">
+            <span class="small" style="font-size: 0.8rem;">Diseñado y desarrollado por <strong class="text-white">S1NT4X System</strong></span>
+            <a href="{{ route('login') }}" class="small d-inline-flex align-items-center gap-1.5 font-semibold text-decoration-none" style="font-size: 0.8rem;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 0.95rem; height: 0.95rem; color: #5eead4;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                 </svg>
                 <span>Acceso Personal</span>
             </a>
         </div>
     </footer>
+    </div>
+
+    <script>
+        (function() {
+            let lastScrollTop = 0;
+            const footer = document.querySelector('.store-footer');
+            
+            window.addEventListener('scroll', function() {
+                let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (scrollTop <= 50) {
+                    if (footer) {
+                        footer.style.transform = 'translateY(0)';
+                        footer.style.opacity = '1';
+                        footer.style.pointerEvents = 'auto';
+                    }
+                    lastScrollTop = scrollTop;
+                    return;
+                }
+                
+                if (scrollTop > lastScrollTop) {
+                    // Scrolling down - hide footer
+                    if (footer) {
+                        footer.style.transform = 'translateY(100%)';
+                        footer.style.opacity = '0';
+                        footer.style.pointerEvents = 'none';
+                    }
+                } else {
+                    // Scrolling up - show footer
+                    if (footer) {
+                        footer.style.transform = 'translateY(0)';
+                        footer.style.opacity = '1';
+                        footer.style.pointerEvents = 'auto';
+                    }
+                }
+                lastScrollTop = scrollTop;
+            }, { passive: true });
+        })();
+    </script>
 
     @include('tienda.partials.chat-widget')
 </body>

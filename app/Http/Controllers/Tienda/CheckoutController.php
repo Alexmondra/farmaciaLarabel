@@ -33,6 +33,16 @@ class CheckoutController extends Controller
         }
 
         $sucursales = \App\Models\Sucursal::whereIn('id', $sucursalIds)->get();
+        $sucursalesJson = $sucursales->map(function($s) {
+            return [
+                'id' => $s->id,
+                'nombre' => $s->nombre,
+                'direccion' => $s->direccion,
+                'distrito' => $s->distrito,
+                'lat' => $s->latitud ? (float)$s->latitud : null,
+                'lng' => $s->longitud ? (float)$s->longitud : null,
+            ];
+        });
 
         $pagosOnlinePendientes = PedidoOnline::where('cliente_id', $cliente->id)
             ->where('metodo_pago', 'PAGO_ONLINE')
@@ -43,7 +53,7 @@ class CheckoutController extends Controller
         $limiteOnlineAlcanzado = $pagosOnlinePendientes >= 3;
         $montoInsuficienteOnline = $total < 15.00;
 
-        return view('tienda.checkout', compact('items', 'total', 'cliente', 'fechaRecojoDefault', 'fechaRecojoMin', 'esMultiSucursal', 'sucursales', 'limiteOnlineAlcanzado', 'montoInsuficienteOnline'));
+        return view('tienda.checkout', compact('items', 'total', 'cliente', 'fechaRecojoDefault', 'fechaRecojoMin', 'esMultiSucursal', 'sucursales', 'sucursalesJson', 'limiteOnlineAlcanzado', 'montoInsuficienteOnline'));
     }
 
     public function store(Request $request)

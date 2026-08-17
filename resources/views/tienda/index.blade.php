@@ -153,6 +153,56 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Lógica de Scroll-Up Reveal para Filtros (Cabecera siempre fija)
+        let lastScrollTop = 0;
+        const header = document.querySelector('.store-header');
+        const searchBox = document.querySelector('.search-box-compact');
+        
+        if (searchBox && header) {
+            searchBox.style.position = 'sticky';
+            searchBox.style.top = `${header.offsetHeight || 74}px`;
+            searchBox.style.zIndex = '40';
+            searchBox.style.transition = 'transform 0.3s ease-in-out, opacity 0.2s ease-in-out, top 0.3s ease-in-out, box-shadow 0.3s ease-in-out';
+            
+            window.addEventListener('resize', () => {
+                searchBox.style.top = `${header.offsetHeight || 74}px`;
+            });
+        }
+
+        window.addEventListener('scroll', function() {
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (scrollTop <= 50) {
+                if (searchBox) {
+                    searchBox.style.transform = 'translateY(0)';
+                    searchBox.style.opacity = '1';
+                    searchBox.style.pointerEvents = 'auto';
+                    searchBox.style.boxShadow = 'none';
+                }
+                lastScrollTop = scrollTop;
+                return;
+            }
+            
+            if (scrollTop > lastScrollTop) {
+                // Scrolling down - hide only the filter bar (sliding under the header)
+                if (searchBox) {
+                    searchBox.style.transform = 'translateY(-120px)';
+                    searchBox.style.opacity = '0';
+                    searchBox.style.pointerEvents = 'none';
+                }
+            } else {
+                // Scrolling up - show filter bar right below header
+                if (searchBox) {
+                    searchBox.style.transform = 'translateY(0)';
+                    searchBox.style.opacity = '1';
+                    searchBox.style.pointerEvents = 'auto';
+                    searchBox.style.top = `${header.offsetHeight || 74}px`;
+                    searchBox.style.boxShadow = '0 10px 25px -5px rgba(15, 23, 42, 0.08)';
+                }
+            }
+            lastScrollTop = scrollTop;
+        }, { passive: true });
+
         const grid = document.getElementById('product-grid');
         const sentinel = document.getElementById('product-sentinel');
         const loader = document.getElementById('product-loader');

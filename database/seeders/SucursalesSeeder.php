@@ -23,6 +23,8 @@ class SucursalesSeeder extends Seeder
                 'direccion'           => 'Av. Jose Larco 123',
                 'telefono'            => '(01) 444-1111',
                 'email'               => 'ventas.lima@mifarmacia.com',
+                'latitud'             => -12.1226154,
+                'longitud'            => -77.030588,
                 'impuesto_porcentaje' => 18.00,
                 'activo'              => true,
                 // Series Familia 01
@@ -47,6 +49,8 @@ class SucursalesSeeder extends Seeder
                 'direccion'           => 'Calle San Jose 456',
                 'telefono'            => '(074) 222-3333',
                 'email'               => 'ventas.chiclayo@mifarmacia.com',
+                'latitud'             => -6.7718018,
+                'longitud'            => -79.8407421,
                 'impuesto_porcentaje' => 18.00,
                 'activo'              => true,
                 // Series Familia 02
@@ -71,6 +75,8 @@ class SucursalesSeeder extends Seeder
                 'direccion'           => 'Av. Ejercito 789',
                 'telefono'            => '(054) 555-6666',
                 'email'               => 'ventas.arequipa@mifarmacia.com',
+                'latitud'             => -16.3908865,
+                'longitud'            => -71.5471477,
                 'impuesto_porcentaje' => 18.00,
                 'activo'              => true,
                 // Series Familia 03
@@ -95,6 +101,8 @@ class SucursalesSeeder extends Seeder
                 'direccion'           => 'Av. España 245, Centro Histórico',
                 'telefono'            => '(044) 201-5555',
                 'email'               => 'ventas.trujillo@mifarmacia.com',
+                'latitud'             => -8.1130644,
+                'longitud'            => -79.0300267,
                 'impuesto_porcentaje' => 18.00,
                 'activo'              => true,
                 // Series Familia 04
@@ -119,6 +127,8 @@ class SucursalesSeeder extends Seeder
                 'direccion'           => 'Av. El Sol 900',
                 'telefono'            => '(084) 231-9999',
                 'email'               => 'ventas.cusco@mifarmacia.com',
+                'latitud'             => -13.5218779,
+                'longitud'            => -71.9723709,
                 'impuesto_porcentaje' => 18.00,
                 'activo'              => true,
                 // Series Familia 05
@@ -143,6 +153,8 @@ class SucursalesSeeder extends Seeder
                 'direccion'           => 'Av. Grau 550',
                 'telefono'            => '(073) 304-8888',
                 'email'               => 'ventas.piura@mifarmacia.com',
+                'latitud'             => -5.1960249,
+                'longitud'            => -80.6300438,
                 'impuesto_porcentaje' => 18.00,
                 'activo'              => true,
                 // Series Familia 06

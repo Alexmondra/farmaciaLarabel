@@ -8,6 +8,7 @@
         display: flex;
         flex-direction: column;
         height: calc(100vh - 220px);
+        height: calc(100dvh - 220px);
         min-height: 500px;
         background: white;
         border-radius: 1.25rem;
@@ -252,6 +253,7 @@
     @media (max-width: 767.98px) {
         .chat-container {
             height: calc(100vh - 160px);
+            height: calc(100dvh - 160px);
             border-radius: 0;
             margin: 0 -12px;
         }

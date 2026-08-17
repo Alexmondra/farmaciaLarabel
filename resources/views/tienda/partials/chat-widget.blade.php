@@ -72,7 +72,9 @@
         position: fixed;
         top: 0;
         right: 0;
-        height: 100%;
+        bottom: 0;
+        height: 100vh;
+        height: 100dvh;
         width: 440px;
         max-width: 100%;
         background: #f8fafc;
@@ -537,6 +539,8 @@
     @media (max-width: 480px) {
         .chat-widget-drawer {
             width: 100%;
+            height: 100vh;
+            height: 100dvh;
         }
         .chat-widget-trigger {
             bottom: 16px;
@@ -671,6 +675,7 @@
         if (isOpen) {
             drawer.classList.add('active');
             backdrop.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Bloquea el scroll del fondo
             input.focus();
             if (!isHistoryLoaded) {
                 loadHistory();
@@ -678,6 +683,7 @@
         } else {
             drawer.classList.remove('active');
             backdrop.classList.remove('active');
+            document.body.style.overflow = ''; // Restaura el scroll del fondo
         }
     }
 

@@ -55,10 +55,6 @@ class CarritoController extends Controller
         [$items] = $this->itemsCarrito();
         $sucursalIds = $items->pluck('producto.sucursal_id')->unique();
 
-        if ($sucursalIds->count() > 1) {
-            return redirect()->route('tienda.carrito.index')->with('warning', 'Tienes productos de diferentes sucursales. Te recomendamos elegir productos de una sola sucursal para recoger tu pedido en el menor tiempo. Si continuas con productos de varias sucursales, el tiempo de espera sera de al menos una semana mientras trasladamos todo a un solo punto de recojo.');
-        }
-
         return redirect()->route('tienda.carrito.index')->with('success', 'Producto agregado al carrito.');
     }
 

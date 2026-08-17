@@ -35,7 +35,14 @@ class ProcesarAnulacionSunat implements ShouldQueue
         $exito = $sunatService->transmitirNotaCredito($this->nota, $this->venta);
 
         if (!$exito) {
-            throw new \Exception("Fallo envío de Nota de Crédito ID: " . $this->nota->id);
+            $codigoError = (int)$this->nota->codigo_error_sunat;
+            // Si es un código de rechazo definitivo de SUNAT (entre 2000 y 3999), no reintentamos
+            if ($codigoError >= 2000 && $codigoError <= 3999) {
+                Log::channel('worker')->warning("NC Rechazada de forma definitiva por SUNAT (Código {$codigoError}): {$this->nota->mensaje_sunat}");
+                return;
+            }
+
+            throw new \Exception("Fallo envío de Nota de Crédito ID: " . $this->nota->id . " - " . $this->nota->mensaje_sunat);
         }
 
         Log::channel('worker')->info("NC Aceptada por SUNAT: {$this->nota->serie}-{$this->nota->numero}");

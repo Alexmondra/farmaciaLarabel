@@ -14,6 +14,7 @@ class ComprobanteService
 {
     public function generarPdf(Venta $venta, $tipo = 'stream')
     {
+        $venta->loadMissing(['detalles.medicamento', 'cliente', 'sucursal']);
         $config = Configuracion::firstOrFail();
 
         // 1. Datos del Emisor
@@ -64,6 +65,7 @@ class ComprobanteService
 
     public function generarGuiaPdf(GuiaRemision $guia, $tipo = 'stream')
     {
+        $guia->loadMissing(['detalles.lote', 'cliente', 'sucursal']);
         $config = Configuracion::firstOrFail();
 
         // 1. Datos del Emisor

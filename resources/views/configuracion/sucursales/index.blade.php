@@ -108,6 +108,7 @@
 @stop
 
 @section('js')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
 
@@ -139,6 +140,78 @@
     };
 
     // ---------------------------------------------------------
+    // MAPA PICKER (LEAFLET.JS) LÓGICA
+    // ---------------------------------------------------------
+    var pickerMap = null;
+    var pickerMarker = null;
+
+    function initPickerMap(lat, lng) {
+      var defaultLat = -12.046374; // Lima default
+      var defaultLng = -77.042793;
+      var hasCoords = lat && lng && !isNaN(lat) && !isNaN(lng);
+
+      var initialLat = hasCoords ? lat : defaultLat;
+      var initialLng = hasCoords ? lng : defaultLng;
+      var zoom = hasCoords ? 15 : 6;
+
+      if (!pickerMap) {
+        pickerMap = L.map('map_picker').setView([initialLat, initialLng], zoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(pickerMap);
+
+        pickerMarker = L.marker([initialLat, initialLng], {
+          draggable: true
+        }).addTo(pickerMap);
+
+        // Al arrastrar el pin
+        pickerMarker.on('dragend', function(e) {
+          var position = pickerMarker.getLatLng();
+          $('#latitud_input').val(position.lat.toFixed(7));
+          $('#longitud_input').val(position.lng.toFixed(7));
+        });
+
+        // Al hacer clic en el mapa
+        pickerMap.on('click', function(e) {
+          var latlng = e.latlng;
+          pickerMarker.setLatLng(latlng);
+          $('#latitud_input').val(latlng.lat.toFixed(7));
+          $('#longitud_input').val(latlng.lng.toFixed(7));
+        });
+      } else {
+        pickerMap.setView([initialLat, initialLng], zoom);
+        pickerMarker.setLatLng([initialLat, initialLng]);
+      }
+    }
+
+    // Escuchar el evento de que el modal de Bootstrap ya se mostró completamente
+    modal.on('shown.bs.modal', function() {
+      var latVal = $('#latitud_input').val();
+      var lngVal = $('#longitud_input').val();
+      var lat = latVal ? parseFloat(latVal) : null;
+      var lng = lngVal ? parseFloat(lngVal) : null;
+
+      initPickerMap(lat, lng);
+      
+      // Forzar recálculo del tamaño del mapa por si cargó gris
+      setTimeout(function() {
+        if (pickerMap) {
+          pickerMap.invalidateSize();
+        }
+      }, 100);
+    });
+
+    // Si escriben las coordenadas a mano, actualizamos el mapa
+    $('#latitud_input, #longitud_input').on('input change', function() {
+      var lat = parseFloat($('#latitud_input').val());
+      var lng = parseFloat($('#longitud_input').val());
+      if (pickerMarker && pickerMap && !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        pickerMarker.setLatLng([lat, lng]);
+        pickerMap.setView([lat, lng]);
+      }
+    });
+
+    // ---------------------------------------------------------
     // 2. FUNCIÓN PARA ABRIR MODAL "CREAR"
     // ---------------------------------------------------------
     window.abrirModalCrear = function() {
@@ -163,6 +236,10 @@
       $('input[name="serie_nc_factura"]').val(sugerencias.nc_factura);
       $('input[name="serie_nc_boleta"]').val(sugerencias.nc_boleta);
       $('input[name="serie_guia"]').val(sugerencias.guia);
+
+      // Limpiar coordenadas anteriores
+      $('#latitud_input').val('');
+      $('#longitud_input').val('');
 
       // Resetear campo file por si acaso
       $('#customFile').val('');
@@ -195,13 +272,16 @@
       $('input[name="distrito"]').val(data.distrito);
       $('input[name="direccion"]').val(data.direccion);
 
+      // Coordenadas
+      $('#latitud_input').val(data.latitud || '');
+      $('#longitud_input').val(data.longitud || '');
+
       // Contacto & Fiscal
       $('input[name="email"]').val(data.email);
       $('input[name="telefono"]').val(data.telefono);
       $('input[name="impuesto_porcentaje"]').val(data.impuesto_porcentaje);
 
       // --- SERIES ---
-      // Aseguramos que se carguen de la BD, o se queden vacías si son null (el form no permite vacíos ya que tienen required)
       $('input[name="serie_boleta"]').val(data.serie_boleta || sugerencias.boleta);
       $('input[name="serie_factura"]').val(data.serie_factura || sugerencias.factura);
       $('input[name="serie_ticket"]').val(data.serie_ticket || sugerencias.ticket);
@@ -216,10 +296,8 @@
       $('#customFile').val(''); // Resetear campo file
 
       if (data.imagen_sucursal) {
-        // Usar la variable JS del asset para construir la ruta, más seguro que concatenar la ruta PHP en JS
         previewImg.attr('src', storagePath + "/" + data.imagen_sucursal);
       } else {
-        // Generar avatar con iniciales si no hay foto
         let nombreClean = data.nombre ? data.nombre.replace(/[^a-zA-Z ]/g, "").substring(0, 2) : 'S';
         previewImg.attr('src', 'https://ui-avatars.com/api/?name=' + nombreClean + '&background=20c997&color=fff&size=128');
       }
@@ -266,6 +344,7 @@
 
 
 @section('css')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
   /* === RESPONSIVIDAD: TABLA TRANSFORMADA A TARJETA EN MÓVIL === */
   @media screen and (max-width: 768px) {

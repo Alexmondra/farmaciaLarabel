@@ -19,6 +19,8 @@ class Sucursal extends Model
         'telefono',
         'email',
         'imagen_sucursal',
+        'latitud',
+        'longitud',
         'impuesto_porcentaje',
         'serie_boleta',
         'serie_factura',

@@ -11,6 +11,24 @@ use Illuminate\Support\Facades\DB;
 
 class TiendaController extends Controller
 {
+    public function sucursales()
+    {
+        $sucursales = Sucursal::where('activo', true)->orderBy('nombre')->get();
+        $sucursalesJson = $sucursales->map(function($s) {
+            return [
+                'id' => $s->id,
+                'nombre' => $s->nombre,
+                'direccion' => $s->direccion ?? 'Ubicación principal',
+                'distrito' => $s->distrito,
+                'provincia' => $s->provincia,
+                'latitud' => $s->latitud ? (float)$s->latitud : null,
+                'longitud' => $s->longitud ? (float)$s->longitud : null,
+                'url_catalogo' => route('tienda.index', ['sucursal' => $s->id])
+            ];
+        });
+        return view('tienda.sucursales', compact('sucursales', 'sucursalesJson'));
+    }
+
     public function index(Request $request)
     {
         $sucursalIds = TiendaProducto::query()

@@ -39,10 +39,27 @@ class AiChatService
             $antecedentesSection .= "- " . $antecedentes . "\n";
         }
 
+        // Obtener la información de todas las sucursales activas en tiempo real
+        $sucursales = \App\Models\Sucursal::where('activo', true)->get();
+        $sucursalesSection = "\n## NUESTRAS SUCURSALES (RECOJO EN TIENDA)\n";
+        $sucursalesSection .= "Disponemos de las siguientes ubicaciones físicas operativas para recojo de pedidos y consultas presenciales:\n";
+        foreach ($sucursales as $s) {
+            $sucursalesSection .= "- **{$s->nombre}**: Dirección: {$s->direccion}, {$s->distrito}, {$s->provincia}";
+            if ($s->telefono) {
+                $sucursalesSection .= " | Teléfono: {$s->telefono}";
+            }
+            if ($s->latitud && $s->longitud) {
+                $sucursalesSection .= " | Coordenadas del mapa: {$s->latitud}, {$s->longitud}";
+            }
+            $sucursalesSection .= "\n";
+        }
+        $sucursalesSection .= "Si el usuario pregunta por la ubicación de alguna de nuestras tiendas, proporcionales esta información de forma amable y recuérdales que también pueden verlas en el mapa interactivo de la sección /tienda/sucursales.\n";
+
         return <<<PROMPT
 Eres el Asistente Virtual de Farmacia, un auxiliar farmaceutico digital. Tu proposito es orientar a clientes sobre sintomas comunes y recomendar productos disponibles en nuestra tienda.
 {$identidadSection}
 {$antecedentesSection}
+{$sucursalesSection}
 ## REGLAS INQUEBRANTABLES
 
 ### 1. SEGURIDAD MEDICA - LEE ESTO PRIMERO

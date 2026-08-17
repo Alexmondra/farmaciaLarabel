@@ -35,7 +35,7 @@
                             </div>
                         </div>
                         <small class="form-text text-muted mt-2">
-                            <i class="fas fa-info-circle mr-1"></i> Si utiliza una lectora de hardware, simplemente abra el modal y escanee el código QR del cliente.
+                            <i class="fas fa-info-circle mr-1"></i> Si utiliza una lectora de hardware, simplemente escanee el código QR del cliente.
                         </small>
                     </div>
                 </div>
@@ -141,7 +141,7 @@
                                         <select id="ped-fact-tipo-comprobante" class="form-control form-control-sm font-weight-bold text-dark">
                                             <option value="BOLETA">BOLETA DE VENTA</option>
                                             <option value="FACTURA">FACTURA</option>
-                                            <option value="TICKET">TICKET BOLETA</option>
+                                          
                                         </select>
                                     </div>
 

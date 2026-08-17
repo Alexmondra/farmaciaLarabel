@@ -16,8 +16,8 @@ class ProcesarVentaSunat implements ShouldQueue
 
     protected $venta;
 
-    // Si falla la conexión a SUNAT, reintenta 3 veces automáticamente
-    public $tries = 3;
+    // Si falla la conexión a SUNAT, reintenta 5 veces automáticamente
+    public $tries = 5;
     // Espera 60 segundos entre reintentos
     public $backoff = 60;
 
@@ -28,6 +28,10 @@ class ProcesarVentaSunat implements ShouldQueue
 
     public function handle(SunatService $sunatService)
     {
-        $sunatService->transmitirAComprobante($this->venta);
+        $exito = $sunatService->transmitirAComprobante($this->venta);
+
+        if (!$exito && $this->venta->estado === 'PENDIENTE') {
+            throw new \Exception("Error temporal de conexión con SUNAT para Venta ID {$this->venta->id}: " . $this->venta->mensaje_sunat);
+        }
     }
 }

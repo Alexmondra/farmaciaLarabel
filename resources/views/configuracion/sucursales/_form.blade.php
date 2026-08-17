@@ -90,6 +90,27 @@
             </div>
         </div>
 
+        {{-- COORDENADAS GEOGRÁFICAS --}}
+        <h6 class="text-teal font-weight-bold mt-3 mb-2" style="font-size: 0.9rem;">
+            <i class="fas fa-map mr-1"></i> Ubicación en Mapa (Marcador Interactivo)
+        </h6>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label class="small font-weight-bold text-muted">LATITUD</label>
+                <input type="text" id="latitud_input" name="latitud" class="form-control form-control-sm font-weight-bold" placeholder="Ej: -12.1226154"
+                    value="{{ old('latitud', $sucursal->latitud ?? '') }}">
+            </div>
+            <div class="form-group col-md-6">
+                <label class="small font-weight-bold text-muted">LONGITUD</label>
+                <input type="text" id="longitud_input" name="longitud" class="form-control form-control-sm font-weight-bold" placeholder="Ej: -77.030588"
+                    value="{{ old('longitud', $sucursal->longitud ?? '') }}">
+            </div>
+        </div>
+        <div class="form-group mb-3">
+            <div id="map_picker" style="height: 200px; border-radius: 8px; border: 1px solid #ced4da; z-index: 10;"></div>
+            <small class="text-muted"><i class="fas fa-info-circle mr-1"></i> Haz clic en cualquier parte del mapa o arrastra el pin para ubicar la sucursal.</small>
+        </div>
+
         {{-- CONTACTO --}}
         <div class="form-row">
             <div class="form-group col-md-6">

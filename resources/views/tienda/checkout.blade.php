@@ -2,6 +2,10 @@
 
 @section('title', 'Finalizar pedido')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+@endpush
+
 @section('content')
 <h1 class="h3 mb-4">Finalizar pedido</h1>
 
@@ -52,7 +56,19 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+                @else
+                    <div class="col-12">
+                        <div class="alert alert-info small mb-0 rounded-xl" style="background-color: #f0fdfa; border-color: rgba(13, 148, 136, 0.15); color: #0f766e;">
+                            <i class="fas fa-store me-1"></i> Recogerás tu pedido en: <strong>{{ $sucursales->first()->nombre }}</strong>
+                            <div class="text-xs text-muted mt-1" style="font-size: 0.75rem; color: #64748b;">{{ $sucursales->first()->direccion }}, {{ $sucursales->first()->distrito }}</div>
+                        </div>
+                    </div>
                 @endif
+
+                <div class="col-12" id="checkout_map_container" style="display: none;">
+                    <label class="form-label text-xs uppercase font-bold tracking-wide text-slate-500 mb-1" style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Ubicación de la sucursal</label>
+                    <div id="checkout_map" style="height: 180px; border-radius: 12px; border: 1px solid #e2e8f0; z-index: 5;"></div>
+                </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Pago</label>
@@ -206,5 +222,74 @@
         actualizarTelefono();
     }
 })();
+</script>
+@endpush
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    (function () {
+        var sucursalesJson = @json($sucursalesJson);
+
+        var checkoutMap = null;
+        var checkoutMarker = null;
+        var esMulti = @json($esMultiSucursal);
+
+        function updateCheckoutMap(sucursalId) {
+            var s = sucursalesJson.find(function(x) { return x.id == sucursalId; });
+            if (!s || !s.lat || !s.lng) {
+                document.getElementById('checkout_map_container').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('checkout_map_container').style.display = 'block';
+
+            var customIcon = L.divIcon({
+                html: `<div style="background-color: #0d9488; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 4px 8px rgba(13, 148, 136, 0.3); display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="fas fa-clinic-medical" style="font-size: 11px;"></i>
+                       </div>`,
+                className: 'custom-map-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            if (!checkoutMap) {
+                checkoutMap = L.map('checkout_map').setView([s.lat, s.lng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(checkoutMap);
+
+                checkoutMarker = L.marker([s.lat, s.lng], { icon: customIcon }).addTo(checkoutMap);
+            } else {
+                checkoutMap.setView([s.lat, s.lng], 16);
+                checkoutMarker.setLatLng([s.lat, s.lng]);
+            }
+
+            checkoutMarker.bindPopup(`<strong>${s.nombre}</strong><br><span style="font-size: 0.85em; color: #64748b;">${s.direccion}</span>`).openPopup();
+            
+            setTimeout(function() {
+                if (checkoutMap) checkoutMap.invalidateSize();
+            }, 150);
+        }
+
+        // Si es multi, escuchar cambios del select
+        if (esMulti) {
+            var select = document.querySelector('select[name="sucursal_recojo_id"]');
+            if (select) {
+                select.addEventListener('change', function () {
+                    updateCheckoutMap(this.value);
+                });
+                // Initial check
+                if (select.value) {
+                    updateCheckoutMap(select.value);
+                }
+            }
+        } else {
+            // Si es sucursal única, cargar directamente
+            if (sucursalesJson.length > 0) {
+                updateCheckoutMap(sucursalesJson[0].id);
+            }
+        }
+    })();
 </script>
 @endpush

@@ -58,6 +58,7 @@ class SunatService
     public function transmitirAComprobante(Venta $venta)
     {
         try {
+            $venta->loadMissing(['detalles.medicamento', 'cliente', 'sucursal']);
             $config = Configuracion::first();
             $see = $this->getSee();
             $invoice = $this->generarComprobante($venta);
@@ -306,6 +307,7 @@ class SunatService
     public function transmitirNotaCredito(NotaCredito $nota, Venta $ventaOriginal)
     {
         try {
+            $ventaOriginal->loadMissing(['detalles.medicamento', 'cliente', 'sucursal']);
             $see = $this->getSee();
 
             // 1. Generar objeto Note

@@ -110,7 +110,7 @@
                                     'LISTO' => 'Listo para Recojo',
                                     'ENTREGADO' => 'Entregado',
                                     'CANCELADO' => 'Cancelado',
-                                    'CONVERTIDO_A_VENTA' => 'Facturado/Venta'
+                                   
                                 ] as $valor => $label)
                                     <option value="{{ $valor }}" @selected($pedido->estado === $valor)>{{ $label }}</option>
                                 @endforeach
@@ -118,7 +118,7 @@
                             <span class="spinner-border spinner-border-sm text-primary ml-2 d-none" id="estado-spinner" role="status"></span>
                         </div>
                     </div>
-                    @if(!in_array($pedido->estado, ['ENTREGADO', 'CANCELADO', 'CONVERTIDO_A_VENTA']))
+                    @if(!in_array($pedido->estado, ['ENTREGADO', 'CANCELADO']))
                         <button type="submit" id="btn-actualizar" class="btn btn-primary btn-block rounded-lg py-2 shadow-xs font-weight-bold transition-all">
                             <i class="fas fa-save mr-1"></i> Guardar Cambios
                         </button>
@@ -157,86 +157,7 @@
             }
         </style>
 
-        <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('estado-form');
-            const select = document.getElementById('select-estado');
-            const spinner = document.getElementById('estado-spinner');
-            const btn = document.getElementById('btn-actualizar');
 
-            function pintarSelect(val) {
-                select.style.backgroundColor = '';
-                select.style.color = '';
-                const colores = {
-                    'PENDIENTE': { bg: '#f1f5f9', text: '#475569' },
-                    'CONFIRMADO': { bg: '#dbeafe', text: '#1d4ed8' },
-                    'PREPARANDO': { bg: '#eff6ff', text: '#1e40af' },
-                    'LISTO': { bg: '#d1fae5', text: '#065f46' },
-                    'ENTREGADO': { bg: '#10b981', text: '#ffffff' },
-                    'CANCELADO': { bg: '#fee2e2', text: '#991b1b' },
-                    'CONVERTIDO_A_VENTA': { bg: '#ccfbf1', text: '#0f766e' }
-                };
-                if (colores[val]) {
-                    select.style.backgroundColor = colores[val].bg;
-                    select.style.color = colores[val].text;
-                }
-            }
-
-            pintarSelect(select.value);
-            select.addEventListener('change', () => pintarSelect(select.value));
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                select.disabled = true;
-                btn.disabled = true;
-                spinner.classList.remove('d-none');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Actualizando...';
-
-                try {
-                    const response = await fetch(form.action, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({ estado: select.value })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && data.success) {
-                        select.dataset.prev = select.value;
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Actualizado!',
-                            text: data.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        throw new Error(data.message || 'Error al actualizar el estado.');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    select.value = select.dataset.prev;
-                    pintarSelect(select.value);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: err.message || 'No se pudo guardar el nuevo estado.'
-                    });
-                } finally {
-                    select.disabled = false;
-                    btn.disabled = false;
-                    spinner.classList.add('d-none');
-                    btn.innerHTML = '<i class="fas fa-save mr-1"></i> Guardar Cambios';
-                }
-            });
-        });
-        </script>
         
         <!-- Modal Entrega Pedido y Facturación (Específico para este pedido) -->
         <div class="modal fade" id="modalEntregaPedido" tabindex="-1" role="dialog" aria-labelledby="modalEntregaPedidoLabel" aria-hidden="true">
@@ -275,7 +196,6 @@
                             <div class="form-group mb-3">
                                 <label class="font-weight-bold text-dark text-xs uppercase" style="letter-spacing: 0.05em;">Tipo de Comprobante</label>
                                 <select name="tipo_comprobante" id="modal-tipo-comprobante" class="form-control rounded-lg border-gray font-weight-medium" required>
-                                    <option value="TICKET">Ticket / Nota de Venta</option>
                                     <option value="BOLETA" selected>Boleta de Venta</option>
                                     <option value="FACTURA">Factura</option>
                                 </select>
@@ -344,11 +264,11 @@
         
         <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('estado-form');
+            const select = document.getElementById('select-estado');
+            const spinner = document.getElementById('estado-spinner');
+            const btn = document.getElementById('btn-actualizar');
             const totalPedido = parseFloat("{{ $pedido->total }}");
-            
-            // Formulario de estado principal
-            const formEstado = document.getElementById('estado-form');
-            const selectEstado = document.getElementById('select-estado');
             
             // Elementos del Modal
             const modalTipoComprobante = document.getElementById('modal-tipo-comprobante');
@@ -362,14 +282,39 @@
             const btnBuscarRuc = document.getElementById('btn-buscar-ruc');
             const formEntregarFacturar = document.getElementById('form-entregar-facturar');
 
+            function pintarSelect(val) {
+                select.style.backgroundColor = '';
+                select.style.color = '';
+                const colores = {
+                    'PENDIENTE': { bg: '#f1f5f9', text: '#475569' },
+                    'CONFIRMADO': { bg: '#dbeafe', text: '#1d4ed8' },
+                    'PREPARANDO': { bg: '#eff6ff', text: '#1e40af' },
+                    'LISTO': { bg: '#d1fae5', text: '#065f46' },
+                    'ENTREGADO': { bg: '#10b981', text: '#ffffff' },
+                    'CANCELADO': { bg: '#fee2e2', text: '#991b1b' },
+                    'CONVERTIDO_A_VENTA': { bg: '#ccfbf1', text: '#0f766e' }
+                };
+                if (colores[val]) {
+                    select.style.backgroundColor = colores[val].bg;
+                    select.style.color = colores[val].text;
+                }
+            }
+
+            pintarSelect(select.value);
+            select.addEventListener('change', () => pintarSelect(select.value));
+
             // Interceptar el envío del formulario de actualización de estado
-            formEstado.addEventListener('submit', (e) => {
-                const nuevoEstado = selectEstado.value;
+            form.addEventListener('submit', async (e) => {
+                const nuevoEstado = select.value;
                 const estadoPago = "{{ $pedido->estado_pago }}";
                 
                 if (nuevoEstado === 'ENTREGADO') {
                     e.preventDefault();
                     e.stopPropagation();
+                    
+                    // Revertir temporalmente el select
+                    select.value = select.dataset.prev;
+                    pintarSelect(select.value);
                     
                     // Si ya está pagado online
                     if (estadoPago === 'PAGADO' || estadoPago === 'COMPLETADO') {
@@ -404,6 +349,56 @@
                             modalPagaCon.focus();
                         }
                     }, 500);
+                    return;
+                }
+
+                // Para otros estados, proceder con la actualización directa vía AJAX
+                e.preventDefault();
+                select.disabled = true;
+                if (btn) btn.disabled = true;
+                if (spinner) spinner.classList.remove('d-none');
+                if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Actualizando...';
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ estado: select.value })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        select.dataset.prev = select.value;
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Actualizado!',
+                            text: data.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        throw new Error(data.message || 'Error al actualizar el estado.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    select.value = select.dataset.prev;
+                    pintarSelect(select.value);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: err.message || 'No se pudo guardar el nuevo estado.'
+                    });
+                } finally {
+                    select.disabled = false;
+                    if (btn) btn.disabled = false;
+                    if (spinner) spinner.classList.add('d-none');
+                    if (btn) btn.innerHTML = '<i class="fas fa-save mr-1"></i> Guardar Cambios';
                 }
             });
 
@@ -542,9 +537,9 @@
                 }
             });
 
-            // Función para procesar entrega de pedidos ya pagados en la vista Detalle
+            // Función para procesar entrega de pedidos ya pagados en la vista Detalle (legacy placeholder)
             async function ejecutarEntregaPrepagadaShow() {
-                const url = formEstado.action;
+                const url = form.action;
                 const nuevoEstado = 'ENTREGADO';
                 const spinner = document.getElementById('estado-spinner');
                 const btnActualizar = document.getElementById('btn-actualizar');
@@ -570,8 +565,8 @@
                     const data = await response.json();
 
                     if (response.ok && data.success) {
-                        selectEstado.dataset.prev = nuevoEstado;
-                        selectEstado.value = nuevoEstado;
+                        select.dataset.prev = nuevoEstado;
+                        select.value = nuevoEstado;
                         
                         Swal.fire({
                             icon: 'success',
@@ -608,9 +603,9 @@
             const btnEntregarRapidoShow = document.getElementById('btn-entregar-pedido-rapido-show');
             if (btnEntregarRapidoShow) {
                 btnEntregarRapidoShow.addEventListener('click', () => {
-                    selectEstado.value = 'ENTREGADO';
-                    // Gatilla el submit de formEstado, lo cual dispara la interceptación de arriba
-                    formEstado.dispatchEvent(new Event('submit', { cancelable: true }));
+                    select.value = 'ENTREGADO';
+                    // Gatilla el submit de form, lo cual dispara la interceptación de arriba
+                    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                 });
             }
 

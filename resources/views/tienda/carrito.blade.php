@@ -52,7 +52,7 @@
                     <div class="store-card bg-white p-4 rounded-2xl border border-slate-100 hover:shadow-md transition-shadow">
                         <div class="row align-items-center g-3">
                             <!-- Miniatura Imagen -->
-                            <div class="col-3 col-sm-2 col-md-1.5 text-center">
+                            <div class="col-3 col-sm-2 col-md-1 text-center">
                                 <div class="aspect-square bg-slate-50 rounded-xl flex items-center justify-center p-2 border border-slate-100" style="width: 60px; height: 60px;">
                                     @if($producto->imagen_url)
                                         <img src="{{ $producto->imagen_url }}" alt="{{ $producto->nombre }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -72,12 +72,12 @@
                                 </div>
                             </div>
                             <!-- Precio Unitario -->
-                            <div class="col-4 col-sm-2 col-md-1.5 text-sm text-slate-500">
+                            <div class="col-4 col-sm-2 col-md-2 text-sm text-slate-500">
                                 <div class="d-sm-none text-xs text-slate-400">Unitario</div>
                                 <span class="font-semibold text-slate-700">S/ {{ number_format($item['precio'], 2) }}</span>
                             </div>
                             <!-- Control de Cantidad -->
-                            <div class="col-5 col-sm-2 col-md-2.5">
+                            <div class="col-5 col-sm-2 col-md-2">
                                 <div class="d-sm-none text-xs text-slate-400 mb-1">Cantidad</div>
                                 <form method="POST" action="{{ route('tienda.carrito.update', $producto) }}" class="form-actualizar-cantidad">
                                     @csrf
@@ -92,7 +92,7 @@
                                 </div>
                             </div>
                             <!-- Subtotal e Icono Eliminar -->
-                            <div class="col-3 col-sm-2 col-md-1.5 text-end d-flex align-items-center justify-content-end gap-3">
+                            <div class="col-3 col-sm-2 col-md-2 text-end d-flex align-items-center justify-content-end gap-3">
                                 <div>
                                     <div class="d-sm-none text-xs text-slate-400">Subtotal</div>
                                     <span class="font-extrabold text-emerald-600 text-base">S/ {{ number_format($item['subtotal'], 2) }}</span>
