@@ -52,6 +52,28 @@ class CheckoutController extends Controller
         $telefonoNuevo = $data['cliente_telefono'] ?? null;
         $emailNuevo = $data['cliente_email'] ?? null;
 
+        if ($emailNuevo !== null && $emailNuevo !== $cliente->email) {
+            $emailTomado = \App\Models\Ventas\Cliente::where('email', $emailNuevo)
+                ->where('id', '!=', $cliente->id)
+                ->exists();
+            if ($emailTomado) {
+                return back()->withInput()->withErrors([
+                    'cliente_email' => 'Este correo ya esta registrado por otro cliente.',
+                ]);
+            }
+        }
+
+        if ($telefonoNuevo !== null && $telefonoNuevo !== $cliente->telefono) {
+            $telefonoTomado = \App\Models\Ventas\Cliente::where('telefono', $telefonoNuevo)
+                ->where('id', '!=', $cliente->id)
+                ->exists();
+            if ($telefonoTomado) {
+                return back()->withInput()->withErrors([
+                    'cliente_telefono' => 'Este telefono ya esta registrado por otro cliente.',
+                ]);
+            }
+        }
+
         $telefonoCambio = $telefonoNuevo !== null && $cliente->telefono !== null && $telefonoNuevo !== $cliente->telefono;
         $emailCambio = $emailNuevo !== null && $cliente->email !== null && $emailNuevo !== $cliente->email;
 

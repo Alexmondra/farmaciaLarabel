@@ -8,7 +8,6 @@
                 <th class="border-0 px-4 py-3">Stock</th>
                 <th class="border-0 px-4 py-3 text-center">Visible</th>
                 <th class="border-0 px-4 py-3 text-center">Destacado</th>
-                <th class="border-0 px-4 py-3">Enlace (Slug)</th>
                 <th class="border-0 px-4 py-3 text-right">Acciones</th>
             </tr>
         </thead>
@@ -75,9 +74,7 @@
                             <span class="text-muted" title="No destacado" style="font-size: 1.1rem;"><i class="far fa-star"></i></span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 align-middle">
-                        <code class="px-2 py-1 bg-light rounded text-xs text-primary" style="font-size: 0.85rem;">{{ $producto->slug }}</code>
-                    </td>
+                 
                     <td class="px-4 py-3 align-middle text-right border-0">
                         <div class="btn-group rounded-lg overflow-hidden shadow-sm" role="group">
                             <a href="{{ route('tienda.productos.show', $producto->slug) }}" target="_blank" 

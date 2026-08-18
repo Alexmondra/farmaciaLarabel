@@ -109,6 +109,17 @@ class TiendaAuthController extends Controller
                 }
             }
 
+            if ($data['telefono'] && $data['telefono'] !== $clienteExistente->telefono) {
+                $telefonoTomado = Cliente::where('telefono', $data['telefono'])
+                    ->where('id', '!=', $clienteExistente->id)
+                    ->exists();
+                if ($telefonoTomado) {
+                    throw ValidationException::withMessages([
+                        'telefono' => 'Este telefono ya esta registrado por otro cliente.',
+                    ]);
+                }
+            }
+
             $clienteExistente->update([
                 'tienda_password' => Hash::make($data['password']),
                 'email' => $data['email'] ?? $clienteExistente->email,
@@ -124,6 +135,15 @@ class TiendaAuthController extends Controller
                 if ($emailTomado) {
                     throw ValidationException::withMessages([
                         'email' => 'Este correo ya esta registrado.',
+                    ]);
+                }
+            }
+
+            if ($data['telefono']) {
+                $telefonoTomado = Cliente::where('telefono', $data['telefono'])->exists();
+                if ($telefonoTomado) {
+                    throw ValidationException::withMessages([
+                        'telefono' => 'Este telefono ya esta registrado.',
                     ]);
                 }
             }
@@ -286,6 +306,17 @@ class TiendaAuthController extends Controller
             if ($emailTomado) {
                 throw ValidationException::withMessages([
                     'email' => 'Este correo ya esta registrado por otro cliente.',
+                ]);
+            }
+        }
+
+        if ($data['telefono'] && $data['telefono'] !== $cliente->telefono) {
+            $telefonoTomado = Cliente::where('telefono', $data['telefono'])
+                ->where('id', '!=', $cliente->id)
+                ->exists();
+            if ($telefonoTomado) {
+                throw ValidationException::withMessages([
+                    'telefono' => 'Este telefono ya esta registrado por otro cliente.',
                 ]);
             }
         }

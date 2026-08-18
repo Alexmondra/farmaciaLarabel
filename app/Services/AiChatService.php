@@ -8,19 +8,35 @@ use Illuminate\Support\Facades\Log;
 
 class AiChatService
 {
-    private string $apiKey;
-    private string $baseUrl;
-    private string $model;
-    private float $temperature;
-    private int $maxTokens;
+    // Propiedades para cliente (FarmaBot - DeepSeek)
+    private string $clientApiKey;
+    private string $clientBaseUrl;
+    private string $clientModel;
+    private float $clientTemperature;
+    private int $clientMaxTokens;
+
+    // Propiedades para personal (FarmaCopiloto - Gemini)
+    private string $personalApiKey;
+    private string $personalBaseUrl;
+    private string $personalModel;
+    private float $personalTemperature;
+    private int $personalMaxTokens;
 
     public function __construct()
     {
-        $this->apiKey = config('ai-chat.api_key');
-        $this->baseUrl = config('ai-chat.base_url');
-        $this->model = config('ai-chat.model');
-        $this->temperature = config('ai-chat.temperature', 0.7);
-        $this->maxTokens = config('ai-chat.max_tokens', 1500);
+        // Cliente (FarmaBot)
+        $this->clientApiKey = (string) (config('ai-chat.client.api_key') ?: config('ai-chat.api_key', ''));
+        $this->clientBaseUrl = (string) (config('ai-chat.client.base_url') ?: config('ai-chat.base_url', ''));
+        $this->clientModel = (string) (config('ai-chat.client.model') ?: config('ai-chat.model', ''));
+        $this->clientTemperature = (float) (config('ai-chat.client.temperature') !== null ? config('ai-chat.client.temperature') : config('ai-chat.temperature', 0.7));
+        $this->clientMaxTokens = (int) (config('ai-chat.client.max_tokens') ?: config('ai-chat.max_tokens', 1500));
+
+        // Personal (FarmaCopiloto)
+        $this->personalApiKey = (string) (config('ai-chat.personal.api_key') ?: config('ai-chat.api_key', ''));
+        $this->personalBaseUrl = (string) (config('ai-chat.personal.base_url') ?: config('ai-chat.base_url', ''));
+        $this->personalModel = (string) (config('ai-chat.personal.model') ?: config('ai-chat.model', ''));
+        $this->personalTemperature = (float) (config('ai-chat.personal.temperature') !== null ? config('ai-chat.personal.temperature') : 0.2);
+        $this->personalMaxTokens = (int) (config('ai-chat.personal.max_tokens') ?: config('ai-chat.personal.max_tokens', 2048));
     }
 
     public function buildSystemPrompt(string $catalog, ?string $antecedentes = null, ?string $nombreUsuario = null): string
@@ -168,12 +184,12 @@ PROMPT;
 
         try {
             $response = Http::timeout(10)
-                ->withToken($this->apiKey)
+                ->withToken($this->clientApiKey)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                 ])
-                ->post("{$this->baseUrl}/chat/completions", [
-                    'model' => $this->model,
+                ->post(rtrim($this->clientBaseUrl, '/') . '/chat/completions', [
+                    'model' => $this->clientModel,
                     'messages' => [
                         [
                             'role' => 'system',
@@ -242,17 +258,17 @@ PROMPT;
 
         try {
             $response = Http::timeout(60)
-                ->withToken($this->apiKey)
+                ->withToken($this->clientApiKey)
                 ->withHeaders([
                     'Accept' => 'text/event-stream',
                     'Content-Type' => 'application/json',
                 ])
                 ->withOptions(['stream' => true])
-                ->post("{$this->baseUrl}/chat/completions", [
-                    'model' => $this->model,
+                ->post(rtrim($this->clientBaseUrl, '/') . '/chat/completions', [
+                    'model' => $this->clientModel,
                     'messages' => $messages,
-                    'temperature' => $this->temperature,
-                    'max_tokens' => $this->maxTokens,
+                    'temperature' => $this->clientTemperature,
+                    'max_tokens' => $this->clientMaxTokens,
                     'stream' => true,
                 ]);
 
@@ -410,7 +426,7 @@ Tu proposito es ayudar al farmaceutico en sus labores diarias: consultar rápida
 PROMPT;
     }
 
-    public function chatStreamPersonal(string $userMessage, array $history, string $catalog, string $nombreUsuario, string $nombreSucursal, callable $onChunk): string
+    public function chatStreamPersonal(string $userMessage, array $history, string $catalog, string $nombreUsuario, string $nombreSucursal, callable $onChunk, ?string $image = null): string
     {
         $systemPrompt = $this->buildPersonalSystemPrompt($catalog, $nombreUsuario, $nombreSucursal);
 
@@ -426,23 +442,45 @@ PROMPT;
             ];
         }
 
-        $messages[] = ['role' => 'user', 'content' => $userMessage];
+        if ($image) {
+            $userContent = [
+                [
+                    'type' => 'text',
+                    'text' => $userMessage ?: 'Analiza esta imagen adjunta para responder a la consulta del personal de la farmacia.'
+                ],
+                [
+                    'type' => 'image_url',
+                    'image_url' => [
+                        'url' => $image
+                    ]
+                ]
+            ];
+        } else {
+            $userContent = $userMessage;
+        }
+
+        $messages[] = ['role' => 'user', 'content' => $userContent];
 
         $fullResponse = '';
 
         try {
+            $url = rtrim($this->personalBaseUrl, '/') . '/chat/completions';
+            if (str_contains($this->personalBaseUrl, 'googleapis.com') && !empty($this->personalApiKey)) {
+                $url .= '?key=' . $this->personalApiKey;
+            }
+
             $response = Http::timeout(60)
-                ->withToken($this->apiKey)
+                ->withToken($this->personalApiKey)
                 ->withHeaders([
                     'Accept' => 'text/event-stream',
                     'Content-Type' => 'application/json',
                 ])
                 ->withOptions(['stream' => true])
-                ->post("{$this->baseUrl}/chat/completions", [
-                    'model' => $this->model,
+                ->post($url, [
+                    'model' => $this->personalModel,
                     'messages' => $messages,
-                    'temperature' => 0.2,
-                    'max_tokens' => $this->maxTokens,
+                    'temperature' => $this->personalTemperature,
+                    'max_tokens' => $this->personalMaxTokens,
                     'stream' => true,
                 ]);
 

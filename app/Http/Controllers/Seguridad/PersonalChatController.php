@@ -52,13 +52,22 @@ class PersonalChatController extends Controller
     public function sendMessage(Request $request, AiChatService $aiChat)
     {
         $request->validate([
-            'message' => 'required|string|max:2000',
+            'message' => 'nullable|string|max:2000',
+            'image' => 'nullable|string', // Base64 data URI
         ]);
 
-        $userMessage = trim($request->input('message'));
+        $userMessage = trim($request->input('message') ?? '');
+        $image = $request->input('image');
         $user = auth()->user();
         $userId = $user->id;
         $nombreUsuario = $user->name ?: $user->username;
+
+        if (empty($userMessage) && empty($image)) {
+            return response()->json([
+                'error' => 'validation_failed',
+                'message' => 'Debe ingresar un mensaje o adjuntar una imagen.'
+            ], 400);
+        }
 
         // Validar límite de mensajes de hoy antes de guardar o llamar a la IA
         $mensajesHoy = PersonalMensaje::whereHas('conversacion', function ($q) use ($userId) {
@@ -102,9 +111,15 @@ class PersonalChatController extends Controller
         }
 
         // 2. Guardar mensaje del usuario (esto incrementará el conteo de hoy)
+        // Guardamos una anotación ligera de la imagen sin almacenar el base64 pesado en DB
+        $dbContent = $userMessage;
+        if ($image) {
+            $dbContent = "📷 [Imagen adjunta]" . ($userMessage ? " " . $userMessage : "");
+        }
+
         $conversacion->mensajes()->create([
             'role' => 'user',
-            'content' => $userMessage,
+            'content' => $dbContent,
         ]);
 
         // 3. Buscar stock e inventario de la sucursal según la consulta
@@ -128,7 +143,7 @@ class PersonalChatController extends Controller
 
         $fullResponse = '';
 
-        $response = new StreamedResponse(function () use ($aiChat, $userMessage, $history, $catalogText, $nombreUsuario, $nombreSucursal, $conversacion, &$fullResponse, $mensajesHoy, $limiteDiario) {
+        $response = new StreamedResponse(function () use ($aiChat, $userMessage, $history, $catalogText, $nombreUsuario, $nombreSucursal, $conversacion, &$fullResponse, $mensajesHoy, $limiteDiario, $image) {
             set_time_limit(60);
             if (ob_get_level()) {
                 ob_end_clean();
@@ -151,7 +166,8 @@ class PersonalChatController extends Controller
                     }
                     $fullResponse .= $chunk;
                     flush();
-                }
+                },
+                $image
             );
 
             // Guardar respuesta del asistente en la BD al finalizar

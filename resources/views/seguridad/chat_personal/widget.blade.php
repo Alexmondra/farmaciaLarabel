@@ -67,10 +67,31 @@
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         </div>
 
+        <!-- Vista previa de imagen seleccionada -->
+        <div id="copilotoImagePreviewContainer" class="d-none px-3 py-2 bg-light border-top align-items-center" style="gap: 10px;">
+            <div class="position-relative" style="width: 50px; height: 50px;">
+                <img id="copilotoImagePreviewImg" src="" class="rounded" style="width: 100%; height: 100%; object-fit: cover; border: 1px solid #cbd5e1;">
+                <button type="button" id="btnRemoveCopilotoImage" class="btn btn-danger btn-xs position-absolute d-flex align-items-center justify-content-center shadow-sm" style="top: -6px; right: -6px; border-radius: 50%; width: 18px; height: 18px; padding: 0; font-size: 10px; line-height: 1;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <span class="text-muted small text-truncate" id="copilotoImagePreviewName">Imagen seleccionada</span>
+        </div>
+
         <!-- Área de Entrada de Texto -->
         <div class="copiloto-chat-input d-flex align-items-center">
+            <button type="button" class="btn btn-link text-muted p-1 mr-1" id="btnVoiceCopiloto" title="Dictar por voz">
+                <i class="fas fa-microphone" style="font-size: 0.95rem;"></i>
+            </button>
+            <!-- Botón de imagen -->
+            <button type="button" class="btn btn-link text-muted p-1 mr-2" id="btnAttachCopiloto" title="Adjuntar imagen">
+                <i class="fas fa-image" style="font-size: 0.95rem;"></i>
+            </button>
+            <input type="file" id="fileCopilotoImage" accept="image/*" style="display: none;">
+
             <textarea id="copilotoInput" rows="1" placeholder="Ej: Stock de Paracetamol, interacciones de..." maxlength="2000"></textarea>
-            <button class="btn btn-success rounded-circle ml-2 p-0 d-flex align-items-center justify-content-center" id="btnSendCopiloto" disabled>
+            
+            <button class="btn btn-success rounded-circle ml-2 p-0 d-flex align-items-center justify-content-center" id="btnSendCopiloto" disabled style="min-width: 32px; min-height: 32px;">
                 <i class="fas fa-paper-plane" style="font-size: 0.85rem;"></i>
             </button>
         </div>
@@ -493,6 +514,37 @@
         color: #ffd8a8;
         border-bottom-color: #4f565e;
     }
+
+    /* Estilos para el botón de voz escuchando */
+    #btnVoiceCopiloto.listening {
+        color: #ef4444 !important;
+        animation: copilotoVoicePulse 1.2s infinite;
+    }
+    @keyframes copilotoVoicePulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.25); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    /* Estilos para botones de acción secundarios */
+    .copiloto-chat-input .btn-link {
+        text-decoration: none;
+        box-shadow: none;
+        outline: none;
+        transition: color 0.2s ease;
+    }
+    .copiloto-chat-input .btn-link:hover {
+        color: #10ac84 !important;
+    }
+    #copilotoImagePreviewContainer {
+        border-top: 1px solid #e2e8f0;
+    }
+    .dark-mode #copilotoImagePreviewContainer {
+        background-color: #2b3035 !important;
+        border-top-color: #4f565e !important;
+    }
+    .dark-mode #copilotoImagePreviewName {
+        color: #a8b2bd !important;
+    }
 </style>
 
 <script>
@@ -647,15 +699,144 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 
-    // Activar/desactivar botón de enviar según texto
+    let selectedImageBase64 = null;
+
+    // Activar/desactivar botón de enviar según texto o imagen
+    function checkSendButton() {
+        const hasText = copilotoInput.value.trim() !== '';
+        const hasImage = selectedImageBase64 !== null;
+        btnSend.disabled = ((!hasText && !hasImage) || isGenerating);
+    }
+
     copilotoInput.addEventListener('input', () => {
-        btnSend.disabled = (copilotoInput.value.trim() === '' || isGenerating);
+        checkSendButton();
         adjustTextareaHeight();
     });
 
     function adjustTextareaHeight() {
         copilotoInput.style.height = 'auto';
         copilotoInput.style.height = (copilotoInput.scrollHeight) + 'px';
+    }
+
+    function clearSelectedImage() {
+        selectedImageBase64 = null;
+        const fileInputEl = document.getElementById('fileCopilotoImage');
+        if (fileInputEl) fileInputEl.value = '';
+        const container = document.getElementById('copilotoImagePreviewContainer');
+        if (container) {
+            container.classList.add('d-none');
+            container.classList.remove('d-flex');
+        }
+        const previewImgEl = document.getElementById('copilotoImagePreviewImg');
+        if (previewImgEl) previewImgEl.src = '';
+        const previewNameEl = document.getElementById('copilotoImagePreviewName');
+        if (previewNameEl) previewNameEl.textContent = '';
+        checkSendButton();
+    }
+
+    // Configuración de Adjuntar Imagen
+    const btnAttach = document.getElementById('btnAttachCopiloto');
+    const fileInput = document.getElementById('fileCopilotoImage');
+    const previewContainer = document.getElementById('copilotoImagePreviewContainer');
+    const previewImg = document.getElementById('copilotoImagePreviewImg');
+    const previewName = document.getElementById('copilotoImagePreviewName');
+    const btnRemoveImage = document.getElementById('btnRemoveCopilotoImage');
+
+    if (btnAttach && fileInput && previewContainer && previewImg && previewName && btnRemoveImage) {
+        btnAttach.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                if (typeof toastr !== 'undefined') toastr.error('Por favor, seleccione un archivo de imagen.');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                if (typeof toastr !== 'undefined') toastr.error('La imagen es demasiado grande. Máximo 5MB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                selectedImageBase64 = event.target.result;
+                previewImg.src = selectedImageBase64;
+                previewName.textContent = file.name;
+                previewContainer.classList.remove('d-none');
+                previewContainer.classList.add('d-flex');
+                checkSendButton();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnRemoveImage.addEventListener('click', () => {
+            clearSelectedImage();
+        });
+    }
+
+    // Configuración de Dictado de Voz (Speech Recognition)
+    const btnVoice = document.getElementById('btnVoiceCopiloto');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-PE';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        let isListening = false;
+
+        btnVoice.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isListening) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.error('Error al iniciar dictado:', err);
+                }
+            }
+        });
+
+        recognition.onstart = () => {
+            isListening = true;
+            btnVoice.classList.add('listening');
+            btnVoice.title = 'Escuchando... Haz clic para detener';
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            btnVoice.classList.remove('listening');
+            btnVoice.title = 'Dictar por voz';
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Error en reconocimiento de voz:', event.error);
+            isListening = false;
+            btnVoice.classList.remove('listening');
+            btnVoice.title = 'Dictar por voz';
+            if (event.error === 'not-allowed') {
+                if (typeof toastr !== 'undefined') toastr.warning('Permiso de micrófono denegado.');
+            }
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript) {
+                const currentVal = copilotoInput.value;
+                const spacer = currentVal.trim() === '' ? '' : ' ';
+                copilotoInput.value = currentVal + spacer + transcript;
+                checkSendButton();
+                adjustTextareaHeight();
+            }
+        };
+    } else {
+        btnVoice.style.display = 'none';
     }
 
     // Actualizar el contador en la cabecera
@@ -705,13 +886,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Agregar Burbuja al Chat
-    function appendMessage(role, content) {
+    function appendMessage(role, content, imageUrl = null) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `copiloto-message ${role}`;
         
         const bubbleDiv = document.createElement('div');
         bubbleDiv.className = 'copiloto-bubble';
-        bubbleDiv.innerHTML = formatMarkdown(content);
+        
+        let htmlContent = '';
+        if (imageUrl) {
+            htmlContent += `<div class="mb-2"><img src="${imageUrl}" class="rounded shadow-sm img-fluid" style="max-width: 160px; max-height: 120px; object-fit: contain; border: 1px solid rgba(0,0,0,0.1);"></div>`;
+        }
+        
+        htmlContent += formatMarkdown(content);
+        bubbleDiv.innerHTML = htmlContent;
         
         msgDiv.appendChild(bubbleDiv);
         copilotoMessages.appendChild(msgDiv);
@@ -726,7 +914,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Envío de Mensaje con Streaming
     function sendMessage() {
         const text = copilotoInput.value.trim();
-        if (text === '' || isGenerating) return;
+        const image = selectedImageBase64;
+        
+        if ((text === '' && !image) || isGenerating) return;
 
         isGenerating = true;
         btnSend.disabled = true;
@@ -734,7 +924,10 @@ document.addEventListener('DOMContentLoaded', () => {
         copilotoInput.style.height = 'auto';
 
         // Agregar mensaje de usuario
-        appendMessage('user', text);
+        appendMessage('user', text, image);
+
+        // Ocultar previsualización
+        clearSelectedImage();
 
         // Mostrar indicador de escribiendo
         copilotoTyping.classList.remove('d-none');
@@ -752,7 +945,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let lastIndex = 0;
         xhr.onprogress = function() {
-            // Ocultar typing una vez que empieza a llegar la respuesta
             copilotoTyping.classList.add('d-none');
 
             const currentText = xhr.responseText;
@@ -815,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appendMessage('assistant', '⚠️ Error de red. No se pudo conectar con el servidor.');
         };
 
-        xhr.send(JSON.stringify({ message: text }));
+        xhr.send(JSON.stringify({ message: text, image: image }));
     }
 
     // Enviar con Enter (sin Shift)

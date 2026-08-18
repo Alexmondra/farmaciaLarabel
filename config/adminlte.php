@@ -284,7 +284,7 @@ return [
                 [
                     'text' => 'Visitar tienda',
                     'url'  => 'tienda',
-                    'icon' => 'fas fa-box-open',
+                    'icon' => 'fas fa-external-link-alt',
                     'active' => ['tienda'],
                 ],
 
