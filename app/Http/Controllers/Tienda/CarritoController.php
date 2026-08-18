@@ -10,14 +10,60 @@ use Illuminate\Support\Facades\Auth;
 
 class CarritoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $this->cargarDeBD();
         [$items, $total] = $this->itemsCarrito();
         $sucursalIds = $items->pluck('producto.sucursal_id')->unique();
         $esMultiSucursal = $sucursalIds->count() > 1;
 
-        return view('tienda.carrito', compact('items', 'total', 'esMultiSucursal'));
+        // Datos requeridos para el checkout si el usuario está logueado
+        $cliente = null;
+        $fechaRecojoDefault = null;
+        $fechaRecojoMin = null;
+        $sucursales = collect();
+        $sucursalesJson = collect();
+        $limiteOnlineAlcanzado = false;
+        $montoInsuficienteOnline = false;
+
+        if (auth('tienda')->check()) {
+            $cliente = auth('tienda')->user();
+            
+            if ($esMultiSucursal) {
+                $fechaRecojoDefault = now()->addWeek()->setTime(14, 0)->format('Y-m-d\TH:i');
+                $fechaRecojoMin = now()->addWeek()->setTime(0, 0)->format('Y-m-d\TH:i');
+            } else {
+                $fechaRecojoDefault = now()->addDay()->setTime(14, 0)->format('Y-m-d\TH:i');
+                $fechaRecojoMin = now()->format('Y-m-d\TH:i');
+            }
+
+            $sucursales = \App\Models\Sucursal::whereIn('id', $sucursalIds)->get();
+            $sucursalesJson = $sucursales->map(function($s) {
+                return [
+                    'id' => $s->id,
+                    'nombre' => $s->nombre,
+                    'direccion' => $s->direccion,
+                    'distrito' => $s->distrito,
+                    'lat' => $s->latitud ? (float)$s->latitud : null,
+                    'lng' => $s->longitud ? (float)$s->longitud : null,
+                ];
+            });
+
+            $pagosOnlinePendientes = \App\Models\Tienda\PedidoOnline::where('cliente_id', $cliente->id)
+                ->where('metodo_pago', 'PAGO_ONLINE')
+                ->where('estado_pago', 'PENDIENTE')
+                ->whereIn('estado', ['PENDIENTE', 'CONFIRMADO'])
+                ->count();
+
+            $limiteOnlineAlcanzado = $pagosOnlinePendientes >= 3;
+            $montoInsuficienteOnline = $total < 15.00;
+        }
+
+        return view('tienda.carrito', compact(
+            'items', 'total', 'esMultiSucursal', 'cliente', 
+            'fechaRecojoDefault', 'fechaRecojoMin', 'sucursales', 
+            'sucursalesJson', 'limiteOnlineAlcanzado', 'montoInsuficienteOnline'
+        ));
     }
 
     public function store(Request $request, TiendaProducto $producto)

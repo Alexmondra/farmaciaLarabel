@@ -10,7 +10,7 @@
 
 
 
-<section x-data="{ openFilters: false }" class="search-box-compact mb-4">
+<section x-data="{ openFilters: false, sucursal: '{{ $sucursalActiva }}', categoria: '{{ $categoriaActiva }}' }" class="search-box-compact mb-4">
     <form method="GET" action="{{ route('tienda.index') }}" class="m-0">
         <div class="row g-2 align-items-center">
             <!-- Buscador Principal -->
@@ -46,20 +46,20 @@
                     <div class="d-none d-md-flex align-items-center gap-2">
                         <!-- Sucursal Select -->
                         <div style="min-width: 160px;">
-                            <select name="sucursal" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                            <select name="sucursal" x-model="sucursal" @change="$el.form.submit()" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 <option value="">Todas las Sucursales</option>
                                 @foreach ($sucursales as $sucursal)
-                                    <option value="{{ $sucursal->id }}" @selected((string) $sucursalActiva === (string) $sucursal->id)>{{ $sucursal->nombre }}</option>
+                                    <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
                                 @endforeach
                             </select>
                         </div>
                         
                         <!-- Categoria Select -->
                         <div style="min-width: 160px;">
-                            <select name="categoria" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                            <select name="categoria" x-model="categoria" @change="$el.form.submit()" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 <option value="">Todas las Categorías</option>
                                 @foreach ($categorias as $categoria)
-                                    <option value="{{ $categoria->id }}" @selected((string) $categoriaActiva === (string) $categoria->id)>{{ $categoria->nombre }}</option>
+                                    <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -79,19 +79,19 @@
             <div class="row g-2">
                 <div class="col-6">
                     <label class="filter-label mb-1.5 block">Sucursal</label>
-                    <select name="sucursal" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                    <select x-model="sucursal" @change="$el.form.submit()" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                         <option value="">Todas</option>
                         @foreach ($sucursales as $sucursal)
-                            <option value="{{ $sucursal->id }}" @selected((string) $sucursalActiva === (string) $sucursal->id)>{{ $sucursal->nombre }}</option>
+                            <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-6">
                     <label class="filter-label mb-1.5 block">Categoría</label>
-                    <select name="categoria" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                    <select x-model="categoria" @change="$el.form.submit()" class="form-select border-slate-200 bg-slate-50/50 px-3 py-2 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                         <option value="">Todas</option>
                         @foreach ($categorias as $categoria)
-                            <option value="{{ $categoria->id }}" @selected((string) $categoriaActiva === (string) $categoria->id)>{{ $categoria->nombre }}</option>
+                            <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
                         @endforeach
                     </select>
                 </div>

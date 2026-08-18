@@ -14,46 +14,7 @@ class CheckoutController extends Controller
 {
     public function create()
     {
-        [$items, $total] = $this->itemsCarrito();
-
-        if ($items->isEmpty()) {
-            return redirect()->route('tienda.index')->with('warning', 'Agrega productos antes de finalizar el pedido.');
-        }
-
-        $cliente = auth('tienda')->user();
-        $sucursalIds = $items->pluck('producto.sucursal_id')->unique();
-        $esMultiSucursal = $sucursalIds->count() > 1;
-
-        if ($esMultiSucursal) {
-            $fechaRecojoDefault = now()->addWeek()->setTime(14, 0)->format('Y-m-d\TH:i');
-            $fechaRecojoMin = now()->addWeek()->setTime(0, 0)->format('Y-m-d\TH:i');
-        } else {
-            $fechaRecojoDefault = now()->addDay()->setTime(14, 0)->format('Y-m-d\TH:i');
-            $fechaRecojoMin = now()->format('Y-m-d\TH:i');
-        }
-
-        $sucursales = \App\Models\Sucursal::whereIn('id', $sucursalIds)->get();
-        $sucursalesJson = $sucursales->map(function($s) {
-            return [
-                'id' => $s->id,
-                'nombre' => $s->nombre,
-                'direccion' => $s->direccion,
-                'distrito' => $s->distrito,
-                'lat' => $s->latitud ? (float)$s->latitud : null,
-                'lng' => $s->longitud ? (float)$s->longitud : null,
-            ];
-        });
-
-        $pagosOnlinePendientes = PedidoOnline::where('cliente_id', $cliente->id)
-            ->where('metodo_pago', 'PAGO_ONLINE')
-            ->where('estado_pago', 'PENDIENTE')
-            ->whereIn('estado', ['PENDIENTE', 'CONFIRMADO'])
-            ->count();
-
-        $limiteOnlineAlcanzado = $pagosOnlinePendientes >= 3;
-        $montoInsuficienteOnline = $total < 15.00;
-
-        return view('tienda.checkout', compact('items', 'total', 'cliente', 'fechaRecojoDefault', 'fechaRecojoMin', 'esMultiSucursal', 'sucursales', 'sucursalesJson', 'limiteOnlineAlcanzado', 'montoInsuficienteOnline'));
+        return redirect()->route('tienda.carrito.index', ['step' => 'checkout']);
     }
 
     public function store(Request $request)

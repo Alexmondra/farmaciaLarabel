@@ -18,10 +18,10 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
-            --store-green: #0d9488;
-            --store-green-dark: #0f766e;
+            --store-green: #10b981;
+            --store-green-dark: #059669;
             --store-green-soft: #f0fdfa;
-            --store-red: #0284c7;
+            --store-red: #0ea5e9;
             --store-ink: #0f172a;
             --store-muted: #64748b;
         }
@@ -30,14 +30,14 @@
         .top-strip { background: #0f172a; color: #94a3b8; font-size: .82rem; font-weight: 500; }
         .store-header {
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
             position: sticky;
             top: 0;
             z-index: 50;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .brand-mark {
             align-items: center;
@@ -48,17 +48,18 @@
             gap: .65rem;
             letter-spacing: -.03em;
             text-decoration: none;
-            transition: opacity 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .brand-mark:hover {
-            color: var(--store-ink);
-            opacity: 0.9;
+            color: var(--store-green);
+            transform: scale(1.02);
+            opacity: 1;
         }
         .brand-icon {
             align-items: center;
             background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
             border-radius: 0.85rem;
-            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
             color: white;
             display: inline-flex;
             height: 38px;
@@ -66,6 +67,11 @@
             width: 38px;
             font-size: 1.25rem;
             font-weight: bold;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .brand-mark:hover .brand-icon {
+            transform: rotate(10deg) scale(1.05);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
         }
         .brand-logo-img {
             height: 38px;
@@ -74,16 +80,38 @@
             border-radius: 0.75rem;
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
             border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .brand-mark:hover .brand-logo-img {
+            transform: scale(1.05);
         }
         .header-link {
             color: var(--store-muted);
             font-weight: 600;
             text-decoration: none;
-            transition: color 0.2s ease;
+            position: relative;
+            transition: color 0.3s ease;
             font-size: 0.95rem;
         }
-        .header-link:hover {
-            color: var(--store-green);
+        .header-link::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            transform: scaleX(0);
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: var(--store-green);
+            transform-origin: bottom right;
+            transition: transform 0.25s ease-out;
+        }
+        .header-link:hover, .header-link.active {
+            color: var(--store-green-dark);
+        }
+        .header-link:hover::after, .header-link.active::after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+            background-color: var(--store-green-dark);
         }
         .cart-pill {
             background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
@@ -91,13 +119,16 @@
             color: white !important;
             font-weight: 700;
             padding: .5rem 1.25rem;
-            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             text-decoration: none;
         }
         .cart-pill:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+        }
+        .cart-pill:active {
+            transform: scale(0.96);
         }
         .store-shell { margin-top: 2rem; flex-grow: 1; padding-bottom: 80px; }
         .store-card {
@@ -114,17 +145,17 @@
             font-weight: 700;
             border-radius: 0.85rem;
             padding: 0.6rem 1.5rem;
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.2);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-store:hover {
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35);
         }
         .btn-store:active {
-            transform: scale(0.98);
+            transform: scale(0.96);
         }
         .btn-store-outline {
             border: 2px solid var(--store-green);
@@ -133,12 +164,18 @@
             font-weight: 700;
             border-radius: 0.85rem;
             padding: 0.6rem 1.5rem;
-            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.05);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-store-outline:hover {
             background: var(--store-green);
             color: white;
             border-color: var(--store-green);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);
+        }
+        .btn-store-outline:active {
+            transform: scale(0.96);
         }
         .search-box {
             background: white;
@@ -181,14 +218,17 @@
             font-size: 0.9rem;
             padding: .5rem 1.1rem;
             text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .category-chip:hover, .category-chip.active {
             background: var(--store-green);
             border-color: var(--store-green);
             color: white;
-            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
-            transform: translateY(-1px);
+            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.35);
+            transform: translateY(-2px);
+        }
+        .category-chip:active {
+            transform: scale(0.96);
         }
         .branch-badge {
             background: var(--store-green-soft);
@@ -214,13 +254,13 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.02);
         }
         .product-card:hover {
-            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.06), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
-            transform: translateY(-4px);
-            border-color: rgba(13, 148, 136, 0.15);
+            box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+            transform: translateY(-6px);
+            border-color: rgba(16, 185, 129, 0.2);
         }
         .product-media {
             align-items: center;
@@ -238,7 +278,7 @@
             object-fit: contain;
             padding: 1.25rem;
             width: 100%;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .product-card:hover .product-media img {
             transform: scale(1.06);
@@ -342,13 +382,13 @@
             font-size: .85rem;
             font-weight: 700;
             padding: .5rem 1rem;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.1);
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-add:hover {
             background: var(--store-green-dark);
-            box-shadow: 0 6px 12px rgba(13, 148, 136, 0.2);
-            transform: translateY(-1px);
+            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px) scale(1.05);
         }
         .btn-add:active {
             transform: scale(0.95);
@@ -429,8 +469,8 @@
                 <span>{{ $nombreTienda }}</span>
             </a>
             <nav class="d-flex align-items-center gap-3">
-                <a href="{{ route('tienda.index') }}" class="header-link">Catalogo</a>
-                <a href="{{ route('tienda.sucursales') }}" class="header-link">Sucursales</a>
+                <a href="{{ route('tienda.index') }}" class="header-link {{ request()->routeIs('tienda.index') || request()->routeIs('tienda.productos.show') ? 'active' : '' }}">Catalogo</a>
+                <a href="{{ route('tienda.sucursales') }}" class="header-link {{ request()->routeIs('tienda.sucursales') ? 'active' : '' }}">Sucursales</a>
                <a href="#" class="header-link open-chat-widget d-none d-md-inline">Chat Asistente</a>
                 @auth('tienda')
                     <div class="dropdown">
