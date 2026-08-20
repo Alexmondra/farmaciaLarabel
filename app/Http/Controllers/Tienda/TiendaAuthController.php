@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\LoginRateLimiter;
 
 class TiendaAuthController extends Controller
 {
@@ -26,6 +27,20 @@ class TiendaAuthController extends Controller
         ]);
 
         $login = trim($request->input('login'));
+        $key = strtolower($login) . '|' . $request->ip();
+
+        // 1. Verificar si está bloqueado por rate limit progresivo
+        $seconds = LoginRateLimiter::blockedSeconds($key);
+        if ($seconds) {
+            $minutes = ceil($seconds / 60);
+            $timeText = $minutes === 1 ? '1 minuto' : ($minutes >= 60 ? ceil($minutes / 60) . ' horas' : "{$minutes} minutos");
+            if ($seconds >= 86400) {
+                $timeText = '24 horas';
+            }
+            throw ValidationException::withMessages([
+                'login' => "Demasiados intentos fallidos. Acceso bloqueado. Intenta de nuevo en {$timeText}.",
+            ]);
+        }
 
         $cliente = Cliente::where('activo', true)
             ->where(function ($query) use ($login) {
@@ -35,11 +50,42 @@ class TiendaAuthController extends Controller
             })
             ->first();
 
-        if (!$cliente || !Hash::check($request->password, $cliente->tienda_password)) {
+        // Si el cliente no existe en la base de datos
+        if (!$cliente) {
             throw ValidationException::withMessages([
-                'login' => 'Las credenciales no coinciden con nuestros registros.',
+                'login' => 'Este documento, correo o teléfono aún no tiene una cuenta. ¡Regístrate gratis!',
             ]);
         }
+
+        // Si el cliente existe pero no tiene contraseña online configurada
+        if (!$cliente->tienda_password) {
+            throw ValidationException::withMessages([
+                'login' => 'Tu registro físico existe, pero aún no activas tu cuenta online. Por favor, ve a "Regístrate gratis" para activarla.',
+            ]);
+        }
+
+        if (!Hash::check($request->password, $cliente->tienda_password)) {
+            // 2. Registrar intento fallido
+            $blockedSeconds = LoginRateLimiter::registerFailedAttempt($key);
+            if ($blockedSeconds) {
+                $minutes = ceil($blockedSeconds / 60);
+                $timeText = $minutes === 1 ? '1 minuto' : ($minutes >= 60 ? ceil($minutes / 60) . ' horas' : "{$minutes} minutos");
+                if ($blockedSeconds >= 86400) {
+                    $timeText = '24 horas';
+                }
+                throw ValidationException::withMessages([
+                    'login' => "Demasiados intentos fallidos. Acceso bloqueado por {$timeText} por motivos de seguridad.",
+                ]);
+            }
+
+            $remaining = LoginRateLimiter::attemptsRemaining($key);
+            throw ValidationException::withMessages([
+                'login' => "La contraseña ingresada es incorrecta. Te quedan {$remaining} intentos antes de ser bloqueado.",
+            ]);
+        }
+
+        // 3. Login exitoso, limpiamos rate limit del cliente
+        LoginRateLimiter::clear($key);
 
         Auth::guard('tienda')->login($cliente, $request->boolean('remember'));
 

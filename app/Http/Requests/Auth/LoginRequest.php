@@ -5,9 +5,9 @@ namespace App\Http\Requests\Auth;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Services\LoginRateLimiter;
 
 class LoginRequest extends FormRequest
 {
@@ -42,14 +42,28 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+            $key = $this->throttleKey();
+            $blockedSeconds = LoginRateLimiter::registerFailedAttempt($key);
 
+            if ($blockedSeconds) {
+                event(new Lockout($this));
+                $minutes = ceil($blockedSeconds / 60);
+                $timeText = $minutes === 1 ? '1 minuto' : ($minutes >= 60 ? ceil($minutes / 60) . ' horas' : "{$minutes} minutos");
+                if ($blockedSeconds >= 86400) {
+                    $timeText = '24 horas';
+                }
+                throw ValidationException::withMessages([
+                    'email' => "Demasiados intentos fallidos. Acceso bloqueado por {$timeText} por motivos de seguridad.",
+                ]);
+            }
+
+            $remaining = LoginRateLimiter::attemptsRemaining($key);
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => "Las credenciales de acceso son incorrectas. Te quedan {$remaining} intentos antes de ser bloqueado.",
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+        LoginRateLimiter::clear($this->throttleKey());
     }
 
     /**
@@ -59,19 +73,23 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $key = $this->throttleKey();
+        $seconds = LoginRateLimiter::blockedSeconds($key);
+
+        if (!$seconds) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $minutes = ceil($seconds / 60);
+        $timeText = $minutes === 1 ? '1 minuto' : ($minutes >= 60 ? ceil($minutes / 60) . ' horas' : "{$minutes} minutos");
+        if ($seconds >= 86400) {
+            $timeText = '24 horas';
+        }
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'email' => "Demasiados intentos fallidos. Acceso bloqueado. Intenta de nuevo en {$timeText}.",
         ]);
     }
 

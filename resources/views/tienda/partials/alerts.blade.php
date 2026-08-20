@@ -80,7 +80,7 @@
         @endif
     @endforeach
 
-    @if ($errors->any())
+    @if ($errors->any() && (!isset($hideGlobalErrors) || !$hideGlobalErrors))
         <div class="alert alert-danger rounded-2xl border-rose-100 bg-rose-50/30 text-rose-900 p-4 mb-4 small">
             <strong class="text-rose-800">Revisa la información ingresada:</strong>
             <ul class="mb-0 mt-1 ps-3">
