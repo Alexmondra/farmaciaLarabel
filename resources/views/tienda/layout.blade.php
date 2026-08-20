@@ -18,22 +18,24 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
-            --store-green: #10b981;
-            --store-green-dark: #059669;
-            --store-green-soft: #f0fdfa;
-            --store-red: #0ea5e9;
+            --store-green: #0d9488; /* Verde azulado médico elegante */
+            --store-green-dark: #0f766e;
+            --store-green-soft: #ecfdf5; /* Menta pastel muy suave */
+            --store-primary: #10b981; /* Verde esmeralda saludable */
+            --store-red: #0ea5e9; /* Mantenido para retrocompatibilidad de nombre */
             --store-ink: #0f172a;
             --store-muted: #64748b;
+            --store-bg: #f3f8f6; /* Fondo gris-mentolado muy suave y limpio */
         }
 
-        body { background: #f8fafc; color: var(--store-ink); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
-        .top-strip { background: #0f172a; color: #94a3b8; font-size: .82rem; font-weight: 500; }
+        body { background: var(--store-bg); color: var(--store-ink); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+        .top-strip { background: linear-gradient(135deg, var(--store-green-dark) 0%, var(--store-green) 100%); color: #ffffff; font-size: .82rem; font-weight: 600; letter-spacing: 0.02em; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
         .store-header {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+            border-bottom: 1px solid rgba(13, 148, 136, 0.1);
+            box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.05);
             position: sticky;
             top: 0;
             z-index: 50;
@@ -57,9 +59,9 @@
         }
         .brand-icon {
             align-items: center;
-            background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
+            background: linear-gradient(135deg, var(--store-primary) 0%, var(--store-green-dark) 100%);
             border-radius: 0.85rem;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
             color: white;
             display: inline-flex;
             height: 38px;
@@ -71,7 +73,7 @@
         }
         .brand-mark:hover .brand-icon {
             transform: rotate(10deg) scale(1.05);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 6px 16px rgba(13, 148, 136, 0.3);
         }
         .brand-logo-img {
             height: 38px;
@@ -89,43 +91,35 @@
             color: var(--store-muted);
             font-weight: 600;
             text-decoration: none;
-            position: relative;
-            transition: color 0.3s ease;
+            padding: 0.45rem 0.95rem;
+            border-radius: 0.75rem;
+            transition: all 0.25s ease-in-out;
             font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
         }
-        .header-link::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            transform: scaleX(0);
-            height: 2px;
-            bottom: -4px;
-            left: 0;
-            background-color: var(--store-green);
-            transform-origin: bottom right;
-            transition: transform 0.25s ease-out;
-        }
-        .header-link:hover, .header-link.active {
+        .header-link:hover {
             color: var(--store-green-dark);
+            background-color: rgba(13, 148, 136, 0.05);
         }
-        .header-link:hover::after, .header-link.active::after {
-            transform: scaleX(1);
-            transform-origin: bottom left;
-            background-color: var(--store-green-dark);
+        .header-link.active {
+            color: var(--store-green-dark);
+            background-color: var(--store-green-soft);
+            box-shadow: inset 0 0 0 1px rgba(13, 148, 136, 0.08);
         }
         .cart-pill {
-            background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
+            background: linear-gradient(135deg, var(--store-primary) 0%, var(--store-green-dark) 100%);
             border-radius: 999px;
             color: white !important;
             font-weight: 700;
             padding: .5rem 1.25rem;
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.2);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             text-decoration: none;
         }
         .cart-pill:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35);
         }
         .cart-pill:active {
             transform: scale(0.96);
@@ -134,25 +128,25 @@
         .store-card {
             border: 0;
             border-radius: 1.25rem;
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.03), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
-            border: 1px solid rgba(226, 232, 240, 0.7);
+            box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.02), 0 8px 10px -6px rgba(13, 148, 136, 0.02);
+            border: 1px solid rgba(13, 148, 136, 0.08);
         }
         .price { color: var(--store-green); font-weight: 800; }
         .btn-store {
-            background: linear-gradient(135deg, var(--store-red) 0%, #0284c7 100%);
+            background: linear-gradient(135deg, var(--store-primary) 0%, var(--store-green-dark) 100%);
             border: 0;
             color: white;
             font-weight: 700;
             border-radius: 0.85rem;
             padding: 0.6rem 1.5rem;
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.2);
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.15);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-store:hover {
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35);
+            box-shadow: 0 8px 20px rgba(13, 148, 136, 0.3);
         }
         .btn-store:active {
             transform: scale(0.96);
@@ -164,7 +158,7 @@
             font-weight: 700;
             border-radius: 0.85rem;
             padding: 0.6rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.05);
+            box-shadow: 0 2px 8px rgba(13, 148, 136, 0.05);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-store-outline:hover {
@@ -172,23 +166,23 @@
             color: white;
             border-color: var(--store-green);
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 8px 16px rgba(13, 148, 136, 0.2);
         }
         .btn-store-outline:active {
             transform: scale(0.96);
         }
         .search-box {
             background: white;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid rgba(13, 148, 136, 0.1);
             border-radius: 1.5rem;
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.02), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
+            box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.02), 0 8px 10px -6px rgba(13, 148, 136, 0.02);
             padding: 1.75rem;
         }
         .search-box-compact {
-            background: white;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            background: #ecfdf5; /* Fondo verde mentolado muy suave para el buscador */
+            border: 1px solid rgba(13, 148, 136, 0.15);
             border-radius: 1.25rem;
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03);
+            box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.03);
             padding: 0.75rem 1.25rem;
         }
         .scrollbar-hide::-webkit-scrollbar {
@@ -210,7 +204,7 @@
         }
         .category-chip {
             background: white;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid rgba(13, 148, 136, 0.1);
             border-radius: 999px;
             color: var(--store-ink);
             display: inline-flex;
@@ -224,7 +218,7 @@
             background: var(--store-green);
             border-color: var(--store-green);
             color: white;
-            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 8px 16px -4px rgba(13, 148, 136, 0.3);
             transform: translateY(-2px);
         }
         .category-chip:active {
@@ -237,11 +231,11 @@
             font-weight: 700;
             padding: .35rem .8rem;
             font-size: 0.85rem;
-            border: 1px solid rgba(13, 148, 136, 0.1);
+            border: 1px solid rgba(13, 148, 136, 0.15);
         }
         .muted-copy { color: var(--store-muted); }
         .quick-banner {
-            background: linear-gradient(135deg, #fff 0%, #f0fdfa 100%);
+            background: linear-gradient(135deg, #fff 0%, #ecfdf5 100%);
             border-radius: 1.25rem;
             padding: 1.25rem;
             border: 1px solid rgba(13, 148, 136, 0.08);
@@ -249,29 +243,29 @@
         .quick-banner strong { color: var(--store-green-dark); }
         .product-card {
             background: white;
-            border: 1px solid rgba(241, 245, 249, 0.9);
+            border: 1px solid rgba(13, 148, 136, 0.06);
             border-radius: 1.25rem;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.02);
+            box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.02);
         }
         .product-card:hover {
-            box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 20px 30px -10px rgba(13, 148, 136, 0.08);
             transform: translateY(-6px);
-            border-color: rgba(16, 185, 129, 0.2);
+            border-color: rgba(13, 148, 136, 0.25);
         }
         .product-media {
             align-items: center;
-            background: #f8fafc;
+            background: radial-gradient(circle, #f0fdf4 0%, #f8fafc 100%); /* Fondo degradado radial muy sutil para destacar medicamentos blancos */
             display: flex;
             height: 180px;
             justify-content: center;
             overflow: hidden;
             position: relative;
             text-decoration: none;
-            border-bottom: 1px solid rgba(241, 245, 249, 0.5);
+            border-bottom: 1px solid rgba(13, 148, 136, 0.05);
         }
         .product-media img {
             height: 100%;
@@ -284,7 +278,7 @@
             transform: scale(1.06);
         }
         .product-gallery { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
-        .product-gallery-item { align-items: center; background: #f7faf8; border: 1px solid #e7eee9; border-radius: .85rem; display: flex; height: 86px; justify-content: center; overflow: hidden; }
+        .product-gallery-item { align-items: center; background: #f0fdf4; border: 1px solid rgba(13, 148, 136, 0.1); border-radius: .85rem; display: flex; height: 86px; justify-content: center; overflow: hidden; }
         .product-gallery-item img { height: 100%; object-fit: contain; padding: .45rem; width: 100%; }
         .product-placeholder {
             align-items: center;
@@ -320,7 +314,7 @@
             padding: 1.25rem;
         }
         .product-meta {
-            color: var(--store-green);
+            color: var(--store-green-dark);
             font-size: .75rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -366,7 +360,7 @@
             gap: .75rem;
             justify-content: space-between;
             margin-top: 1rem;
-            border-top: 1px solid rgba(241, 245, 249, 0.8);
+            border-top: 1px solid rgba(13, 148, 136, 0.08);
             padding-top: 0.75rem;
         }
         .product-bottom .price {
@@ -375,7 +369,7 @@
             font-weight: 800;
         }
         .btn-add {
-            background: var(--store-green);
+            background: var(--store-primary);
             border: 0;
             border-radius: .75rem;
             color: white;
@@ -387,7 +381,7 @@
         }
         .btn-add:hover {
             background: var(--store-green-dark);
-            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 8px 16px -4px rgba(13, 148, 136, 0.4);
             transform: translateY(-2px) scale(1.05);
         }
         .btn-add:active {
@@ -592,7 +586,7 @@
 
     <footer class="store-footer py-3">
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <span class="small" style="font-size: 0.8rem;">Diseñado y desarrollado por <strong class="text-white">S1NT4X System</strong></span>
+           <span class="small" style="font-size: 0.8rem;">Cuidando de ti y de los que más quieres cada día.</span>
             <a href="{{ route('login') }}" class="small d-inline-flex align-items-center gap-1.5 font-semibold text-decoration-none" style="font-size: 0.8rem;">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 0.95rem; height: 0.95rem; color: #5eead4;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>

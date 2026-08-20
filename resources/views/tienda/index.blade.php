@@ -141,7 +141,7 @@
                        @keydown.up="focusPrev()"
                        @keydown.escape="closeSuggestions()"
                        autocomplete="off"
-                       class="form-control border-slate-200 bg-slate-50/50 ps-5 pe-3 py-2.5 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
+                       class="form-control border-emerald-200/50 bg-white/95 ps-5 pe-3 py-2.5 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
                        placeholder="Buscar medicamento o laboratorio...">
 
                 <!-- Indicador de Carga (Spinner) -->
@@ -162,42 +162,42 @@
                      style="left: 0; right: 0; min-width: 280px; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.12); display: none;">
                     
                     <div class="d-flex flex-column divide-y divide-slate-100">
-                        <template x-for="(item, index) in suggestions" :key="item.id">
-                            <a :href="item.url" 
-                               :class="{'bg-slate-50': index === activeIndex}"
-                               @mouseenter="activeIndex = index"
-                               class="d-flex align-items-center gap-3 p-3 text-decoration-none text-reset hover:bg-slate-50 transition-colors">
-                                
-                                <div class="flex-shrink-0 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                                    <img :src="item.imagen_url" alt="" class="h-100 w-100 object-contain p-1">
-                                </div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <h4 class="text-xs font-bold text-slate-800 mb-0.5 text-truncate" x-text="item.nombre"></h4>
-                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                        <span class="text-[10px] text-slate-400" x-show="item.laboratorio" x-text="'Lab: ' + item.laboratorio"></span>
-                                        <span class="text-[10px] text-slate-400" x-show="item.laboratorio">•</span>
-                                        <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50/80 px-1.5 py-0.5 rounded" x-text="item.sucursal"></span>
-                                    </div>
-                                </div>
-                                <div class="flex-shrink-0 text-end">
-                                    <span class="text-xs text-slate-400 font-semibold">S/</span>
-                                    <span class="text-sm font-extrabold text-emerald-600" x-text="item.precio"></span>
-                                </div>
-                            </a>
-                        </template>
-
-                        <div x-show="suggestions.length === 0" class="p-4 text-center text-slate-400 text-xs font-medium" style="display: none;">
-                            No se encontraron recomendaciones para tu búsqueda.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botón Filtros Avanzados -->
-            <button type="button" 
-                    data-bs-toggle="offcanvas" 
-                    data-bs-target="#filterSidebar" 
-                    class="btn btn-outline-secondary border-slate-200 text-slate-600 d-inline-flex align-items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold active:scale-95 transition-all">
+                         <template x-for="(item, index) in suggestions" :key="item.id">
+                             <a :href="item.url" 
+                                :class="{'bg-slate-50': index === activeIndex}"
+                                @mouseenter="activeIndex = index"
+                                class="d-flex align-items-center gap-3 p-3 text-decoration-none text-reset hover:bg-slate-50 transition-colors">
+                                 
+                                 <div class="flex-shrink-0 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                                     <img :src="item.imagen_url" alt="" class="h-100 w-100 object-contain p-1">
+                                 </div>
+                                 <div class="flex-grow-1 min-w-0">
+                                     <h4 class="text-xs font-bold text-slate-800 mb-0.5 text-truncate" x-text="item.nombre"></h4>
+                                     <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                         <span class="text-[10px] text-slate-400" x-show="item.laboratorio" x-text="'Lab: ' + item.laboratorio"></span>
+                                         <span class="text-[10px] text-slate-400" x-show="item.laboratorio">•</span>
+                                         <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50/80 px-1.5 py-0.5 rounded" x-text="item.sucursal"></span>
+                                     </div>
+                                 </div>
+                                 <div class="flex-shrink-0 text-end">
+                                     <span class="text-xs text-slate-400 font-semibold">S/</span>
+                                     <span class="text-sm font-extrabold text-emerald-600" x-text="item.precio"></span>
+                                 </div>
+                             </a>
+                         </template>
+ 
+                         <div x-show="suggestions.length === 0" class="p-4 text-center text-slate-400 text-xs font-medium" style="display: none;">
+                             No se encontraron recomendaciones para tu búsqueda.
+                         </div>
+                     </div>
+                 </div>
+             </div>
+ 
+             <!-- Botón Filtros Avanzados -->
+             <button type="button" 
+                     data-bs-toggle="offcanvas" 
+                     data-bs-target="#filterSidebar" 
+                     class="btn btn-outline-secondary border-emerald-200/50 bg-white/95 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-950 d-inline-flex align-items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold active:scale-95 transition-all">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.05rem; height: 1.05rem;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                 </svg>
@@ -258,7 +258,7 @@
 <div class="row g-3 d-none mt-2" id="product-loader">
     @for ($i = 0; $i < 4; $i++)
         <div class="col-6 col-lg-3 product-item mb-4">
-            <div class="product-card h-100 d-flex flex-column bg-white border border-slate-100/80 rounded-2xl p-3 animate-pulse" style="min-height: 360px;">
+            <div class="product-card h-100 d-flex flex-column bg-white border border-emerald-100/50 rounded-2xl p-3 animate-pulse" style="min-height: 360px;">
                 <div class="bg-slate-100 rounded-xl w-full mb-3" style="aspect-ratio: 1; min-height: 140px;"></div>
                 <div class="flex-grow-1 d-flex flex-column justify-between">
                     <div>
