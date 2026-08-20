@@ -359,32 +359,17 @@
                                 <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider mb-1.5">Método de Pago</label>
                                 <select name="metodo_pago" class="form-select border-slate-200 bg-slate-50/50 px-3.5 py-2.5 rounded-xl text-sm focus:bg-white focus:border-emerald-500 transition-all @error('metodo_pago') is-invalid @enderror">
                                     <option value="PAGO_AL_RECOGER" @selected(old('metodo_pago') === 'PAGO_AL_RECOGER')>Pagar al recoger (Efectivo/Tarjeta)</option>
-                                    @if($montoInsuficienteOnline)
-                                        <option value="PAGO_ONLINE" disabled>Pago online (Monto mínimo S/ 15.00)</option>
-                                    @elseif($limiteOnlineAlcanzado)
-                                        <option value="PAGO_ONLINE" disabled>Pago online (Límite: 3 pendientes alcanzado)</option>
-                                    @else
-                                        <option value="PAGO_ONLINE" @selected(old('metodo_pago') === 'PAGO_ONLINE')>Pago online (Con tarjeta/Yape)</option>
-                                    @endif
+                                    <option value="PAGO_ONLINE" disabled>Pago online (En mantenimiento)</option>
                                 </select>
                                 @error('metodo_pago')
                                     <div class="invalid-feedback text-xs mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                                @if($montoInsuficienteOnline)
-                                    <div class="alert bg-rose-50/60 border border-rose-100 text-rose-800 rounded-xl p-2.5 mt-2.5 d-flex align-items-center gap-2 small mb-0">
-                                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1rem; height: 1rem; flex-shrink: 0;" class="text-rose-600">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                        </svg>
-                                        <span>El pago online requiere compras de S/ 15.00 o más.</span>
-                                    </div>
-                                @elseif($limiteOnlineAlcanzado)
-                                    <div class="alert bg-rose-50/60 border border-rose-100 text-rose-800 rounded-xl p-2.5 mt-2.5 d-flex align-items-center gap-2 small mb-0">
-                                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1rem; height: 1rem; flex-shrink: 0;" class="text-rose-600">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                        </svg>
-                                        <span>Límite alcanzado: Tienes 3 pedidos con pago online pendientes de procesar.</span>
-                                    </div>
-                                @endif
+                                <div class="alert bg-amber-50/60 border border-amber-100 text-amber-800 rounded-xl p-2.5 mt-2.5 d-flex align-items-center gap-2 small mb-0">
+                                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1rem; height: 1rem; flex-shrink: 0;" class="text-amber-600">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                    <span>Los pagos online actualmente se encuentran en mantenimiento. Por favor, use la opción de "Pagar al recoger".</span>
+                                </div>
                             </div>
 
                             <!-- Fecha de Recojo -->

@@ -15,6 +15,8 @@
                     </span>
                 </div>
 
+                <div id="modal-lotes-alertas"></div>
+
                 <div class="table-responsive">
                     <table class="table table-sm table-hover table-striped mb-0" style="font-size: 0.9rem;">
                         <thead class="thead-light">

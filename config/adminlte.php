@@ -359,13 +359,26 @@ return [
                     'can'  => 'categorias.ver',
                     'icon' => 'fas fa-tags',
                 ],
-                // --- NUEVO ÍTEM ---
                 [
                     'text' => 'Catálogo General', // Nombre claro: son TODOS los productos
                     'url'  => 'inventario/medicamentos-general',
                     'can'    => 'medicamentos.global',
                     'icon' => 'fas fa-globe-americas', // Ícono global
                     'active' => ['inventario/medicamentos-general*'],
+                ],
+                [
+                    'text' => 'Lotes de Medicamentos',
+                    'url'  => 'inventario/lotes',
+                    'can'  => 'medicamentos.ver',
+                    'icon' => 'fas fa-barcode',
+                    'active' => ['inventario/lotes*'],
+                ],
+                [
+                    'text' => 'Mermas y Dañados',
+                    'url'  => 'inventario/mermas',
+                    'can'  => 'medicamentos.ver',
+                    'icon' => 'fas fa-exclamation-circle',
+                    'active' => ['inventario/mermas*'],
                 ],
             ],
         ],

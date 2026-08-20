@@ -80,6 +80,16 @@
         {{-- Configured right links --}}
         @each('adminlte::partials.navbar.menu-item', $adminlte->menu('navbar-right'), 'item')
 
+        {{-- 🔔 Campana de Alertas de Inventario (Vencimientos + Stock Bajo) --}}
+        @if(Auth::check())
+            @include('inventario.partials.alertas_dropdown')
+        @endif
+
+        {{-- ⚠️ Alerta de Mermas Pendientes por Confirmar --}}
+        @if(Auth::check())
+            @include('inventario.partials.mermas_dropdown')
+        @endif
+
         {{-- User menu link --}}
         {{-- User menu link (PERSONALIZADO) --}}
         {{-- User menu link (DISEÑO VERTICAL Y COMPACTO) --}}

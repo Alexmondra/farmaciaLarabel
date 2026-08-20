@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('tienda')->name('tienda.')->group(function () {
     Route::get('/', [TiendaController::class, 'index'])->name('index');
+    Route::get('/productos/sugerencias', [TiendaController::class, 'sugerencias'])->name('productos.sugerencias');
     Route::get('/sucursales', [TiendaController::class, 'sucursales'])->name('sucursales');
     Route::get('/producto/{slug}', [TiendaController::class, 'show'])->name('productos.show');
 

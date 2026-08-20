@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 // --- Importación de Controladores ---
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seguridad\{RolePermissionController, UsuarioController};
-use App\Http\Controllers\Inventario\{MedicamentoController, MedicamentoSucursalController, CategoriaController};
+use App\Http\Controllers\Inventario\{MedicamentoController, MedicamentoSucursalController, CategoriaController, LoteController, MermaController};
 use App\Http\Controllers\Compras\{ProveedorController, CompraController};
 use App\Http\Controllers\Ventas\{CajaSesionController, VentaController};
 use App\Http\Controllers\Configuracion\SucursalController;
@@ -133,6 +133,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('movimientos.store_salida');
         Route::post('movimientos/ingreso', [MedicamentoSucursalController::class, 'storeIngreso'])
             ->name('movimientos.store_ingreso');
+
+        Route::get('lotes', [LoteController::class, 'index'])->name('lotes.index');
+        Route::get('mermas', [MermaController::class, 'index'])->name('mermas.index');
+        Route::post('mermas/{lote}/confirmar', [MermaController::class, 'confirmar'])->name('mermas.confirmar');
 
         Route::resource('medicamentos', MedicamentoController::class);
     });

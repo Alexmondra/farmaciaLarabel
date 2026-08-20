@@ -40,11 +40,13 @@ class CheckoutController extends Controller
             'cliente_telefono' => $reglasTelefono,
             'cliente_email' => ['nullable', 'email', 'max:120'],
             'tipo_entrega' => ['required', 'in:RECOJO_SUCURSAL'],
-            'metodo_pago' => ['required', 'in:PAGO_AL_RECOGER,PAGO_ONLINE'],
+            'metodo_pago' => ['required', 'in:PAGO_AL_RECOGER'],
             'fecha_recojo' => ['required', 'date', 'after:' . $fechaRecojoMin->toDateTimeString()],
             'observaciones' => ['nullable', 'string', 'max:2000'],
             'sucursal_recojo_id' => $esMultiSucursal ? ['required', 'integer', 'in:' . $sucursalIds->join(',')] : ['nullable'],
             'confirmar_datos' => ['nullable'],
+        ], [
+            'metodo_pago.in' => 'Los pagos online actualmente se encuentran en mantenimiento. Por favor, use la opción de pagar al recoger.',
         ]);
 
         $cliente = auth('tienda')->user();

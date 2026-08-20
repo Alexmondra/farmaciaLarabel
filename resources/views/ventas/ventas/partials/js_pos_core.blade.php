@@ -234,6 +234,8 @@
                 },
                 success: function(lotes) {
                     let tbody = $('#modal-lotes-tbody').empty();
+                    $('#modal-lotes-alertas').empty();
+
                     if (!lotes.length) {
                         tbody.append('<tr><td colspan="7" class="text-center text-danger">SIN STOCK DISPONIBLE</td></tr>');
                         return;

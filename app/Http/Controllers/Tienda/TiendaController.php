@@ -48,9 +48,15 @@ class TiendaController extends Controller
         $categorias = Categoria::whereIn('id', $categoriaIds)->orderBy('nombre')->get();
 
         $productos = TiendaProducto::with(['medicamento.categoria', 'medicamento.sucursales', 'sucursal', 'imagenesVisibles'])
-            ->where('visible', true)
+            ->select('tienda_productos.*')
+            ->leftJoin('medicamento_sucursal', function ($join) {
+                $join->on('medicamento_sucursal.medicamento_id', '=', 'tienda_productos.medicamento_id')
+                     ->on('medicamento_sucursal.sucursal_id', '=', 'tienda_productos.sucursal_id');
+            })
+            ->addSelect('medicamento_sucursal.precio_venta as precio_sucursal')
+            ->where('tienda_productos.visible', true)
             ->when($request->filled('sucursal'), function ($query) use ($request) {
-                $query->where('sucursal_id', $request->integer('sucursal'));
+                $query->where('tienda_productos.sucursal_id', $request->integer('sucursal'));
             })
             ->when($request->filled('categoria'), function ($query) use ($request) {
                 $query->whereHas('medicamento', function ($medicamento) use ($request) {
@@ -60,7 +66,7 @@ class TiendaController extends Controller
             ->when($request->filled('q'), function ($query) use ($request) {
                 $term = trim($request->q);
                 $query->where(function ($sub) use ($term) {
-                    $sub->where('nombre_web', 'LIKE', "%{$term}%")
+                    $sub->where('tienda_productos.nombre_web', 'LIKE', "%{$term}%")
                         ->orWhereHas('medicamento', function ($medicamento) use ($term) {
                             $medicamento->where('nombre', 'LIKE', "%{$term}%")
                                 ->orWhere('laboratorio', 'LIKE', "%{$term}%")
@@ -68,9 +74,15 @@ class TiendaController extends Controller
                         });
                 });
             })
-            ->orderByDesc('destacado')
-            ->orderByDesc('id')
-            ->orderBy('nombre_web')
+            ->when($request->filled('precio_max'), function ($query) use ($request) {
+                $max = (float) $request->precio_max;
+                $query->where(function ($sub) use ($max) {
+                    $sub->whereRaw('COALESCE(tienda_productos.precio_web, medicamento_sucursal.precio_venta) <= ?', [$max]);
+                });
+            })
+            ->orderByDesc('tienda_productos.destacado')
+            ->orderByDesc('tienda_productos.id')
+            ->orderBy('tienda_productos.nombre_web')
             ->paginate(12)
             ->appends($request->query());
 
@@ -82,6 +94,46 @@ class TiendaController extends Controller
         }
 
         return view('tienda.index', compact('productos', 'sucursales', 'categorias'));
+    }
+
+    public function sugerencias(Request $request)
+    {
+        $term = trim($request->q);
+        if (strlen($term) < 2) {
+            return response()->json([]);
+        }
+
+        $productos = TiendaProducto::with(['imagenesVisibles', 'sucursal', 'medicamento'])
+            ->select('tienda_productos.*')
+            ->leftJoin('medicamento_sucursal', function ($join) {
+                $join->on('medicamento_sucursal.medicamento_id', '=', 'tienda_productos.medicamento_id')
+                     ->on('medicamento_sucursal.sucursal_id', '=', 'tienda_productos.sucursal_id');
+            })
+            ->addSelect('medicamento_sucursal.precio_venta as precio_sucursal')
+            ->where('tienda_productos.visible', true)
+            ->where(function ($query) use ($term) {
+                $query->where('tienda_productos.nombre_web', 'LIKE', "%{$term}%")
+                      ->orWhereHas('medicamento', function ($med) use ($term) {
+                          $med->where('nombre', 'LIKE', "%{$term}%")
+                              ->orWhere('laboratorio', 'LIKE', "%{$term}%");
+                      });
+            })
+            ->take(5)
+            ->get();
+
+        $sugerencias = $productos->map(function ($prod) {
+            return [
+                'id' => $prod->id,
+                'nombre' => $prod->nombre,
+                'precio' => number_format($prod->precioVenta(), 2),
+                'imagen_url' => $prod->imagen_url ?: '/vendor/adminlte/dist/img/avatar.png',
+                'url' => route('tienda.productos.show', $prod->slug),
+                'sucursal' => $prod->sucursal->nombre ?? 'General',
+                'laboratorio' => $prod->medicamento->laboratorio ?? '',
+            ];
+        });
+
+        return response()->json($sugerencias);
     }
 
     public function show(string $slug)
