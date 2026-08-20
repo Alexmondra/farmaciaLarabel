@@ -14,16 +14,40 @@
         transition: min-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Tarjetas apiladas físicamente */
+    /* Tarjetas físicas individuales */
     .auth-card {
         position: absolute;
         top: 0;
         left: 50%;
         width: 92%;
         max-width: 440px;
+        height: auto;
+        min-height: 480px;
+        border-radius: 1.5rem;
         transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
         transform-style: preserve-3d;
+        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08);
     }
+
+    /* Fondos sólidos opacos por defecto para cada tarjeta */
+    .card-login-cliente {
+        background-color: #f0fdf4 !important; /* Verde menta médico claro sólido */
+        border: 1.5px solid #a7f3d0 !important; /* Borde verde menta suave */
+        color: #064e3b;
+    }
+    .card-register {
+        background-color: #e6fcf5 !important; /* Verde esmeralda suave clínico */
+        border: 1.5px solid #96f2d7 !important; /* Borde esmeralda suave */
+        color: #093325;
+        min-height: 830px;
+    }
+    .card-login-personal {
+        background-color: #0b2535 !important; /* Azul clínico medianoche sólido */
+        border: 1.5px solid #144460 !important; /* Borde azul clínico */
+        color: #ffffff;
+    }
+
+    /* --- ALINEACIONES 3D EN ESCRITORIO --- */
 
     /* Tarjeta activa (al centro y al frente) */
     .card-active {
@@ -33,59 +57,93 @@
         pointer-events: auto !important;
     }
 
-    /* Clientes inactiva (desplazada a la izquierda y al fondo) */
-    .card-clientes.card-inactive {
-        transform: translate3d(calc(-50% - 90px), 20px, -150px) rotate(-4deg);
-        z-index: 10;
-        opacity: 0.18;
-        filter: blur(1.2px) grayscale(50%);
-        pointer-events: auto; /* Permite hacer clic para traer al frente */
+    /* 1. Estado: Login Cliente Activo */
+    .state-login_cliente .card-register.card-inactive {
+        transform: translate3d(calc(-50% + 55px), 15px, -60px) scale(0.96) rotate(2deg);
+        z-index: 20;
+        opacity: 1;
         cursor: pointer;
     }
-    .card-clientes.card-inactive:hover {
-        opacity: 0.85;
-        filter: blur(0) grayscale(0);
-        transform: translate3d(calc(-50% - 95px), 15px, -120px) rotate(-3deg);
-    }
-
-    /* Personal inactiva (desplazada a la derecha y al fondo, asomándose) */
-    .card-personal.card-inactive {
-        transform: translate3d(calc(-50% + 90px), 20px, -150px) rotate(4deg);
+    .state-login_cliente .card-login-personal.card-inactive {
+        transform: translate3d(calc(-50% + 110px), 30px, -120px) scale(0.92) rotate(4deg);
         z-index: 10;
-        opacity: 0.18;
-        filter: blur(1.2px) grayscale(50%);
-        pointer-events: auto; /* Permite hacer clic para traer al frente */
+        opacity: 1;
         cursor: pointer;
     }
-    .card-personal.card-inactive:hover {
-        opacity: 0.85;
-        filter: blur(0) grayscale(0);
-        transform: translate3d(calc(-50% + 95px), 15px, -120px) rotate(3deg);
+
+    /* 2. Estado: Registro Activo */
+    .state-register .card-login-cliente.card-inactive {
+        transform: translate3d(calc(-50% - 55px), 15px, -60px) scale(0.96) rotate(-2deg);
+        z-index: 20;
+        opacity: 1;
+        cursor: pointer;
+    }
+    .state-register .card-login-personal.card-inactive {
+        transform: translate3d(calc(-50% + 55px), 15px, -60px) scale(0.96) rotate(2deg);
+        z-index: 10;
+        opacity: 1;
+        cursor: pointer;
     }
 
-    /* Estructura Interna del Card Flip de Clientes */
-    .flip-card-inner {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        transform-style: preserve-3d;
+    /* 3. Estado: Personal Activo */
+    .state-personal .card-register.card-inactive {
+        transform: translate3d(calc(-50% - 55px), 15px, -60px) scale(0.96) rotate(-2deg);
+        z-index: 20;
+        opacity: 1;
+        cursor: pointer;
     }
-    .flip-card-inner.flipped {
-        transform: rotateY(180deg);
+    .state-personal .card-login-cliente.card-inactive {
+        transform: translate3d(calc(-50% - 110px), 30px, -120px) scale(0.92) rotate(-4deg);
+        z-index: 10;
+        opacity: 1;
+        cursor: pointer;
     }
-    .flip-card-front, .flip-card-back {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        backface-visibility: hidden;
-        -webkit-backface-visibility: hidden;
-        border-radius: 1.5rem;
+
+    /* Hover interactivo para asomarse más al puntero */
+    .card-inactive:hover {
+        opacity: 1 !important;
     }
-    .flip-card-back {
-        transform: rotateY(180deg);
+    .state-login_cliente .card-register.card-inactive:hover {
+        transform: translate3d(calc(-50% + 65px), 10px, -40px) scale(0.98) rotate(1deg);
+    }
+    .state-login_cliente .card-login-personal.card-inactive:hover {
+        transform: translate3d(calc(-50% + 120px), 25px, -100px) scale(0.94) rotate(3deg);
+    }
+    .state-register .card-login-cliente.card-inactive:hover {
+        transform: translate3d(calc(-50% - 65px), 10px, -40px) scale(0.98) rotate(-1deg);
+    }
+    .state-register .card-login-personal.card-inactive:hover {
+        transform: translate3d(calc(-50% + 65px), 10px, -40px) scale(0.98) rotate(1deg);
+    }
+    .state-personal .card-register.card-inactive:hover {
+        transform: translate3d(calc(-50% - 65px), 10px, -40px) scale(0.98) rotate(-1deg);
+    }
+    .state-personal .card-login-cliente.card-inactive:hover {
+        transform: translate3d(calc(-50% - 120px), 25px, -100px) scale(0.94) rotate(-3deg);
+    }
+
+    /* Ocultar contenido interno de cualquier tarjeta inactiva */
+    .card-inactive .avatar-wrapper,
+    .card-inactive form,
+    .card-inactive h1,
+    .card-inactive p,
+    .card-inactive .text-center {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    /* Mostrar suavemente al activarse */
+    .card-active .avatar-wrapper,
+    .card-active form,
+    .card-active h1,
+    .card-active p,
+    .card-active .text-center {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        transition: opacity 0.5s ease 0.2s, visibility 0.5s ease 0.2s;
     }
 
     /* Animaciones de los avatares (monitos interactivos) */
@@ -128,27 +186,46 @@
         transform: translateY(2px);
     }
 
-    /* Ajustes para Pantallas Móviles (Desfase vertical anti desborde) */
+    /* --- ALINEACIONES 3D EN DISPOSITIVOS MÓVILES (Desfase vertical escalonado) --- */
     @media (max-width: 767.98px) {
         .auth-stage {
             max-width: 440px;
         }
-        /* En móvil se asoma hacia abajo */
-        .card-clientes.card-inactive {
-            transform: translate3d(-50%, 35px, -110px) scale(0.92) rotate(0deg);
-            opacity: 0.22;
-            filter: blur(1.5px) grayscale(50%);
+
+        /* 1. Estado: Login Cliente Activo en móvil */
+        .state-login_cliente .card-register.card-inactive {
+            transform: translate3d(-50%, -25px, -50px) scale(0.96) rotate(0deg);
+            z-index: 20;
         }
-        /* En móvil se asoma hacia arriba */
-        .card-personal.card-inactive {
-            transform: translate3d(-50%, -35px, -110px) scale(0.92) rotate(0deg);
-            opacity: 0.22;
-            filter: blur(1.5px) grayscale(50%);
+        .state-login_cliente .card-login-personal.card-inactive {
+            transform: translate3d(-50%, -50px, -100px) scale(0.92) rotate(0deg);
+            z-index: 10;
         }
-        /* Quitar blur y aumentar opacidad en hover/touch para dar feedback */
+
+        /* 2. Estado: Registro Activo en móvil */
+        .state-register .card-login-cliente.card-inactive {
+            transform: translate3d(-50%, 25px, -50px) scale(0.96) rotate(0deg);
+            z-index: 20;
+        }
+        .state-register .card-login-personal.card-inactive {
+            transform: translate3d(-50%, -25px, -50px) scale(0.96) rotate(0deg);
+            z-index: 10;
+        }
+
+        /* 3. Estado: Personal Activo en móvil */
+        .state-personal .card-register.card-inactive {
+            transform: translate3d(-50%, 25px, -50px) scale(0.96) rotate(0deg);
+            z-index: 20;
+        }
+        .state-personal .card-login-cliente.card-inactive {
+            transform: translate3d(-50%, 50px, -100px) scale(0.92) rotate(0deg);
+            z-index: 10;
+        }
+
+        /* Hover interactivo móvil simplificado */
         .card-inactive:hover {
-            opacity: 0.8 !important;
-            filter: blur(0) grayscale(0) !important;
+            transform: translate3d(-50%, -5px, 0) scale(1) rotate(0deg) !important;
+            z-index: 40 !important;
         }
     }
 </style>
@@ -156,36 +233,28 @@
 
 @section('content')
 @php
-    // Detectamos la pestaña inicial si viene por query param (?tab=register o ?tab=login_personal)
+    // Determinamos el estado inicial en base a query param (?tab=register o ?tab=login_personal)
     $tabInicial = request('tab', 'login_cliente');
-    $cardInicial = 'clientes';
-    $clientesTabInicial = 'login';
-
-    if ($tabInicial === 'login_personal') {
-        $cardInicial = 'personal';
-    } elseif ($tabInicial === 'register') {
-        $cardInicial = 'clientes';
-        $clientesTabInicial = 'register';
+    if (!in_array($tabInicial, ['login_cliente', 'register', 'login_personal'])) {
+        $tabInicial = 'login_cliente';
     }
 
     // Forzar tab si hay errores específicos de registro en la sesión
     if ($errors->hasAny(['documento', 'nombre', 'password_confirmation', 'tipo_documento'])) {
-        $cardInicial = 'clientes';
-        $clientesTabInicial = 'register';
+        $tabInicial = 'register';
     }
     // Forzar tab si hay errores del login de personal (correo/contraseña)
     elseif ($errors->has('email') && !$errors->hasAny(['documento', 'nombre'])) {
-        $cardInicial = 'personal';
+        $tabInicial = 'login_personal';
     }
 @endphp
 
 <div class="row justify-content-center my-4 md:my-5">
     <div class="col-12 d-flex justify-content-center">
         
-        <!-- Escenario 3D de Tarjetas apiladas -->
+        <!-- Escenario de acordeón 3D -->
         <div x-data="{ 
-                activeCard: '{{ $cardInicial }}',
-                clientesTab: '{{ $clientesTabInicial }}',
+                activeCard: '{{ $tabInicial }}',
                 loginFocus: false,
                 passFocus: false,
                 personalFocus: false,
@@ -193,328 +262,319 @@
                 registerFocus: false,
                 registerPassFocus: false
              }" 
-             class="auth-stage" 
-             :style="activeCard === 'clientes' && clientesTab === 'register' ? 'min-height: 870px; height: 870px;' : 'min-height: 520px; height: 520px;'">
+             class="auth-stage"
+             :class="'state-' + activeCard"
+             :style="activeCard === 'register' ? 'min-height: 920px; height: 920px;' : 'min-height: 570px; height: 570px;'">
             
-            <!-- TARJETA CLIENTES (Lado Front: Login / Lado Back: Registro) -->
-            <div class="auth-card card-clientes" 
-                 :class="activeCard === 'clientes' ? 'card-active' : 'card-inactive'" 
-                 @click="if (activeCard !== 'clientes') { activeCard = 'clientes'; }">
+            <!-- TARJETA 1: LOGIN CLIENTE -->
+            <div class="auth-card card-login-cliente p-4 p-md-5"
+                 :class="activeCard === 'login_cliente' ? 'card-active' : 'card-inactive'"
+                 @click="if (activeCard !== 'login_cliente') { activeCard = 'login_cliente'; }">
                 
-                <div class="flip-card-inner h-100" :class="{'flipped': clientesTab === 'register'}">
-                    
-                    <!-- FRENTE: LOGIN CLIENTE -->
-                    <div class="flip-card-front bg-white shadow-xl shadow-slate-100/80 border border-slate-100/50 p-4 p-md-5">
-                        
-                        <!-- Avatar Cliente -->
-                        <div class="avatar-wrapper" :class="{'looking': loginFocus, 'cover-eyes': passFocus}">
-                            <svg class="avatar-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="60" cy="60" r="50" fill="#e0f2fe" stroke="#334155" stroke-width="3" />
-                                <path d="M20 45 Q 60 15 100 45 Q 60 30 20 45 Z" fill="#475569" stroke="#334155" stroke-width="3" />
-                                <g id="client-eyes">
-                                    <circle cx="45" cy="70" r="5" fill="#1e293b" />
-                                    <circle cx="75" cy="70" r="5" fill="#1e293b" />
-                                    <circle class="pupil" cx="47" cy="68" r="1.5" fill="white" />
-                                    <circle class="pupil" cx="77" cy="68" r="1.5" fill="white" />
-                                </g>
-                                <path id="client-mouth" d="M45 85 Q 60 98 75 85" fill="none" stroke="#be123c" stroke-width="3" stroke-linecap="round" />
-                                <g class="arm arm-left">
-                                    <path d="M10 80 Q 20 50 45 60 Q 30 90 20 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
-                                </g>
-                                <g class="arm arm-right">
-                                    <path d="M110 80 Q 100 50 75 60 Q 90 90 100 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
-                                </g>
-                            </svg>
-                        </div>
-
-                        <div class="text-center mb-4">
-                            <h1 class="h4 font-extrabold text-slate-800 tracking-tight mb-1" style="font-weight: 800;">Acceso Clientes</h1>
-                            <p class="text-xs text-slate-400 font-medium px-2 leading-relaxed">Ingresa a tu cuenta de farmacia virtual.</p>
-                        </div>
-
-                        <!-- Formulario de Acceso Cliente -->
-                        <form method="POST" action="{{ route('tienda.login') }}">
-                            @csrf
-                            <div class="mb-3">
-                                <label class="text-xs font-semibold text-slate-500 mb-1.5 d-block">Documento, correo o teléfono</label>
-                                <div class="position-relative">
-                                    <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 1rem; z-index: 10;">
-                                        <i class="fas fa-user-circle"></i>
-                                    </span>
-                                    <input type="text" name="login" value="{{ old('login') }}" 
-                                           @focus="loginFocus = true" @blur="loginFocus = false"
-                                           class="w-100 py-2.5 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                           style="padding-left: 2.5rem; padding-right: 1rem; font-size: 0.92rem; border-radius: 1rem;" 
-                                           placeholder="Ej. 72345678" required autofocus>
-                                </div>
-                                @error('login')
-                                    <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="text-xs font-semibold text-slate-500 mb-1.5 d-block">Contraseña</label>
-                                <div class="position-relative">
-                                    <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 1rem; z-index: 10;">
-                                        <i class="fas fa-lock"></i>
-                                    </span>
-                                    <input type="password" name="password" 
-                                           @focus="passFocus = true" @blur="passFocus = false"
-                                           class="w-100 py-2.5 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                           style="padding-left: 2.5rem; padding-right: 1rem; font-size: 0.92rem; border-radius: 1rem;" 
-                                           placeholder="••••••••" required>
-                                </div>
-                                @error('password')
-                                    <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-4 d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <input type="checkbox" name="remember" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" id="remember" style="width: 16px; height: 16px; cursor: pointer;">
-                                    <label class="text-xs font-medium text-slate-500 ml-2" for="remember" style="cursor: pointer; margin-left: 0.5rem;">Recordarme</label>
-                                </div>
-                                <!-- Botón para ir a Personal en el mismo escenario (desplaza las tarjetas) -->
-                                <button type="button" @click.stop="activeCard = 'personal'" class="text-xs font-bold text-decoration-none text-emerald-600 hover:text-emerald-700 border-0 bg-transparent p-0">Acceso Personal &rarr;</button>
-                            </div>
-
-                            <button class="w-100 py-2.5 text-white font-bold rounded-2xl border-0 transition-all shadow-md hover:shadow-lg d-flex justify-content-center align-items-center gap-2 active:scale-95"
-                                    style="background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%); font-size: 0.95rem; border-radius: 1rem;">
-                                <span>Ingresar como Cliente</span>
-                                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.1rem; height: 1.1rem;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                                </svg>
-                            </button>
-                        </form>
-
-                        <div class="text-center mt-4 pt-2 border-t border-slate-100">
-                            <span class="text-xs text-slate-400 font-medium">¿Nuevo en nuestra tienda?</span>
-                            <!-- Botón para girar al Registro (Dorso de la misma tarjeta) -->
-                            <button type="button" @click.stop="clientesTab = 'register'" class="text-xs font-bold text-decoration-none transition-all ml-1 border-0 bg-transparent p-0 text-emerald-600 hover:text-emerald-700" style="font-weight: bold; margin-left: 0.25rem;">Regístrate gratis</button>
-                        </div>
-                    </div>
-
-                    <!-- DORSO: REGISTRO CLIENTE -->
-                    <div class="flip-card-back bg-white shadow-xl shadow-slate-100/80 border border-slate-100/50 p-4 p-md-5">
-                        
-                        <!-- Avatar Registro -->
-                        <div class="avatar-wrapper" :class="{'looking': registerFocus, 'cover-eyes': registerPassFocus}">
-                            <svg class="avatar-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="60" cy="60" r="50" fill="#e0f2fe" stroke="#334155" stroke-width="3" />
-                                <path d="M20 45 Q 60 15 100 45 Q 60 30 20 45 Z" fill="#475569" stroke="#334155" stroke-width="3" />
-                                <g id="reg-eyes">
-                                    <circle cx="45" cy="70" r="5" fill="#1e293b" />
-                                    <circle cx="75" cy="70" r="5" fill="#1e293b" />
-                                    <circle class="pupil" cx="47" cy="68" r="1.5" fill="white" />
-                                    <circle class="pupil" cx="77" cy="68" r="1.5" fill="white" />
-                                </g>
-                                <path id="reg-mouth" d="M45 85 Q 60 98 75 85" fill="none" stroke="#be123c" stroke-width="3" stroke-linecap="round" />
-                                <g class="arm arm-left">
-                                    <path d="M10 80 Q 20 50 45 60 Q 30 90 20 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
-                                </g>
-                                <g class="arm arm-right">
-                                    <path d="M110 80 Q 100 50 75 60 Q 90 90 100 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
-                                </g>
-                            </svg>
-                        </div>
-
-                        <div class="text-center mb-3">
-                            <h1 class="h4 font-extrabold text-slate-800 tracking-tight mb-1" style="font-weight: 800;">Crear Cuenta</h1>
-                            <p class="text-xs text-slate-400 font-medium px-2">Crea tu cuenta virtual gratis en segundos.</p>
-                        </div>
-
-                        <form method="POST" action="{{ route('tienda.register') }}" id="form-register">
-                            @csrf
-                            <input type="hidden" name="tipo_documento" id="tipo_documento_hidden" value="{{ old('tipo_documento', 'DNI') }}">
-
-                            <!-- Tipo y Documento -->
-                            <div class="row g-2 mb-2" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                <div style="flex: 0 0 30%;">
-                                    <label class="text-[10px] font-semibold text-slate-500 mb-1 d-block">Tipo Doc.</label>
-                                    <select id="tipo_documento" class="w-100 py-2 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500" style="width: 100%; border-radius: 0.85rem; padding-top: 0.5rem; padding-bottom: 0.5rem; font-size: 0.88rem; outline: none; border: 1px solid #e2e8f0; padding-left: 0.25rem;">
-                                        <option value="DNI" @selected(old('tipo_documento') === 'DNI')>DNI</option>
-                                        <option value="RUC" @selected(old('tipo_documento') === 'RUC')>RUC</option>
-                                        <option value="CE" @selected(old('tipo_documento') === 'CE')>CE</option>
-                                    </select>
-                                </div>
-                                <div style="flex: 1;">
-                                    <label class="text-[10px] font-semibold text-slate-500 mb-1 d-block">Número Documento</label>
-                                    <div class="position-relative" style="position: relative;">
-                                        <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 0.75rem; z-index: 10;">
-                                            <i class="fas fa-id-card"></i>
-                                        </span>
-                                        <input type="text" name="documento" id="documento" value="{{ old('documento') }}" 
-                                               @focus="registerFocus = true" @blur="registerFocus = false"
-                                               class="w-100 py-2 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                               style="padding-left: 2.25rem; padding-right: 2.5rem; font-size: 0.88rem; border-radius: 0.85rem;" 
-                                               placeholder="Ej. 72345678" required maxlength="20">
-                                        <button type="button" id="btn-buscar-doc" class="position-absolute top-50 translate-middle-y border-0 bg-transparent text-emerald-600 hover-text-primary" 
-                                                style="position: absolute; top: 50%; transform: translateY(-50%); right: 0.75rem; z-index: 10; cursor: pointer; color: var(--store-green);">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="doc-feedback" class="form-text text-[10px] pl-2 mb-2 text-slate-400" style="margin-top: -0.25rem;"></div>
-
-                            <!-- Nombre Completo -->
-                            <div class="mb-2">
-                                <label class="text-[10px] font-semibold text-slate-500 mb-1 d-block">Nombre completo o Razón social</label>
-                                <div class="position-relative">
-                                    <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 0.75rem; z-index: 10;">
-                                        <i class="fas fa-user"></i>
-                                    </span>
-                                    <input type="text" name="nombre" id="nombre" value="{{ old('nombre') }}" 
-                                           class="w-100 py-2 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                           style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" required>
-                                </div>
-                                @error('nombre')
-                                    <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Correo -->
-                            <div class="mb-2">
-                                <label class="text-[10px] font-semibold text-slate-500 mb-1 d-block">Correo <span class="text-slate-400 font-normal">(Opcional)</span></label>
-                                <div class="position-relative">
-                                    <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 0.75rem; z-index: 10;">
-                                        <i class="fas fa-envelope"></i>
-                                    </span>
-                                    <input type="email" name="email" id="email" value="{{ old('email') }}" 
-                                           class="w-100 py-2 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                           style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" 
-                                           placeholder="ejemplo@correo.com">
-                                </div>
-                                @error('email')
-                                    <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Telefono -->
-                            <div class="mb-2">
-                                <label class="text-[10px] font-semibold text-slate-500 mb-1 d-block">Teléfono <span class="text-slate-400 font-normal">(Opcional)</span></label>
-                                <div class="position-relative">
-                                    <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 0.75rem; z-index: 10;">
-                                        <i class="fas fa-phone-alt"></i>
-                                    </span>
-                                    <input type="text" name="telefono" id="telefono" value="{{ old('telefono') }}" 
-                                           class="w-100 py-2 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                           style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" 
-                                           placeholder="Ej. 987654321">
-                                </div>
-                                @error('telefono')
-                                    <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Contraseña -->
-                            <div class="mb-3">
-                                <label class="text-[10px] font-semibold text-slate-500 mb-1 d-block">Contraseña</label>
-                                <div class="position-relative">
-                                    <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 0.75rem; z-index: 10;">
-                                        <i class="fas fa-lock"></i>
-                                    </span>
-                                    <input type="password" name="password" 
-                                           @focus="registerPassFocus = true" @blur="registerPassFocus = false"
-                                           class="w-100 py-2 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
-                                           style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" 
-                                           placeholder="Mín. 8 caracteres" required>
-                                </div>
-                                @error('password')
-                                    <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <button id="btn-submit" class="w-100 py-2 text-white font-bold rounded-2xl border-0 transition-all shadow-md hover:shadow-lg d-flex justify-content-center align-items-center gap-2 active:scale-95"
-                                    style="background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%); font-size: 0.9rem; border-radius: 0.85rem; border: none; cursor: pointer;">
-                                <span>Crear cuenta</span>
-                            </button>
-                        </form>
-
-                        <div class="text-center mt-3 pt-2 border-t border-slate-100">
-                            <span class="text-xs text-slate-400 font-medium">¿Ya tienes cuenta?</span>
-                            <!-- Botón para girar al Login de Clientes (Frente de la misma tarjeta) -->
-                            <button type="button" @click.stop="clientesTab = 'login'" class="text-xs font-bold text-decoration-none transition-all ml-1 border-0 bg-transparent p-0 text-emerald-600 hover:text-emerald-700" style="font-weight: bold; margin-left: 0.25rem;">Inicia sesión (Volver)</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TARJETA PERSONAL (Solo Login Personal) -->
-            <div class="auth-card card-personal bg-white shadow-xl shadow-slate-100/80 border border-slate-100/50 p-4 p-md-5"
-                 :class="activeCard === 'personal' ? 'card-active' : 'card-inactive'"
-                 @click="if (activeCard !== 'personal') { activeCard = 'personal'; }">
-                
-                <!-- Avatar Personal -->
-                <div class="avatar-wrapper" :class="{'looking': personalFocus, 'cover-eyes': personalPassFocus}">
+                <!-- Avatar Cliente -->
+                <div class="avatar-wrapper" :class="{'looking': loginFocus, 'cover-eyes': passFocus}">
                     <svg class="avatar-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="60" cy="60" r="50" fill="#ffedd5" stroke="#334155" stroke-width="3" />
-                        <path d="M10 60 Q 60 20 110 60 L 110 50 Q 60 10 10 50 Z" fill="#ffffff" stroke="#334155" stroke-width="3" />
-                        <path d="M56 35 h8 v8 h-8 z M60 31 v16" stroke="#0d9488" stroke-width="3" stroke-linecap="round" />
-                        <g id="eyes">
-                            <circle cx="45" cy="75" r="5" fill="#1e293b" />
-                            <circle cx="75" cy="75" r="5" fill="#1e293b" />
-                            <circle class="pupil" cx="47" cy="73" r="1.5" fill="white" />
-                            <circle class="pupil" cx="77" cy="73" r="1.5" fill="white" />
+                        <circle cx="60" cy="60" r="50" fill="#e0f2fe" stroke="#334155" stroke-width="3" />
+                        <path d="M20 45 Q 60 15 100 45 Q 60 30 20 45 Z" fill="#475569" stroke="#334155" stroke-width="3" />
+                        <g id="client-eyes">
+                            <circle cx="45" cy="70" r="5" fill="#1e293b" />
+                            <circle cx="75" cy="70" r="5" fill="#1e293b" />
+                            <circle class="pupil" cx="47" cy="68" r="1.5" fill="white" />
+                            <circle class="pupil" cx="77" cy="68" r="1.5" fill="white" />
                         </g>
-                        <path id="mouth" d="M45 90 Q 60 100 75 90" fill="none" stroke="#be123c" stroke-width="3" stroke-linecap="round" />
+                        <path id="client-mouth" d="M45 85 Q 60 98 75 85" fill="none" stroke="#be123c" stroke-width="3" stroke-linecap="round" />
                         <g class="arm arm-left">
-                            <path d="M10 80 Q 20 50 45 60 Q 30 90 20 100 Z" fill="#e2e8f0" stroke="#334155" stroke-width="3" />
+                            <path d="M10 80 Q 20 50 45 60 Q 30 90 20 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
                         </g>
                         <g class="arm arm-right">
-                            <path d="M110 80 Q 100 50 75 60 Q 90 90 100 100 Z" fill="#e2e8f0" stroke="#334155" stroke-width="3" />
+                            <path d="M110 80 Q 100 50 75 60 Q 90 90 100 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
                         </g>
                     </svg>
                 </div>
 
                 <div class="text-center mb-4">
-                    <h1 class="h4 font-extrabold text-slate-800 tracking-tight mb-1" style="font-weight: 800;">Acceso Personal</h1>
+                    <h1 class="h4 font-extrabold text-emerald-950 tracking-tight mb-1" style="font-weight: 800;">Acceso Clientes</h1>
+                    <p class="text-xs text-emerald-800/80 font-medium px-2 leading-relaxed">Ingresa a tu cuenta de farmacia virtual.</p>
+                </div>
+
+                <form method="POST" action="{{ route('tienda.login') }}">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="text-xs font-semibold text-emerald-900/80 mb-1.5 d-block">Documento, correo o teléfono</label>
+                        <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 1rem; z-index: 10;">
+                                <i class="fas fa-user-circle"></i>
+                            </span>
+                            <input type="text" name="login" value="{{ old('login') }}" 
+                                   @focus="loginFocus = true" @blur="loginFocus = false"
+                                   class="w-100 py-2.5 rounded-2xl border border-emerald-200/80 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                   style="padding-left: 2.5rem; padding-right: 1rem; font-size: 0.92rem; border-radius: 1rem;" 
+                                   placeholder="Ej. 72345678" required autofocus>
+                        </div>
+                        @error('login')
+                            <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2 text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-xs font-semibold text-emerald-900/80 mb-1.5 d-block">Contraseña</label>
+                        <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 1rem; z-index: 10;">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            <input type="password" name="password" 
+                                   @focus="passFocus = true" @blur="passFocus = false"
+                                   class="w-100 py-2.5 rounded-2xl border border-emerald-200/80 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                   style="padding-left: 2.5rem; padding-right: 1rem; font-size: 0.92rem; border-radius: 1rem;" 
+                                   placeholder="••••••••" required>
+                        </div>
+                        @error('password')
+                            <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2 text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <input type="checkbox" name="remember" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" id="remember" style="width: 16px; height: 16px; cursor: pointer;">
+                            <label class="text-xs font-medium text-emerald-800 ml-2" for="remember" style="cursor: pointer; margin-left: 0.5rem;">Recordarme</label>
+                        </div>
+                        <button type="button" @click.stop="activeCard = 'login_personal'" class="text-xs font-bold text-decoration-none text-emerald-600 hover:text-emerald-700 border-0 bg-transparent p-0">Acceso Personal &rarr;</button>
+                    </div>
+
+                    <button class="w-100 py-2.5 text-white font-bold rounded-2xl border-0 transition-all shadow-md hover:shadow-lg d-flex justify-content-center align-items-center gap-2 active:scale-95"
+                            style="background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%); font-size: 0.95rem; border-radius: 1rem; cursor: pointer;">
+                        <span>Ingresar como Cliente</span>
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.1rem; height: 1.1rem;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </button>
+                </form>
+
+                <div class="text-center mt-4 pt-2 border-t border-emerald-100/60">
+                    <span class="text-xs text-emerald-800/60 font-medium">¿Nuevo en nuestra tienda?</span>
+                    <button type="button" @click.stop="activeCard = 'register'" class="text-xs font-bold text-decoration-none transition-all ml-1 border-0 bg-transparent p-0 text-emerald-600 hover:text-emerald-700" style="font-weight: bold; margin-left: 0.25rem;">Regístrate gratis</button>
+                </div>
+            </div>
+
+            <!-- TARJETA 2: REGISTRO CLIENTE -->
+            <div class="auth-card card-register p-4 p-md-5"
+                 :class="activeCard === 'register' ? 'card-active' : 'card-inactive'"
+                 @click="if (activeCard !== 'register') { activeCard = 'register'; }">
+                
+                <!-- Avatar Registro -->
+                <div class="avatar-wrapper" :class="{'looking': registerFocus, 'cover-eyes': registerPassFocus}">
+                    <svg class="avatar-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="60" cy="60" r="50" fill="#e0f2fe" stroke="#334155" stroke-width="3" />
+                        <path d="M20 45 Q 60 15 100 45 Q 60 30 20 45 Z" fill="#475569" stroke="#334155" stroke-width="3" />
+                        <g id="reg-eyes">
+                            <circle cx="45" cy="70" r="5" fill="#1e293b" />
+                            <circle cx="75" cy="70" r="5" fill="#1e293b" />
+                            <circle class="pupil" cx="47" cy="68" r="1.5" fill="white" />
+                            <circle class="pupil" cx="77" cy="68" r="1.5" fill="white" />
+                        </g>
+                        <path id="reg-mouth" d="M45 85 Q 60 98 75 85" fill="none" stroke="#be123c" stroke-width="3" stroke-linecap="round" />
+                        <g class="arm arm-left">
+                            <path d="M10 80 Q 20 50 45 60 Q 30 90 20 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
+                        </g>
+                        <g class="arm arm-right">
+                            <path d="M110 80 Q 100 50 75 60 Q 90 90 100 100 Z" fill="#f1f5f9" stroke="#334155" stroke-width="3" />
+                        </g>
+                    </svg>
+                </div>
+
+                <div class="text-center mb-3">
+                    <h1 class="h4 font-extrabold text-emerald-950 tracking-tight mb-1" style="font-weight: 800;">Crear Cuenta</h1>
+                    <p class="text-xs text-emerald-800/80 font-medium px-2">Crea tu cuenta virtual gratis en segundos.</p>
+                </div>
+
+                <form method="POST" action="{{ route('tienda.register') }}" id="form-register">
+                    @csrf
+                    <input type="hidden" name="tipo_documento" id="tipo_documento_hidden" value="{{ old('tipo_documento', 'DNI') }}">
+
+                    <!-- Tipo y Documento -->
+                    <div class="row g-2 mb-2" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <div style="flex: 0 0 30%;">
+                            <label class="text-[10px] font-semibold text-emerald-900/80 mb-1 d-block">Tipo Doc.</label>
+                            <select id="tipo_documento" class="w-100 py-2 rounded-2xl border border-emerald-200 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500" style="width: 100%; border-radius: 0.85rem; padding-top: 0.5rem; padding-bottom: 0.5rem; font-size: 0.88rem; outline: none; border: 1px solid #a7f3d0; padding-left: 0.25rem;">
+                                <option value="DNI" @selected(old('tipo_documento') === 'DNI')>DNI</option>
+                                <option value="RUC" @selected(old('tipo_documento') === 'RUC')>RUC</option>
+                                <option value="CE" @selected(old('tipo_documento') === 'CE')>CE</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label class="text-[10px] font-semibold text-emerald-900/80 mb-1 d-block">Número Documento</label>
+                            <div class="position-relative" style="position: relative;">
+                                <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 0.75rem; z-index: 10;">
+                                    <i class="fas fa-id-card"></i>
+                                </span>
+                                <input type="text" name="documento" id="documento" value="{{ old('documento') }}" 
+                                       @focus="registerFocus = true" @blur="registerFocus = false"
+                                       class="w-100 py-2 rounded-2xl border border-emerald-200 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                       style="padding-left: 2.25rem; padding-right: 2.5rem; font-size: 0.88rem; border-radius: 0.85rem;" 
+                                       placeholder="Ej. 72345678" required maxlength="20">
+                                <button type="button" id="btn-buscar-doc" class="position-absolute top-50 translate-middle-y border-0 bg-transparent text-emerald-600 hover-text-primary" 
+                                        style="position: absolute; top: 50%; transform: translateY(-50%); right: 0.75rem; z-index: 10; cursor: pointer; color: var(--store-green);">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="doc-feedback" class="form-text text-[10px] pl-2 mb-2 text-emerald-700/60" style="margin-top: -0.25rem;"></div>
+
+                    <!-- Nombre Completo -->
+                    <div class="mb-2">
+                        <label class="text-[10px] font-semibold text-emerald-900/80 mb-1 d-block">Nombre completo o Razón social</label>
+                        <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 0.75rem; z-index: 10;">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <input type="text" name="nombre" id="nombre" value="{{ old('nombre') }}" 
+                                   class="w-100 py-2 rounded-2xl border border-emerald-200 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                   style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" required>
+                        </div>
+                        @error('nombre')
+                            <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2 text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Correo -->
+                    <div class="mb-2">
+                        <label class="text-[10px] font-semibold text-emerald-900/80 mb-1 d-block">Correo <span class="text-emerald-700/50 font-normal">(Opcional)</span></label>
+                        <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 0.75rem; z-index: 10;">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                            <input type="email" name="email" id="email" value="{{ old('email') }}" 
+                                   class="w-100 py-2 rounded-2xl border border-emerald-200 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                   style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" 
+                                   placeholder="ejemplo@correo.com">
+                        </div>
+                        @error('email')
+                            <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2 text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Telefono -->
+                    <div class="mb-2">
+                        <label class="text-[10px] font-semibold text-emerald-900/80 mb-1 d-block">Teléfono <span class="text-emerald-700/50 font-normal">(Opcional)</span></label>
+                        <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 0.75rem; z-index: 10;">
+                                <i class="fas fa-phone-alt"></i>
+                            </span>
+                            <input type="text" name="telefono" id="telefono" value="{{ old('telefono') }}" 
+                                   class="w-100 py-2 rounded-2xl border border-emerald-200 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                   style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" 
+                                   placeholder="Ej. 987654321">
+                        </div>
+                        @error('telefono')
+                            <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2 text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div class="mb-3">
+                        <label class="text-[10px] font-semibold text-emerald-900/80 mb-1 d-block">Contraseña</label>
+                        <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y text-emerald-600/60" style="left: 0.75rem; z-index: 10;">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            <input type="password" name="password" 
+                                   @focus="registerPassFocus = true" @blur="registerPassFocus = false"
+                                   class="w-100 py-2 rounded-2xl border border-emerald-200 text-emerald-950 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                   style="padding-left: 2.25rem; padding-right: 1rem; font-size: 0.88rem; border-radius: 0.85rem;" 
+                                   placeholder="Mín. 8 caracteres" required>
+                        </div>
+                        @error('password')
+                            <div class="invalid-feedback d-block text-[10px] font-semibold mt-0.5 pl-2 text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <button id="btn-submit" class="w-100 py-2 text-white font-bold rounded-2xl border-0 transition-all shadow-md hover:shadow-lg d-flex justify-content-center align-items-center gap-2 active:scale-95"
+                            style="background: linear-gradient(135deg, var(--store-green) 0%, var(--store-green-dark) 100%); font-size: 0.9rem; border-radius: 0.85rem; border: none; cursor: pointer;">
+                        <span>Crear cuenta</span>
+                    </button>
+                </form>
+
+                <div class="text-center mt-3 pt-2 border-t border-emerald-100/60">
+                    <span class="text-xs text-emerald-800/60 font-medium">¿Ya tienes cuenta?</span>
+                    <button type="button" @click.stop="activeCard = 'login_cliente'" class="text-xs font-bold text-decoration-none transition-all ml-1 border-0 bg-transparent p-0 text-emerald-600 hover:text-emerald-700" style="font-weight: bold; margin-left: 0.25rem;">Inicia sesión (Volver)</button>
+                </div>
+            </div>
+
+            <!-- TARJETA 3: ACCESO PERSONAL -->
+            <div class="auth-card card-login-personal p-4 p-md-5"
+                 :class="activeCard === 'login_personal' ? 'card-active' : 'card-inactive'"
+                 @click="if (activeCard !== 'login_personal') { activeCard = 'login_personal'; }">
+                
+                <!-- Avatar Personal -->
+                <div class="avatar-wrapper" :class="{'looking': personalFocus, 'cover-eyes': personalPassFocus}">
+                    <svg class="avatar-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="60" cy="60" r="50" fill="#1e293b" stroke="#475569" stroke-width="3" />
+                        <path d="M10 60 Q 60 20 110 60 L 110 50 Q 60 10 10 50 Z" fill="#334155" stroke="#475569" stroke-width="3" />
+                        <path d="M56 35 h8 v8 h-8 z M60 31 v16" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round" />
+                        <g id="eyes">
+                            <circle cx="45" cy="75" r="5" fill="#f8fafc" />
+                            <circle cx="75" cy="75" r="5" fill="#f8fafc" />
+                            <circle class="pupil" cx="47" cy="73" r="1.5" fill="#0f172a" />
+                            <circle class="pupil" cx="77" cy="73" r="1.5" fill="#0f172a" />
+                        </g>
+                        <path id="mouth" d="M45 90 Q 60 100 75 90" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round" />
+                        <g class="arm arm-left">
+                            <path d="M10 80 Q 20 50 45 60 Q 30 90 20 100 Z" fill="#334155" stroke="#475569" stroke-width="3" />
+                        </g>
+                        <g class="arm arm-right">
+                            <path d="M110 80 Q 100 50 75 60 Q 90 90 100 100 Z" fill="#334155" stroke="#475569" stroke-width="3" />
+                        </g>
+                    </svg>
+                </div>
+
+                <div class="text-center mb-4">
+                    <h1 class="h4 font-extrabold text-white tracking-tight mb-1" style="font-weight: 800;">Acceso Personal</h1>
                     <p class="text-xs text-slate-400 font-medium px-2 leading-relaxed">Área de administración y farmacéuticos.</p>
                 </div>
 
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <div class="mb-3">
-                        <label class="text-xs font-semibold text-slate-500 mb-1.5 d-block">Correo Electrónico</label>
+                        <label class="text-xs font-semibold text-slate-400 mb-1.5 d-block">Correo Electrónico</label>
                         <div class="position-relative">
-                            <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 1rem; z-index: 10;">
+                            <span class="position-absolute top-50 translate-middle-y text-slate-500" style="left: 1rem; z-index: 10;">
                                 <i class="fas fa-envelope"></i>
                             </span>
                             <input type="email" name="email" value="{{ old('email') }}" 
                                    @focus="personalFocus = true" @blur="personalFocus = false"
-                                   class="w-100 py-2.5 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all" 
+                                   class="w-100 py-2.5 rounded-2xl border border-slate-700 text-white bg-slate-800/80 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all" 
                                    style="padding-left: 2.5rem; padding-right: 1rem; font-size: 0.92rem; border-radius: 1rem;" 
                                    placeholder="ejemplo@farmacia.com" required>
                         </div>
                         @error('email')
-                            <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2">{{ $message }}</div>
+                            <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2 text-rose-400">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="mb-3">
-                        <label class="text-xs font-semibold text-slate-500 mb-1.5 d-block">Contraseña</label>
+                        <label class="text-xs font-semibold text-slate-400 mb-1.5 d-block">Contraseña</label>
                         <div class="position-relative">
-                            <span class="position-absolute top-50 translate-middle-y text-slate-400" style="left: 1rem; z-index: 10;">
+                            <span class="position-absolute top-50 translate-middle-y text-slate-500" style="left: 1rem; z-index: 10;">
                                 <i class="fas fa-lock"></i>
                             </span>
                             <input type="password" name="password" 
                                    @focus="personalPassFocus = true" @blur="personalPassFocus = false"
-                                   class="w-100 py-2.5 rounded-2xl border border-slate-200 text-slate-700 bg-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all" 
+                                   class="w-100 py-2.5 rounded-2xl border border-slate-700 text-white bg-slate-800/80 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all" 
                                    style="padding-left: 2.5rem; padding-right: 1rem; font-size: 0.92rem; border-radius: 1rem;" 
                                    placeholder="••••••••" required>
                         </div>
                         @error('password')
-                            <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2">{{ $message }}</div>
+                            <div class="invalid-feedback d-block text-xs font-semibold mt-1 pl-2 text-rose-400">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="mb-4 d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
-                            <input type="checkbox" name="remember" class="rounded border-slate-300 text-teal-600 focus:ring-teal-500" id="remember_personal" style="width: 16px; height: 16px; cursor: pointer;">
-                            <label class="text-xs font-medium text-slate-500 ml-2" for="remember_personal" style="cursor: pointer; margin-left: 0.5rem;">Recordarme</label>
+                            <input type="checkbox" name="remember" class="rounded border-slate-700 bg-slate-800 text-teal-500 focus:ring-teal-500" id="remember_personal" style="width: 16px; height: 16px; cursor: pointer;">
+                            <label class="text-xs font-medium text-slate-400 ml-2" for="remember_personal" style="cursor: pointer; margin-left: 0.5rem;">Recordarme</label>
                         </div>
-                        <!-- Botón para ir a Clientes en el mismo escenario (desplaza las tarjetas) -->
-                        <button type="button" @click.stop="activeCard = 'clientes'" class="text-xs font-bold text-decoration-none text-emerald-600 hover:text-emerald-700 border-0 bg-transparent p-0">&larr; Acceso Clientes</button>
+                        <button type="button" @click.stop="activeCard = 'login_cliente'" class="text-xs font-bold text-decoration-none text-teal-400 hover:text-teal-300 border-0 bg-transparent p-0">&larr; Acceso Clientes</button>
                     </div>
 
                     <button class="w-100 py-2.5 text-white font-bold rounded-2xl border-0 transition-all shadow-md hover:shadow-lg d-flex justify-content-center align-items-center gap-2 active:scale-95"
@@ -526,9 +586,9 @@
                     </button>
                 </form>
 
-                <div class="text-center mt-4 pt-2 border-t border-slate-100">
-                    <span class="text-xs text-slate-400 font-medium">¿Eres cliente?</span>
-                    <button type="button" @click.stop="activeCard = 'clientes'" class="text-xs font-bold text-decoration-none transition-all ml-1 border-0 bg-transparent p-0 text-emerald-600 hover:text-emerald-700" style="font-weight: bold; margin-left: 0.25rem;">Soy Cliente (Volver)</button>
+                <div class="text-center mt-4 pt-2 border-t border-slate-800">
+                    <span class="text-xs text-slate-500 font-medium">¿Eres cliente?</span>
+                    <button type="button" @click.stop="activeCard = 'login_cliente'" class="text-xs font-bold text-decoration-none transition-all ml-1 border-0 bg-transparent p-0 text-teal-400 hover:text-teal-300" style="font-weight: bold; margin-left: 0.25rem;">Soy Cliente (Volver)</button>
                 </div>
             </div>
 
@@ -552,7 +612,7 @@
             <div class="modal-body p-4 text-center">
                 <p class="text-sm text-slate-600 leading-relaxed mb-3">Este documento ya está registrado en la tienda virtual de la farmacia. Puedes acceder de forma directa con tu contraseña.</p>
                 <div class="d-grid gap-2">
-                    <button type="button" @click="activeCard = 'clientes'; clientesTab = 'login'; ocultarModalAlerta()" class="btn btn-store py-2 rounded-xl font-bold text-xs" id="btn-modal-ir-login">
+                    <button type="button" @click="activeCard = 'login_cliente'; ocultarModalAlerta()" class="btn btn-store py-2 rounded-xl font-bold text-xs" id="btn-modal-ir-login">
                         Ir a Iniciar Sesión
                     </button>
                 </div>
@@ -602,7 +662,6 @@
         if (tipo === 'RUC' && valor.length > 11) docInput.value = valor.substring(0, 11);
     }
 
-    // Retorna solo dígitos
     function getDocDigits() {
         return docInput ? docInput.value.replace(/\D/g, '') : '';
     }
