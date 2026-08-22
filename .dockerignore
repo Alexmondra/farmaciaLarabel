@@ -1,0 +1,30 @@
+# Ignorar carpetas de dependencias locales
+/node_modules
+/vendor
+
+# Ignorar archivos del entorno y claves locales
+.env
+.env.backup
+.env.docker
+oauth-private.key
+oauth-public.key
+
+# Ignorar archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ignorar carpetas temporales y logs locales
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+.phpunit.result.cache
+
+# Ignorar directorios de control de versiones y del IDE
+.git
+.gitignore
+.agents
+.vscode
+.idea
+.claude

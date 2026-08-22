@@ -25,7 +25,7 @@
             </div>
 
             <div id="culqiPreparando" class="my-3">
-                <div class="spinner-border text-success mb-2" role="status"></div>
+                <div class="spinner-border text-emerald-600 mb-2" role="status"></div>
                 <p class="text-muted small mb-0">Preparando metodos de pago...</p>
             </div>
 
@@ -39,7 +39,7 @@
             </button>
 
             <div id="pagoCargando" class="d-none mt-3">
-                <div class="spinner-border text-success mb-2" role="status"></div>
+                <div class="spinner-border text-emerald-600 mb-2" role="status"></div>
                 <p id="pagoMsg" class="text-muted small mb-0">Procesando tu pago...</p>
             </div>
 

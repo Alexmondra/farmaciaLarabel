@@ -15,24 +15,24 @@
         font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: #64748b;
+        color: var(--store-muted);
         font-weight: 700;
-        border-bottom: 2px solid #f1f5f9;
+        border-bottom: 2px solid var(--store-border);
         padding: 12px 16px;
     }
     .custom-table td {
         padding: 16px;
         vertical-align: middle;
-        color: #334155;
-        border-bottom: 1px solid #f1f5f9;
+        color: var(--store-ink);
+        border-bottom: 1px solid var(--store-border);
         font-size: 0.9rem;
     }
     .qr-download-btn {
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .qr-download-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+        transform: translateY(-1.5px);
+        box-shadow: 0 8px 20px rgba(23, 51, 47, 0.08);
     }
     .qr-download-btn:active {
         transform: scale(0.96);
@@ -207,7 +207,7 @@
                 <div class="doctor-anim-container" id="doctor-svg-source" style="width: 90px; height: 120px; flex-shrink: 0;">
                     <svg viewBox="0 0 120 160" width="90" height="120" class="doctor-character" id="doctor-svg-element">
                         <!-- Cap / Gorro Médico -->
-                        <path d="M25,60 C25,25 75,25 75,60 Z" fill="#0d9488" />
+                        <path d="M25,60 C25,25 75,25 75,60 Z" fill="#0F9F82" />
                         <rect x="45" y="32" width="10" height="10" rx="2" fill="#ffffff" />
                         <rect x="47" y="30" width="6" height="14" rx="1.5" fill="#ffffff" />
                         <rect x="43" y="34" width="14" height="6" rx="1.5" fill="#ffffff" />
@@ -219,13 +219,13 @@
                         <!-- Smile -->
                         <path d="M45,73 Q50,77 55,73" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" fill="none" />
                         <!-- Glasses -->
-                        <circle cx="42" cy="62" r="8" fill="none" stroke="#0ea5e9" stroke-width="2" />
-                        <circle cx="58" cy="62" r="8" fill="none" stroke="#0ea5e9" stroke-width="2" />
-                        <line x1="50" y1="62" x2="50" y2="62" stroke="#0ea5e9" stroke-width="2" />
+                        <circle cx="42" cy="62" r="8" fill="none" stroke="#0F4C5C" stroke-width="2" />
+                        <circle cx="58" cy="62" r="8" fill="none" stroke="#0F4C5C" stroke-width="2" />
+                        <line x1="50" y1="62" x2="50" y2="62" stroke="#0F4C5C" stroke-width="2" />
                         <!-- Body / Bata -->
                         <path d="M15,115 C15,95 30,90 50,90 C70,90 85,95 85,115 L80,150 L20,150 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
                         <!-- Shirt (Teal) -->
-                        <path d="M42,90 L50,105 L58,90 Z" fill="#0d9488" />
+                        <path d="M42,90 L50,105 L58,90 Z" fill="#0F9F82" />
                         <!-- Stethoscope -->
                         <path d="M35,90 C35,110 65,110 65,90" fill="none" stroke="#475569" stroke-width="2.5" />
                         <!-- Pointing Hand -->
@@ -380,11 +380,11 @@
             ctx.stroke();
 
             // 2. Título de Cabecera
-            ctx.fillStyle = '#0f172a'; // slate-900
+            ctx.fillStyle = '#17332F'; // brand slate/ink
             ctx.font = 'bold 20px "Inter", system-ui, sans-serif';
             ctx.fillText('Código QR de Recojo', 30, 45);
 
-            ctx.fillStyle = '#10b981'; // emerald-500
+            ctx.fillStyle = '#0F9F82'; // brand emerald/green
             ctx.font = 'bold 16px "Inter", sans-serif';
             ctx.fillText('Pedido: {{ $pedido->codigo }}', 30, 75);
 
@@ -392,13 +392,13 @@
             ctx.drawImage(doctorImage, 30, 95, 110, 147);
 
             // 4. Dibujar el QR (SVG) a la derecha con un marco sutil
-            ctx.strokeStyle = '#f1f5f9';
+            ctx.strokeStyle = '#E2ECE9'; // brand border
             ctx.lineWidth = 1;
             ctx.strokeRect(225, 95, 180, 180);
             ctx.drawImage(qrImage, 230, 100, 170, 170);
 
             // 5. Dibujar texto de ayuda
-            ctx.fillStyle = '#64748b'; // slate-500
+            ctx.fillStyle = '#647875'; // brand slate/muted
             ctx.font = '11px "Inter", sans-serif';
             ctx.fillText('Presenta este código en la farmacia para retirar tu pedido.', 30, 290);
 

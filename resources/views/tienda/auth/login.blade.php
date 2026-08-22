@@ -33,8 +33,8 @@
 
     /* Fondos sólidos opacos por defecto para cada tarjeta */
     .card-personal {
-        background-color: #0b2535 !important; /* Azul clínico medianoche sólido */
-        border: 1.5px solid #144460 !important; /* Borde azul clínico */
+        background-color: var(--store-blue) !important; /* Azul clínico premium */
+        border: 1.5px solid rgba(255, 255, 255, 0.15) !important; 
         color: #ffffff;
         min-height: 520px;
         height: 520px;
@@ -127,16 +127,16 @@
     .flip-card-front {
         transform: rotateY(0deg);
         z-index: 2;
-        background-color: #f0fdf4 !important; /* Verde menta médico claro sólido */
-        border: 1.5px solid #a7f3d0 !important; /* Borde verde menta suave */
-        color: #064e3b;
+        background-color: var(--store-surface) !important; /* Superficie blanca */
+        border: 1.5px solid var(--store-border) !important; /* Borde suave */
+        color: var(--store-ink);
     }
     .flip-card-back {
         transform: rotateY(180deg);
         z-index: 1;
-        background-color: #e6fcf5 !important; /* Verde esmeralda suave clínico sólido */
-        border: 1.5px solid #96f2d7 !important; /* Borde esmeralda suave */
-        color: #093325;
+        background-color: var(--store-bg-sec) !important; /* Fondo secundario menta suave */
+        border: 1.5px solid var(--store-border) !important; 
+        color: var(--store-ink);
     }
 
     /* Ocultar la cara opuesta que queda de espaldas durante el reposo para evitar bugs de Webkit */

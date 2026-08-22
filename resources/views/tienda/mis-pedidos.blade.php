@@ -5,12 +5,13 @@
 @push('styles')
 <style>
     .mis-pedidos-tabs {
-        background: white;
+        background: var(--store-surface);
         border-radius: 999px;
-        box-shadow: 0 2px 12px rgba(15, 23, 42, .06);
+        box-shadow: 0 4px 16px rgba(23, 51, 47, .04);
         display: inline-flex;
         gap: 0.25rem;
         padding: 0.35rem;
+        border: 1px solid var(--store-border);
     }
     .mis-pedidos-tabs .nav-link {
         border-radius: 999px;
@@ -18,17 +19,17 @@
         font-size: .92rem;
         font-weight: 700;
         padding: 0.6rem 1.3rem;
-        transition: all .22s ease;
+        transition: all .25s cubic-bezier(0.16, 1, 0.3, 1);
         white-space: nowrap;
     }
     .mis-pedidos-tabs .nav-link:hover {
         color: var(--store-green-dark);
-        background: var(--store-green-soft);
+        background: var(--store-bg-sec);
     }
     .mis-pedidos-tabs .nav-link.active {
         background: var(--store-green);
         color: white;
-        box-shadow: 0 4px 14px rgba(0, 143, 95, .28);
+        box-shadow: 0 4px 14px rgba(15, 159, 130, .25);
     }
     .mis-pedidos-tabs .nav-link.active:hover {
         background: var(--store-green-dark);
@@ -46,37 +47,39 @@
         min-width: 21px;
         padding: .15rem .42rem;
         text-align: center;
-        transition: all .22s ease;
+        transition: all .25s ease;
     }
     .mis-pedidos-tabs .nav-link.active .tab-badge {
-        background: rgba(255, 255, 255, .22);
+        background: rgba(255, 255, 255, .25);
         color: white;
     }
     .tab-empty {
         align-items: center;
-        background: #f9fbfa;
-        border: 1px dashed #d4e2da;
-        border-radius: 1rem;
+        background: var(--store-bg-sec);
+        border: 1.5px dashed var(--store-border);
+        border-radius: 1.25rem;
         color: var(--store-muted);
         display: flex;
         flex-direction: column;
         font-weight: 600;
         gap: .5rem;
         justify-content: center;
-        padding: 2.5rem 1rem;
+        padding: 3rem 1.5rem;
         text-align: center;
     }
     .tab-empty-icon {
         align-items: center;
-        background: var(--store-green-soft);
+        background: var(--store-surface);
+        border: 1px solid var(--store-border);
         border-radius: 50%;
-        color: var(--store-green-dark);
+        color: var(--store-green);
         display: flex;
         font-size: 1.4rem;
         font-weight: 800;
         height: 52px;
         justify-content: center;
         width: 52px;
+        box-shadow: 0 4px 10px rgba(23, 51, 47, 0.02);
     }
     @media (max-width: 575px) {
         .mis-pedidos-tabs { width: 100%; }

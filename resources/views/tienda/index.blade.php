@@ -5,20 +5,31 @@
 @push('styles')
 <style>
     .suggestions-dropdown {
-        border: 1px solid rgba(226, 232, 240, 0.8) !important;
-        background-color: #ffffff;
+        border: 1px solid var(--store-border) !important;
+        background-color: var(--store-surface);
+        box-shadow: 0 12px 36px rgba(23, 51, 47, 0.08) !important;
     }
     .suggestions-dropdown a {
-        transition: background-color 0.15s ease-in-out;
+        transition: all 0.2s ease-in-out;
     }
     .suggestions-dropdown a:hover {
-        background-color: #f8fafc;
+        background-color: var(--store-bg-sec);
     }
     .form-range::-webkit-slider-thumb {
-        background: var(--store-green, #10b981) !important;
+        background: var(--store-green, #0F9F82) !important;
+        box-shadow: 0 0 0 4px rgba(15, 159, 130, 0.15) !important;
+        transition: all 0.2s ease;
+    }
+    .form-range::-webkit-slider-thumb:active {
+        transform: scale(1.1);
     }
     .form-range::-moz-range-thumb {
-        background: var(--store-green, #10b981) !important;
+        background: var(--store-green, #0F9F82) !important;
+        box-shadow: 0 0 0 4px rgba(15, 159, 130, 0.15) !important;
+        transition: all 0.2s ease;
+    }
+    .form-range::-moz-range-thumb:active {
+        transform: scale(1.1);
     }
 </style>
 @endpush

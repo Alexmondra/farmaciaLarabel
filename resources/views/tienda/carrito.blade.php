@@ -5,9 +5,9 @@
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
-    /* Estilos futuristas y transiciones SPA */
+    /* Estilos premium y transiciones SPA */
     .step-container {
-        transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         opacity: 1;
         transform: translateY(0);
     }
@@ -19,17 +19,18 @@
         display: none !important;
     }
     .form-control:focus, .form-select:focus {
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+        border-color: var(--store-green) !important;
+        box-shadow: 0 0 0 4px rgba(15, 159, 130, 0.12) !important;
     }
     .cart-item-card {
-        border: 1px solid rgba(241, 245, 249, 0.9);
-        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.02);
+        border: 1px solid var(--store-border);
+        box-shadow: 0 4px 12px -2px rgba(23, 51, 47, 0.01);
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .cart-item-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.06);
-        border-color: rgba(16, 185, 129, 0.15);
+        transform: translateY(-1.5px);
+        box-shadow: 0 12px 24px -6px rgba(23, 51, 47, 0.05);
+        border-color: var(--store-green);
     }
     .step-icon {
         cursor: pointer;
@@ -38,16 +39,18 @@
         transition: transform 0.3s ease;
     }
     .custom-map-marker:hover {
-        transform: scale(1.15);
+        transform: scale(1.1);
     }
     .leaflet-popup-content-wrapper {
-        border-radius: 12px;
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
-        border: 1px solid #f1f5f9;
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px rgba(23, 51, 47, 0.08) !important;
+        border: 1px solid var(--store-border) !important;
         padding: 4px;
+        font-family: inherit;
     }
     .leaflet-popup-tip {
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 10px 30px rgba(23, 51, 47, 0.08) !important;
+        border: 1px solid var(--store-border);
     }
 </style>
 @endpush
@@ -359,17 +362,11 @@
                                 <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider mb-1.5">Método de Pago</label>
                                 <select name="metodo_pago" class="form-select border-slate-200 bg-slate-50/50 px-3.5 py-2.5 rounded-xl text-sm focus:bg-white focus:border-emerald-500 transition-all @error('metodo_pago') is-invalid @enderror">
                                     <option value="PAGO_AL_RECOGER" @selected(old('metodo_pago') === 'PAGO_AL_RECOGER')>Pagar al recoger (Efectivo/Tarjeta)</option>
-                                    <option value="PAGO_ONLINE" disabled>Pago online (En mantenimiento)</option>
+                                    <option value="PAGO_ONLINE" @selected(old('metodo_pago') === 'PAGO_ONLINE')>Pago online</option>
                                 </select>
                                 @error('metodo_pago')
                                     <div class="invalid-feedback text-xs mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                                <div class="alert bg-amber-50/60 border border-amber-100 text-amber-800 rounded-xl p-2.5 mt-2.5 d-flex align-items-center gap-2 small mb-0">
-                                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1rem; height: 1rem; flex-shrink: 0;" class="text-amber-600">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                    </svg>
-                                    <span>Los pagos online actualmente se encuentran en mantenimiento. Por favor, use la opción de "Pagar al recoger".</span>
-                                </div>
                             </div>
 
                             <!-- Fecha de Recojo -->
@@ -708,7 +705,7 @@
         if (container) container.style.display = 'block';
 
         var customIcon = L.divIcon({
-            html: `<div style="background-color: #10b981; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; color: white;">
+            html: `<div style="background-color: #0F9F82; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(15, 159, 130, 0.35); display: flex; align-items: center; justify-content: center; color: white;">
                     <i class="fas fa-clinic-medical" style="font-size: 11px;"></i>
                    </div>`,
             className: 'custom-map-marker',
