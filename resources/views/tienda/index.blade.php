@@ -135,11 +135,10 @@
         @if(request()->filled('precio_max'))
             <input type="hidden" name="precio_max" value="{{ request('precio_max') }}">
         @endif
-
         <div class="d-flex align-items-center gap-2">
             <!-- Contenedor Buscador con autocompletado -->
             <div class="position-relative flex-grow-1">
-                <span class="position-absolute top-50 start-0 translate-middle-y ps-3 text-slate-400">
+                <span x-show="!focused" x-transition.opacity class="position-absolute top-50 start-0 translate-middle-y ps-2 text-slate-400">
                     <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.1rem; height: 1.1rem;">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
@@ -147,12 +146,15 @@
                 <input type="search" 
                        name="q" 
                        x-model="query"
+                       @focus="focused = true"
+                       @blur="focused = false"
                        @input="fetchSuggestions()"
                        @keydown.down="focusNext()"
                        @keydown.up="focusPrev()"
                        @keydown.escape="closeSuggestions()"
                        autocomplete="off"
-                       class="form-control border-emerald-200/50 bg-white/95 ps-5 pe-3 py-2.5 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
+                       class="form-control border-emerald-200/50 bg-white/95 pe-3 py-2.5 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                       :style="focused ? 'padding-left: 1rem !important;' : 'padding-left: 2.25rem !important;'"
                        placeholder="Buscar medicamento o laboratorio...">
 
                 <!-- Indicador de Carga (Spinner) -->
@@ -305,6 +307,7 @@
             open: false,
             loading: false,
             activeIndex: -1,
+            focused: false,
             async fetchSuggestions() {
                 if (this.query.trim().length < 2) {
                     this.suggestions = [];
