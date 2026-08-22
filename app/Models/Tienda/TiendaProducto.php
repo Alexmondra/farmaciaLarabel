@@ -104,19 +104,23 @@ class TiendaProducto extends Model
         return $imagenes;
     }
 
-    public function precioVenta(): float
+    public function precioOriginal(): float
     {
         if (isset($this->precio_sucursal)) {
-            $precio = $this->precio_web ?: $this->precio_sucursal;
-            return (float) ($precio ?: 0);
+            return (float) $this->precio_sucursal;
         }
 
-        $precio = $this->precio_web ?: DB::table('medicamento_sucursal')
+        $precio = DB::table('medicamento_sucursal')
             ->where('medicamento_id', $this->medicamento_id)
             ->where('sucursal_id', $this->sucursal_id)
             ->value('precio_venta');
 
         return (float) ($precio ?: 0);
+    }
+
+    public function precioVenta(): float
+    {
+        return (float) ($this->precio_web ?: $this->precioOriginal());
     }
 
     public function stockDisponible(): ?int
