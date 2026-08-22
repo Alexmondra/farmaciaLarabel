@@ -136,8 +136,8 @@
                             $producto = $item['producto'];
                             $categoriaNombre = $producto->medicamento->categoria->nombre ?? 'Medicamento';
                         @endphp
-                        <div class="cart-item-card bg-white p-4 rounded-2xl border">
-                            <div class="row align-items-center g-3">
+                        <div class="cart-item-card bg-white p-3 p-sm-4 rounded-2xl border">
+                            <div class="row align-items-center g-2 g-sm-3">
                                 <!-- Miniatura Imagen -->
                                 <div class="col-3 col-sm-2 col-md-1.5 text-center">
                                     <div class="aspect-square bg-slate-50 rounded-xl flex items-center justify-center p-2 border border-slate-100" style="width: 60px; height: 60px; margin: 0 auto;">
@@ -150,41 +150,52 @@
                                 </div>
                                 <!-- Datos del Producto -->
                                 <div class="col-9 col-sm-5 col-md-5.5">
-                                    <span class="text-xs text-emerald-600 font-bold uppercase tracking-wider">{{ $categoriaNombre }}</span>
-                                    <h3 class="h6 font-extrabold text-slate-800 mb-1 mt-0.5">{{ $producto->nombre }}</h3>
-                                    <div class="d-flex flex-wrap align-items-center gap-2">
-                                        <span class="badge bg-slate-50 text-slate-600 border border-slate-100 rounded-lg px-2 py-1" style="font-size: 0.72rem; font-weight: 500;">
-                                            📍 {{ $producto->sucursal->nombre ?? 'Sucursal' }}
-                                        </span>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <span class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">{{ $categoriaNombre }}</span>
+                                            <h3 class="h6 font-extrabold text-slate-800 mb-1 mt-0.5" style="font-size: 0.9rem; line-height: 1.2;">{{ $producto->nombre }}</h3>
+                                            <span class="badge bg-slate-50 text-slate-600 border border-slate-100 rounded-lg px-2 py-0.5" style="font-size: 0.68rem; font-weight: 500;">
+                                                📍 {{ $producto->sucursal->nombre ?? 'Sucursal' }}
+                                            </span>
+                                        </div>
+                                        <!-- Botón Eliminar Móvil -->
+                                        <form method="POST" action="{{ route('tienda.carrito.destroy', $producto) }}" class="mb-0 d-sm-none">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-link text-slate-400 hover:text-rose-600 p-1" aria-label="Quitar {{ $producto->nombre }}">
+                                                <i class="fas fa-trash-alt" style="font-size: 0.95rem;"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
-                                <!-- Precio Unitario -->
-                                <div class="col-4 col-sm-2 col-md-1.5 text-sm text-slate-500 text-sm-center">
-                                    <div class="d-sm-none text-xs text-slate-400">Unitario</div>
-                                    <span class="font-semibold text-slate-700">S/ {{ number_format($item['precio'], 2) }}</span>
-                                </div>
-                                <!-- Control de Cantidad -->
-                                <div class="col-5 col-sm-2 col-md-2">
-                                    <div class="d-sm-none text-xs text-slate-400 mb-1">Cantidad</div>
-                                    <form method="POST" action="{{ route('tienda.carrito.update', $producto) }}" class="form-actualizar-cantidad">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="number" name="cantidad" value="{{ $item['cantidad'] }}" 
-                                               onchange="this.form.submit()"
-                                               min="1" max="{{ $item['stock_disponible'] === null ? 99 : min(99, $item['stock_disponible']) }}" 
-                                               class="form-control form-control-sm border-slate-200 rounded-xl text-center font-bold text-sm bg-slate-50/50 py-1.5 focus:bg-white" style="max-width: 80px; margin: 0 auto;">
-                                    </form>
-                                    <div class="text-slate-400 text-center mt-1" style="font-size: 0.7rem;">
-                                        {{ $item['stock_disponible'] === null ? 'Sin límite' : 'Stock: ' . $item['stock_disponible'] }}
+                                <!-- Detalles de Costo y Cantidad -->
+                                <div class="col-12 col-sm-5 col-md-5 d-flex align-items-center justify-content-between gap-2 mt-2 mt-sm-0">
+                                    <!-- Precio Unitario -->
+                                    <div class="text-sm-center">
+                                        <span class="d-sm-none text-[10px] text-slate-400 d-block">Unitario</span>
+                                        <span class="font-semibold text-slate-600 text-xs sm:text-sm">S/ {{ number_format($item['precio'], 2) }}</span>
                                     </div>
-                                </div>
-                                <!-- Subtotal e Icono Eliminar -->
-                                <div class="col-3 col-sm-1 col-md-1.5 text-end d-flex align-items-center justify-content-end gap-3">
+                                    <!-- Control de Cantidad -->
+                                    <div class="d-flex flex-column align-items-center">
+                                        <form method="POST" action="{{ route('tienda.carrito.update', $producto) }}" class="form-actualizar-cantidad mb-0">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="number" name="cantidad" value="{{ $item['cantidad'] }}" 
+                                                   onchange="this.form.submit()"
+                                                   min="1" max="{{ $item['stock_disponible'] === null ? 99 : min(99, $item['stock_disponible']) }}" 
+                                                   class="form-control form-control-sm border-slate-200 rounded-xl text-center font-bold text-xs bg-slate-50/50 py-1 focus:bg-white" style="max-width: 65px; margin: 0 auto;">
+                                        </form>
+                                        <div class="text-slate-400 text-center mt-0.5" style="font-size: 0.65rem;">
+                                            {{ $item['stock_disponible'] === null ? 'Sin límite' : 'Stock: ' . $item['stock_disponible'] }}
+                                        </div>
+                                    </div>
+                                    <!-- Subtotal -->
                                     <div class="text-end">
-                                        <div class="d-sm-none text-xs text-slate-400">Subtotal</div>
-                                        <span class="font-extrabold text-emerald-600 text-base">S/ {{ number_format($item['subtotal'], 2) }}</span>
+                                        <span class="d-sm-none text-[10px] text-slate-400 d-block">Subtotal</span>
+                                        <span class="font-extrabold text-emerald-600 text-sm sm:text-base">S/ {{ number_format($item['subtotal'], 2) }}</span>
                                     </div>
-                                    <form method="POST" action="{{ route('tienda.carrito.destroy', $producto) }}" class="mb-0">
+                                    <!-- Botón Eliminar Escritorio -->
+                                    <form method="POST" action="{{ route('tienda.carrito.destroy', $producto) }}" class="mb-0 d-none d-sm-block">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm btn-link text-slate-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition-all active:scale-95" aria-label="Quitar {{ $producto->nombre }}">

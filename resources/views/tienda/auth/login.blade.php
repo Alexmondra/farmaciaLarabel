@@ -243,7 +243,17 @@
 @endphp
 
 <div class="row justify-content-center my-4 md:my-5">
-    <div class="col-12 d-flex flex-column align-items-center">
+    <div class="col-12 d-flex flex-column align-items-center"
+         x-data="{ 
+                activeCard: '{{ $cardInicial }}',
+                clientesTab: '{{ $clientesTabInicial }}',
+                loginFocus: false,
+                passFocus: false,
+                personalFocus: false,
+                personalPassFocus: false,
+                registerFocus: false,
+                registerPassFocus: false
+             }">
         
         <!-- Selector Móvil Premium -->
         <div class="d-flex d-md-none w-100 max-w-[440px] mb-4 bg-white/90 border border-slate-200 rounded-2xl p-1 shadow-sm gap-2" style="max-width: 440px; border-radius: 1rem; border: 1px solid var(--store-border); background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 0.35rem; display: flex; gap: 0.5rem; box-shadow: 0 4px 12px rgba(23, 51, 47, 0.03);">
@@ -258,17 +268,7 @@
         </div>
         
         <!-- Escenario de acordeón 3D de 2 tarjetas -->
-        <div x-data="{ 
-                activeCard: '{{ $cardInicial }}',
-                clientesTab: '{{ $clientesTabInicial }}',
-                loginFocus: false,
-                passFocus: false,
-                personalFocus: false,
-                personalPassFocus: false,
-                registerFocus: false,
-                registerPassFocus: false
-             }" 
-             class="auth-stage"
+        <div class="auth-stage"
              :class="'state-' + activeCard"
              :style="activeCard === 'clientes' && clientesTab === 'register' ? 'min-height: 920px; height: 920px;' : 'min-height: 570px; height: 570px;'">
             

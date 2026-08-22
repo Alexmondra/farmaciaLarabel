@@ -124,14 +124,20 @@
 
         .header-link {
             color: var(--store-muted);
-            font-weight: 600;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
+            font-weight: 700;
+            padding: 0.5rem 0.55rem;
             border-radius: 0.75rem;
             transition: all 0.25s ease-in-out;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             display: inline-flex;
             align-items: center;
+        }
+
+        @media (min-width: 576px) {
+            .header-link {
+                padding: 0.5rem 1rem;
+                font-size: 0.95rem;
+            }
         }
 
         .header-link:hover {
@@ -150,10 +156,16 @@
             border-radius: 999px;
             color: white !important;
             font-weight: 700;
-            padding: .5rem 1.25rem;
+            padding: .5rem .7rem;
             box-shadow: 0 4px 14px rgba(15, 159, 130, 0.2);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             text-decoration: none;
+        }
+
+        @media (min-width: 576px) {
+            .cart-pill {
+                padding: .5rem 1.25rem;
+            }
         }
 
         .cart-pill:hover {
@@ -592,7 +604,7 @@
     </div>
 
     <header class="store-header py-3">
-        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-2 gap-sm-3">
             <a href="{{ route('tienda.index') }}" class="brand-mark">
                 @if($logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $nombreTienda }}" class="brand-logo-img">
@@ -601,7 +613,7 @@
                 @endif
                 <span>{{ $nombreTienda }}</span>
             </a>
-            <nav class="d-flex align-items-center gap-3">
+            <nav class="d-flex align-items-center gap-2 gap-sm-3">
                 <a href="{{ route('tienda.index') }}" class="header-link {{ request()->routeIs('tienda.index') || request()->routeIs('tienda.productos.show') ? 'active' : '' }}">Catalogo</a>
                 <a href="{{ route('tienda.sucursales') }}" class="header-link {{ request()->routeIs('tienda.sucursales') ? 'active' : '' }}">Sucursales</a>
                <a href="#" class="header-link open-chat-widget d-none d-md-inline">Chat Asistente</a>
@@ -629,7 +641,7 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width: 1.1rem; height: 1.1rem;">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
-                    <span>Carrito</span>
+                    <span class="d-none d-sm-inline">Carrito</span>
                     @if(count(session('tienda_carrito', [])) > 0)
                         <span class="badge bg-danger text-white rounded-full px-2 py-0.5" style="font-size: 0.72rem; min-width: 1.25rem; line-height: 1.25;">
                             {{ array_sum(session('tienda_carrito', [])) }}
