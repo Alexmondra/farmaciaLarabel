@@ -189,28 +189,29 @@
         transform: translateY(2px);
     }
 
-    /* --- ALINEACIONES 3D EN DISPOSITIVOS MÓVILES (Desfase vertical) --- */
+    /* --- ALINEACIONES EN DISPOSITIVOS MÓVILES --- */
     @media (max-width: 767.98px) {
         .auth-stage {
             max-width: 440px;
+            perspective: none;
         }
 
-        /* Clientes Inactiva en móvil (Personal Activo) */
-        .state-personal .card-clientes.card-inactive {
-            transform: translate3d(-50%, 25px, -50px) scale(0.96) rotate(0deg);
-            z-index: 10;
+        /* Evitar transformaciones 3D o desplazamientos en tarjetas activas en móvil */
+        .card-active {
+            transform: translate3d(-50%, 0, 0) scale(1) rotate(0deg) !important;
+            z-index: 30 !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            box-shadow: 0 10px 30px -5px rgba(23, 51, 47, 0.08) !important;
         }
 
-        /* Personal Inactiva en móvil (Clientes Activo) */
-        .state-clientes .card-personal.card-inactive {
-            transform: translate3d(-50%, -25px, -50px) scale(0.96) rotate(0deg);
-            z-index: 10;
-        }
-
-        /* Hover interactivo móvil simplificado */
-        .card-inactive:hover {
-            transform: translate3d(-50%, -5px, 0) scale(1) rotate(0deg) !important;
-            z-index: 40 !important;
+        /* Ocultar tarjeta inactiva por completo para evitar desborde vertical y errores de tap */
+        .card-inactive {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: none !important;
         }
     }
 </style>
@@ -242,7 +243,19 @@
 @endphp
 
 <div class="row justify-content-center my-4 md:my-5">
-    <div class="col-12 d-flex justify-content-center">
+    <div class="col-12 d-flex flex-column align-items-center">
+        
+        <!-- Selector Móvil Premium -->
+        <div class="d-flex d-md-none w-100 max-w-[440px] mb-4 bg-white/90 border border-slate-200 rounded-2xl p-1 shadow-sm gap-2" style="max-width: 440px; border-radius: 1rem; border: 1px solid var(--store-border); background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 0.35rem; display: flex; gap: 0.5rem; box-shadow: 0 4px 12px rgba(23, 51, 47, 0.03);">
+            <button type="button" @click="activeCard = 'clientes'" class="flex-grow-1 border-0 py-2 px-3 rounded-xl text-xs font-bold transition-all duration-300"
+                    :class="activeCard === 'clientes' ? 'bg-[#0F9F82] text-white shadow-sm' : 'bg-transparent text-slate-500'" style="flex: 1; border: none; padding: 0.5rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.75rem; cursor: pointer;">
+                Soy Cliente
+            </button>
+            <button type="button" @click="activeCard = 'personal'" class="flex-grow-1 border-0 py-2 px-3 rounded-xl text-xs font-bold transition-all duration-300"
+                    :class="activeCard === 'personal' ? 'bg-[#0F4C5C] text-white shadow-sm' : 'bg-transparent text-slate-500'" style="flex: 1; border: none; padding: 0.5rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.75rem; cursor: pointer;">
+                Soy Personal
+            </button>
+        </div>
         
         <!-- Escenario de acordeón 3D de 2 tarjetas -->
         <div x-data="{ 
