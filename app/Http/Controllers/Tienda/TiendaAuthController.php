@@ -128,7 +128,7 @@ class TiendaAuthController extends Controller
             'nombre' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:120'],
             'telefono' => ['nullable', 'string', 'max:30'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'password' => ['required', 'string', 'min:6'],
         ]);
 
         $documento = trim($data['documento']);
