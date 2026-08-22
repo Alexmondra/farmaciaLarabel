@@ -59,11 +59,11 @@
         }
 
         .store-header {
-            background: rgba(255, 255, 255, 0.85);
+            background: #BCECE1 !important; /* Verde menta bajito pero bien definido */
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--store-border);
-            box-shadow: 0 4px 30px -10px rgba(23, 51, 47, 0.05);
+            box-shadow: 0 4px 30px -10px rgba(23, 51, 47, 0.08);
             position: sticky;
             top: 0;
             z-index: 50;
@@ -147,8 +147,8 @@
 
         .header-link.active {
             color: var(--store-green-dark);
-            background-color: var(--store-green-soft);
-            box-shadow: inset 0 0 0 1px rgba(15, 159, 130, 0.08);
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(23, 51, 47, 0.05), inset 0 0 0 1px rgba(15, 159, 130, 0.12);
         }
 
         .cart-pill {
