@@ -591,6 +591,13 @@
         .store-footer a:hover {
             color: #5eead4 !important;
         }
+
+        /* Evitar zoom automático en dispositivos móviles (iOS/Android WebKit) al enfocar inputs */
+        @media (max-width: 767.98px) {
+            input, select, textarea, .form-control, .form-select {
+                font-size: 16px !important;
+            }
+        }
     </style>
     @stack('styles')
 </head>
